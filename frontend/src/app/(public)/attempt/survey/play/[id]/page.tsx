@@ -3,7 +3,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import QuestPlayComponent from "@/components/Liveui/QuestPlayComponent";
-import { normalizeTasks } from "@/utils/QuickFromTransform";
+import { normalizeTasks } from "@/utils/quickFormTransform";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";

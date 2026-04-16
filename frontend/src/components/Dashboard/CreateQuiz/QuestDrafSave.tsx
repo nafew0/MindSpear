@@ -17,9 +17,9 @@ import { Quiz } from "@/types/types";
 // import { clearQuest } from "@/services/redux/features/questInformationSlice";
 import { IoSaveSharp } from "react-icons/io5";
 import { QuestConvertDataComponent } from "@/utils/QuestConvertDataComponent";
-import { quickFormTaskArray } from "@/utils/QuickFromTransform";
+import { quickFormTaskArray } from "@/utils/quickFormTransform";
 import { RiDraftFill } from "react-icons/ri";
-// import { type Questio nsResponse } from "@/utils/QuickFromTransform";
+// import { type Questio nsResponse } from "@/utils/quickFormTransform";
 interface QuizState {
 	quiz: Quiz;
 }

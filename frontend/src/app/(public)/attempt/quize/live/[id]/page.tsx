@@ -5,7 +5,7 @@ import QuizAttemptForm from '@/components/Liveui/QuizAttemptForm'
 import QuizPlayComponent from '@/components/Liveui/QuizPlayComponent';
 import axiosInstance from '@/utils/axiosInstance';
 import { AxiosError } from 'axios';
-import { normalizeTasks } from '@/utils/QuickFromTransform';
+import { normalizeTasks } from '@/utils/quickFormTransform';
 
 function QuizAttempt() {
 	const searchParams = useSearchParams();
