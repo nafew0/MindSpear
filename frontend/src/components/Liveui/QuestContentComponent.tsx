@@ -41,7 +41,7 @@ type Props = {
 	onChange?: (val: string) => void;
 };
 
-const QuestContantComponent: React.FC<Props> = ({ task, value }) => {
+const QuestContentComponent: React.FC<Props> = ({ task, value }) => {
 	console.log(task, "tasktasktasktasktask");
 
 	//   const answers = useSelector((state: RootState) => state.answers);
@@ -279,4 +279,4 @@ const QuestContantComponent: React.FC<Props> = ({ task, value }) => {
 	);
 };
 
-export default QuestContantComponent;
+export default QuestContentComponent;

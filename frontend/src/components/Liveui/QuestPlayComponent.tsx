@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import QuizLiveFooter from "@/components/Layouts/quiz/QuizLiveFooter";
 import QuestChoiceComponent from "./QuestChoiceComponent";
-import QuestContantComponent from "./QuestContantComponent";
+import QuestContentComponent from "./QuestContentComponent";
 import QuestRankingComponent from "./QuestRankingComponent";
 import QuestShortAnswerComponent from "./QuestShortAnswerComponent";
 import QuickFormPreview from "./QuickFormPreview";
@@ -85,7 +85,7 @@ const componentForTaskType = (
 		key === "fill_in_the_blanks_choice"
 	)
 		return QuestChoiceComponent;
-	if (key === "content") return QuestContantComponent;
+	if (key === "content") return QuestContentComponent;
 	if (key === "scales") return QuestScalesChoiceComponent;
 	if (key === "ranking" || key === "sorting" || key === "shorting")
 		return QuestRankingComponent;
