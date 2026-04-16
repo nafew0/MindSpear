@@ -18,7 +18,7 @@ import { Calendar, Pencil, Trash2 } from "lucide-react";
 import { MdOutlinePublic, MdQuiz } from "react-icons/md";
 import Questions from "@/components/QuestReports/Questions";
 import HostLive from "@/components/Dashboard/Quest/HostLive";
-import { convertTaskData } from "@/utils/QuestConvertDataComponent";
+import { convertTaskData } from "@/utils/questDataTransformer";
 import moment from "moment";
 import QuestionsResultView from "@/components/ResultComponent/QuestionsResultView";
 import GlobalPagination from "@/components/GlobalPagination";

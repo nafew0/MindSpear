@@ -16,7 +16,7 @@ import { persistor } from "@/stores/store";
 import { Quiz } from "@/types/types";
 // import { clearQuest } from "@/services/redux/features/questInformationSlice";
 import { IoSaveSharp } from "react-icons/io5";
-import { QuestConvertDataComponent } from "@/utils/QuestConvertDataComponent";
+import { QuestConvertDataComponent } from "@/utils/questDataTransformer";
 import { quickFormTaskArray } from "@/utils/quickFormTransform";
 import { SaveAll } from "lucide-react";
 // import { type Questio nsResponse } from "@/utils/quickFormTransform";

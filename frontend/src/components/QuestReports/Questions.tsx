@@ -16,7 +16,7 @@ import Image from "next/image";
 import ConfirmDialog from "@/utils/showConfirmDialog";
 import { removeSelectedItem } from "@/stores/features/quizItems/quizSlice";
 import { useDispatch } from "react-redux";
-import { convertTaskData } from "@/utils/QuestConvertDataComponent";
+import { convertTaskData } from "@/utils/questDataTransformer";
 import DOMPurify from "dompurify";
 import { Pagination } from "antd";
 import {

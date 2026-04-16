@@ -17,7 +17,7 @@ import { AxiosError } from "axios";
 import { useParams, usePathname } from "next/navigation";
 import { setQuiz } from "@/stores/features/quizInformationSlice";
 import type { Quiz } from "@/types/types";
-import { convertTaskData } from "@/utils/QuestConvertDataComponent";
+import { convertTaskData } from "@/utils/questDataTransformer";
 import { setMultipleSelectedItems } from "@/stores/features/quizItems/quizSlice";
 import { PiWarningCircle } from "react-icons/pi";
 import { setQuest } from "@/stores/features/questInformationSlice";
