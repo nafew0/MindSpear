@@ -115,7 +115,7 @@ const ShortAnswerReadOnly: React.FC<{ text?: string }> = ({ text }) => (
 
 
 
-function QuickFromAnswerView({data}: any) {
+function QuickFormAnswerView({data}: any) {
     console.log(data, "datadatadatadatadatadata");
     
 	return (
@@ -164,4 +164,4 @@ function QuickFromAnswerView({data}: any) {
 	);
 }
 
-export default QuickFromAnswerView;
+export default QuickFormAnswerView;

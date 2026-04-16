@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from "react";
 import { FaUser } from "react-icons/fa6";
 import GlobalModal from "@/components/globalModal";
-import QuickFromAnswerView from "./QuickFromAnswerView";
+import QuickFormAnswerView from "./QuickFormAnswerView";
 import {
 	getSocket,
 	connectSocket,
@@ -37,7 +37,7 @@ type Respondent = {
 // 	return { m, ss };
 // };
 
-function QuickFromCreateorView({ quickFromId }: any) {
+function QuickFormCreatorView({ quickFromId }: any) {
 	console.log(quickFromId);
 
 	const [isModalStatus, setIsModalStatus] = useState(false);
@@ -164,7 +164,7 @@ function QuickFromCreateorView({ quickFromId }: any) {
 					<div className="text-gray-500">No data</div>
 				) : (
 					<div>
-						<QuickFromAnswerView data={active} />
+						<QuickFormAnswerView data={active} />
 					</div>
 				)}
 			</GlobalModal>
@@ -172,4 +172,4 @@ function QuickFromCreateorView({ quickFromId }: any) {
 	);
 }
 
-export default QuickFromCreateorView;
+export default QuickFormCreatorView;

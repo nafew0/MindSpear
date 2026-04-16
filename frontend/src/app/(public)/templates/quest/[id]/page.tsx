@@ -22,7 +22,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import GlobalHorizantalBarChart from "@/components/Chart/GlobalHorizantalBarChart";
 import D3WordCloud from "@/components/Chart/D3WordCloud";
 import GlobalBarChart from "@/components/Chart/GlobalBarChart";
-import QuickFromAnswerView from "@/components/Liveui/QuickFromAnswerView";
+import QuickFormAnswerView from "@/components/Liveui/QuickFormAnswerView";
 import QuickShortAndLongAnswer from "@/components/Liveui/QuickShortAndLongAnswer";
 import { ScalesChart } from "@/components/Chart/ScalesChart";
 
@@ -264,7 +264,7 @@ function ChartPanel({ task }: { task: Task }) {
 					</div>
 				) : currentView === "quick_form" ? (
 					<div className="w-full">
-						<QuickFromAnswerView
+						<QuickFormAnswerView
 							data={{
 								id: "",
 								time: 120,

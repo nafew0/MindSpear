@@ -11,7 +11,7 @@ import GlobalHorizantalBarChart from "@/components/Chart/GlobalHorizantalBarChar
 // import HorizontalProgressBars from "@/components/Chart/HorizontalProgressBars";
 import D3WordCloud from "@/components/Chart/D3WordCloud";
 import GlobalBarChart from "@/components/Chart/GlobalBarChart";
-import QuickFromAnswerView from "@/components/Liveui/QuickFromAnswerView";
+import QuickFormAnswerView from "@/components/Liveui/QuickFormAnswerView";
 import QuickShortAndLongAnswer from "@/components/Liveui/QuickShortAndLongAnswer";
 import { AllScalesChart } from "../Chart/AllScalesChart";
 
@@ -358,7 +358,7 @@ function ChartPanel({ sub }: { sub: Submission }) {
 				</div>
 			) : currentView === "quick_form" ? (
 				<div className="">
-					<QuickFromAnswerView
+					<QuickFormAnswerView
 						data={{
 							id: "",
 							time: 120,

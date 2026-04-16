@@ -19,7 +19,7 @@ import Image from "next/image";
 import { getSocket } from "@/socket/quest-socket";
 import { getSocket as quizgetSocket } from "@/socket/socket";
 import DOMPurify from "dompurify";
-import QuickFromCreateorView from "@/components/Liveui/QuickFromCreateorView";
+import QuickFormCreatorView from "@/components/Liveui/QuickFormCreatorView";
 // import { ScalesChart } from "@/components/Chart/ScalesChart";
 import QuickShortAndLongAnswer from "@/components/Liveui/QuickShortAndLongAnswer";
 import { useSelector } from "react-redux";
@@ -533,7 +533,7 @@ export default function HostLiveQuestionView({
 				</div>
 			) : currentView === "quick_form" ? (
 				<div className=" w-[78%] absolute top-50  ">
-					<QuickFromCreateorView quickFromId={currentTask?.id} />
+					<QuickFormCreatorView quickFromId={currentTask?.id} />
 				</div>
 			) : currentView === "shortanswer" ||
 			  currentView === "longanswer" ? (
