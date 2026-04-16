@@ -16,7 +16,7 @@ export type QuestProps = {
 	pagesStatus?: string;
 };
 
-export const QuestComplitedPages: React.FC<QuestProps> = ({ pagesStatus }) => {
+export const QuestCompletedPages: React.FC<QuestProps> = ({ pagesStatus }) => {
 	const dispatch = useDispatch();
 	console.log(pagesStatus);
 	const searchParams = useSearchParams();
@@ -161,4 +161,4 @@ export const QuestComplitedPages: React.FC<QuestProps> = ({ pagesStatus }) => {
 	);
 };
 
-export default QuestComplitedPages;
+export default QuestCompletedPages;

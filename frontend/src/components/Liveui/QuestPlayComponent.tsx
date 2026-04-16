@@ -26,7 +26,7 @@ import {
 	cacheJoin,
 	// setCurrentQuest,
 } from "@/socket/quest-socket";
-import QuestComplitedPages from "@/components/Dashboard/QuestComplitedPages";
+import QuestCompletedPages from "@/components/Dashboard/QuestCompletedPages";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
@@ -427,7 +427,7 @@ const TaskNavigator: React.FC<NavigatorProps> = ({ tasks }) => {
 			</div>
 
 			{liderBoardShow ? (
-				<QuestComplitedPages pagesStatus={"user"} />
+				<QuestCompletedPages pagesStatus={"user"} />
 			) : (
 				<>
 					{currentQuestion && (

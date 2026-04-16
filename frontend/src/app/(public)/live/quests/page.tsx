@@ -17,7 +17,7 @@ import {
 	// setCurrentQsentId,
 	forceEndLive,
 } from "@/stores/features/leaderboardSlice";
-import QuestComplitedPages from "@/components/Dashboard/QuestComplitedPages";
+import QuestCompletedPages from "@/components/Dashboard/QuestCompletedPages";
 import { AxiosError } from "axios";
 import { useSearchParams } from "next/navigation";
 
@@ -765,7 +765,7 @@ export default function LiveQuiz() {
 				</div>
 			)}
 			{showLeaderboard ? (
-				<QuestComplitedPages pagesStatus={"creator"} />
+				<QuestCompletedPages pagesStatus={"creator"} />
 			) : viewModel ? (
 				<HostLiveQuestionView
 					currentView={viewModel.currentView}
