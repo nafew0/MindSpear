@@ -7,7 +7,7 @@ import { Tooltip } from "antd";
 import { AiOutlineQuestion } from "react-icons/ai";
 import { Search, BookOpen, AlertTriangle } from "lucide-react";
 import { toast } from "react-toastify";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 import SelectedQuizList from "./selected-quiz-list";
 import { useParams } from "next/navigation";
 import {
@@ -255,7 +255,7 @@ const QuestionBankModal: React.FC<QuestionBankModalProps> = ({
 	};
 
 	return (
-		<GlobalModal
+		<Modal
 			title="Import Questions from Bank"
 			open={isOpen}
 			onClose={handleClose}
@@ -423,7 +423,7 @@ const QuestionBankModal: React.FC<QuestionBankModalProps> = ({
 					</div>
 				)}
 			</div>
-		</GlobalModal>
+		</Modal>
 	);
 };
 

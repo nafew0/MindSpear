@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 import { MdDataSaverOn, MdError } from "react-icons/md";
 import Image from "next/image";
 import { useParams, useRouter, usePathname } from "next/navigation";
@@ -361,7 +361,7 @@ function SurveySave() {
 			)}
 
 			{/* Confirmation Modal - Only shows when validation passes */}
-			<GlobalModal
+			<Modal
 				title={""}
 				open={isModalOpen}
 				onClose={() => setIsModalOpen(false)}
@@ -392,7 +392,7 @@ function SurveySave() {
 						{isQuizEdit ? "Update" : "Submit"}{" "}
 					</button>
 				</div>
-			</GlobalModal>
+			</Modal>
 		</div>
 	);
 }

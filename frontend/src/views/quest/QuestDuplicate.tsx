@@ -54,7 +54,7 @@ function QuestDuplicate({ data }: any) {
 				Duplicate{" "}
 			</button>
 
-			{/* <GlobalModal
+			{/* <Modal
 				title="Duplicate Quest"
 				open={isModalStatus}
 				onClose={() => setIsModalStatus(false)}
@@ -86,7 +86,7 @@ function QuestDuplicate({ data }: any) {
 						Submit{" "}
 					</button>
 				</div>
-			</GlobalModal> */}
+			</Modal> */}
 		</div>
 	);
 }

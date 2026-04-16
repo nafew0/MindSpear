@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 import {
 	//   CallIcon,
 	PencilSquareIcon,
@@ -167,7 +167,7 @@ function QuizeSetting({ defailtValueUse }: QuizeSettingProps) {
 					Quiz Title
 				</button>
 			</div>
-			<GlobalModal
+			<Modal
 				title="MindSpear Setting"
 				open={isModalOpen}
 				onClose={() => setIsModalOpen(false)}
@@ -288,7 +288,7 @@ function QuizeSetting({ defailtValueUse }: QuizeSettingProps) {
 						</div>
 					</form>
 				</div>
-			</GlobalModal>
+			</Modal>
 		</div>
 	);
 }

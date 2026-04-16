@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import GlobalModal from "./globalModal";
+import { Modal } from "@/components/ui";
 
 interface Props {
 	url: string;
@@ -67,7 +67,7 @@ const QRCodeGenerator: React.FC<Props> = ({ url }) => {
 				</button>
 			</div>
 
-			<GlobalModal
+			<Modal
 				title=""
 				open={isModalOpen}
 				onClose={() => setIsModalOpen(false)}
@@ -81,7 +81,7 @@ const QRCodeGenerator: React.FC<Props> = ({ url }) => {
 						level="H"
 					/>
 				</div>
-			</GlobalModal>
+			</Modal>
 		</div>
 	);
 };

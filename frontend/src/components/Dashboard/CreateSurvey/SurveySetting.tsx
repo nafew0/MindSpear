@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 import { PencilSquareIcon, UserIcon } from "@/assets/icons";
 import InputGroup from "@/components/FormElements/InputGroup";
 import { TextAreaGroup } from "@/components/FormElements/InputGroup/text-area";
@@ -179,7 +179,7 @@ function SurveySetting({ defailtValueUse }: QuizeSettingProps) {
 					Survey Title
 				</button>
 			</div>
-			<GlobalModal
+			<Modal
 				title="MindSpear Setting"
 				open={isModalOpen}
 				onClose={() => setIsModalOpen(false)}
@@ -337,7 +337,7 @@ function SurveySetting({ defailtValueUse }: QuizeSettingProps) {
 						</div>
 					</form>
 				</div>
-			</GlobalModal>
+			</Modal>
 		</div>
 	);
 }

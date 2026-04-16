@@ -6,7 +6,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { mainTemplates, allTemplateCategories } from "@/constants/templates";
 import { TemplateCard } from "./TemplateCard";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 import StylableInput from "@/lib/StylableInput";
 
 // interface TemplateSelectorProps {
@@ -58,7 +58,7 @@ export function TemplateSelector({ onTemplateSelect }: any) {
 			</div>
 
 			{/* All Templates Modal */}
-			<GlobalModal
+			<Modal
 				title="Choose a Template"
 				open={templateModalOpen}
 				onClose={() => setTemplateModalOpen(false)}
@@ -91,7 +91,7 @@ export function TemplateSelector({ onTemplateSelect }: any) {
 						))}
 					</div>
 				</div>
-			</GlobalModal>
+			</Modal>
 		</div>
 	);
 }

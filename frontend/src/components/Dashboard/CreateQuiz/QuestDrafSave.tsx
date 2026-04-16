@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 import { MdDataSaverOn, MdError } from "react-icons/md";
 import Image from "next/image";
 import { useParams, usePathname } from "next/navigation";
@@ -230,7 +230,7 @@ function QuestDrafSave() {
 			)}
 
 			{/* isFormValid */}
-			<GlobalModal
+			<Modal
 				// title={`${
 				// 	isFormValid
 				// 		? "This Eduquize be played"
@@ -397,7 +397,7 @@ function QuestDrafSave() {
 						</button>
 					)}
 				</div>
-			</GlobalModal>
+			</Modal>
 		</div>
 	);
 }

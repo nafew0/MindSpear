@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 // import { QuizItem, FinalData, TransformedQuestion } from '@/types/types';
 import { MdDataSaverOn, MdError } from "react-icons/md";
 import Image from "next/image";
@@ -191,7 +191,7 @@ function QuizeSave() {
 			)}
 
 			{/* isFormValid */}
-			<GlobalModal
+			<Modal
 				// title={`${
 				// 	isFormValid
 				// 		? "This Eduquize be played"
@@ -359,7 +359,7 @@ function QuizeSave() {
 						</button>
 					)}
 				</div>
-			</GlobalModal>
+			</Modal>
 		</div>
 	);
 }

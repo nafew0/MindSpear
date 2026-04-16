@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import { SiKdenlive } from "react-icons/si";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 import Image from "next/image";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -234,7 +234,7 @@ const HostLater: React.FC = () => {
 				</div>
 			</div>
 
-			<GlobalModal
+			<Modal
 				title=""
 				open={isModalOpen}
 				onClose={() => setIsModalOpen(false)}
@@ -494,7 +494,7 @@ const HostLater: React.FC = () => {
 						</div>
 					</div>
 				</form>
-			</GlobalModal>
+			</Modal>
 		</div>
 	);
 };

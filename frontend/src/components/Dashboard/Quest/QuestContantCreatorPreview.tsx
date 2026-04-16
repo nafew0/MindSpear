@@ -19,7 +19,7 @@ import {
 } from "@/stores/features/quizItems/quizSlice";
 import { Trash2 } from "lucide-react";
 import { TemplateCard } from "@/components/editor/TemplateCard";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 import { ContentEditor } from "@/components/editor/ContentEditor";
 // import { ContentBlockComponent } from "@/components/editor/ContentBlock";
 
@@ -398,7 +398,7 @@ const QuestContantCreatorPreview: React.FC<{ id: string }> = ({ id }) => {
 				/>
 			</div>
 
-			<GlobalModal
+			<Modal
 				title="Choose a Template"
 				open={templateModalOpen}
 				onClose={() => setTemplateModalOpen(false)}
@@ -436,7 +436,7 @@ const QuestContantCreatorPreview: React.FC<{ id: string }> = ({ id }) => {
 						)}
 					</div>
 				</div>
-			</GlobalModal>
+			</Modal>
 		</div>
 	);
 };

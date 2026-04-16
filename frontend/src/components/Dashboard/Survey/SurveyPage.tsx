@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Plus, Loader2, Edit2 } from "lucide-react";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 import { toast } from "react-toastify";
 import { useSurvey } from "@/contexts/SurveyContext";
 import { SurveyPage as SurveyPageType } from "@/types/surveyTypes";
@@ -262,7 +262,7 @@ const SurveyPage: React.FC<SurveyPageProps> = ({ onPageUpdated }) => {
 			)}
 
 			{/* Add/Edit Page Modal */}
-			<GlobalModal
+			<Modal
 				title={isEditingPage ? "Edit Page" : "Add New Page"}
 				open={isAddingPage || isEditingPage}
 				onClose={() => {
@@ -345,7 +345,7 @@ const SurveyPage: React.FC<SurveyPageProps> = ({ onPageUpdated }) => {
 						</button>
 					</div>
 				</div>
-			</GlobalModal>
+			</Modal>
 		</div>
 	);
 };

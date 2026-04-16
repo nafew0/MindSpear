@@ -13,7 +13,7 @@ import {
 	setSuccess
 } from "@/stores/features/questionBank/questionBankSlice";
 import axiosInstance from "@/utils/axiosInstance";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
 import { QuizItem } from "@/types/types";
@@ -286,7 +286,7 @@ const AddQuestionToBankModal: React.FC<AddQuestionToBankModalProps> = ({
 	}, [dispatch]);
 
 	return (
-		<GlobalModal open={open} onClose={onClose} title="Add Question to Bank">
+		<Modal open={open} onClose={onClose} title="Add Question to Bank">
 			{/* Display quiz data */}
 			{questionData && (
 				<section>
@@ -553,7 +553,7 @@ const AddQuestionToBankModal: React.FC<AddQuestionToBankModalProps> = ({
 					</div>
 				</form>
 			)}
-		</GlobalModal>
+		</Modal>
 	);
 };
 

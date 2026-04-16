@@ -7,7 +7,7 @@ import { Folder, AlertTriangle, CheckCircle, X, Search, Eye, Edit3, Trash2, Chev
 import Image from "next/image";
 import Swal from "sweetalert2";
 import GlobalPagination from "@/components/GlobalPagination";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 import axiosInstance from "@/utils/axiosInstance";
 import { toast } from "react-toastify";
 
@@ -622,7 +622,7 @@ export default function MyQuestionBank() {
 			)}
 
 			{/* Question Detail Modal */}
-			<GlobalModal
+			<Modal
 				title="Question Details"
 				open={isDetailModalOpen}
 				onClose={() => setIsDetailModalOpen(false)}
@@ -753,7 +753,7 @@ export default function MyQuestionBank() {
 						</div>
 					</div>
 				) : null}
-			</GlobalModal>
+			</Modal>
 		</section>
 	);
 }

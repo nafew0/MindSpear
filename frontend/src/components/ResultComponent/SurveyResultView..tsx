@@ -7,7 +7,7 @@ import { FaRegFileWord, FaFileExcel } from "react-icons/fa";
 import moment from "moment-timezone";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
-import GlobalBigModal from "../globalBigModal";
+import { Modal } from "@/components/ui";
 // import AllQuestResult from "./AllQuestResult";
 import {
     BarChart3,
@@ -684,7 +684,7 @@ function QuizQuestionsResultView({ list }: any) {
             )}
 
             {/* Analytics Modal */}
-            <GlobalBigModal
+            <Modal size="xl"
                 title="Session Analytics Dashboard"
                 open={isModalStatus}
                 onClose={() => setIsModalStatus(false)}
@@ -696,7 +696,7 @@ function QuizQuestionsResultView({ list }: any) {
                         sessionData={resultShowAttemId}
                     />
                 </div>
-            </GlobalBigModal>
+            </Modal>
         </div>
     );
 }

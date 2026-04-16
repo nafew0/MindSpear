@@ -25,7 +25,7 @@ import Image from "next/image";
 import Swal from "sweetalert2";
 import Select from "react-select";
 import GlobalPagination from "@/components/GlobalPagination";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 import axiosInstance from "@/utils/axiosInstance";
 
 // Define interfaces for the new data structure (same as in MyQuestionBank)
@@ -812,7 +812,7 @@ export default function PublicQuestionBank() {
 			)}
 
 			{/* Question Detail Modal */}
-			<GlobalModal
+			<Modal
 				title="Question Details"
 				open={isDetailModalOpen}
 				onClose={() => setIsDetailModalOpen(false)}
@@ -977,7 +977,7 @@ export default function PublicQuestionBank() {
 						</div>
 					</div>
 				) : null}
-			</GlobalModal>
+			</Modal>
 		</section>
 	);
 }

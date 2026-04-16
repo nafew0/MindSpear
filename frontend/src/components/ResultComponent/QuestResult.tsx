@@ -6,7 +6,7 @@ import { AxiosError } from "axios";
 import React, { useEffect, useState } from "react";
 import { FaUser } from "react-icons/fa6";
 import ResultShowModal from "./ResultShowModal";
-import GlobalBigModal from "../globalBigModal";
+import { Modal } from "@/components/ui";
 import { Skeleton } from "antd";
 import { toast } from "react-toastify";
 // import moment from "moment";
@@ -154,13 +154,13 @@ function QuestResult() {
 				</div>
 			)}
 
-			<GlobalBigModal
+			<Modal size="xl"
 				title={`${activeUser} - Answer`}
 				open={isModalStatus}
 				onClose={() => setIsModalStatus(false)}
 			>
 				<ResultShowModal attemId={resultShowAttemId} />
-			</GlobalBigModal>
+			</Modal>
 		</div>
 	);
 }

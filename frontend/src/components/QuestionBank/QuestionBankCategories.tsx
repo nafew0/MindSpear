@@ -15,7 +15,7 @@ import {
 	Folder,
 	ListTree,
 } from "lucide-react";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 
 interface QuestionBankCategoriesProps {
 	categories: APICategory[];
@@ -166,7 +166,7 @@ const CategoryModal = ({
 	};
 
 	return (
-		<GlobalModal open={isOpen} onClose={onClose} title={title}>
+		<Modal open={isOpen} onClose={onClose} title={title}>
 			<form onSubmit={handleSubmit} className="space-y-4">
 				{error && (
 					<div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg text-sm flex items-center gap-2">
@@ -380,7 +380,7 @@ const CategoryModal = ({
 					</button>
 				</div>
 			</form>
-		</GlobalModal>
+		</Modal>
 	);
 };
 

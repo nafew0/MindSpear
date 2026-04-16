@@ -9,7 +9,7 @@ import { FaChartPie } from "react-icons/fa";
 
 import { MdDonutSmall } from "react-icons/md";
 import { cn } from "@/lib/utils";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/stores/store";
@@ -73,7 +73,7 @@ function HostLiveLeftSideBar({ onChartTypeChange }: HostLiveLeftSideBarProps) {
 						/>
 					</Tooltip>
 
-					<GlobalModal
+					<Modal
 						title="Result Setting"
 						open={isModalStatus}
 						onClose={() => setIsModalStatus(false)}
@@ -116,7 +116,7 @@ function HostLiveLeftSideBar({ onChartTypeChange }: HostLiveLeftSideBarProps) {
 								))}
 							</div>
 						</div>
-					</GlobalModal>
+					</Modal>
 				</div>
 
 				<div className="!relative mt-2">

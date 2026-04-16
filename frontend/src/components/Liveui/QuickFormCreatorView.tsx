@@ -3,7 +3,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { FaUser } from "react-icons/fa6";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 import QuickFormAnswerView from "./QuickFormAnswerView";
 import {
 	getSocket,
@@ -155,7 +155,7 @@ function QuickFormCreatorView({ quickFromId }: any) {
 				})}
 			</div>
 
-			<GlobalModal
+			<Modal
 				title={active ? `${active.user_name} — Answers` : "Result"}
 				open={isModalStatus}
 				onClose={() => setIsModalStatus(false)}
@@ -167,7 +167,7 @@ function QuickFormCreatorView({ quickFromId }: any) {
 						<QuickFormAnswerView data={active} />
 					</div>
 				)}
-			</GlobalModal>
+			</Modal>
 		</div>
 	);
 }

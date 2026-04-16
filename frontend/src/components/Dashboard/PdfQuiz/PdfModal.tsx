@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from "react";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 import FileUploadModal from "@/views/dashboard/quiz/FileUploadModal";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/stores/store";
@@ -216,7 +216,7 @@ export default function PdfModal({
 
 	return (
 		<>
-			<GlobalModal
+			<Modal
 				title="Upload Document"
 				open={isUploadModalOpen}
 				onClose={() => {
@@ -225,7 +225,7 @@ export default function PdfModal({
 				}}
 			>
 				<FileUploadModal onFileUpload={handleFileUpload} />
-			</GlobalModal>
+			</Modal>
 			{uploading && (
 				<div className="fixed inset-0 z_index__1000 bg-black bg-opacity-50 flex items-center justify-center">
 					<div className="bg-white px-8 py-6 rounded-lg shadow-xl">
@@ -234,13 +234,13 @@ export default function PdfModal({
 				</div>
 			)}
 
-			<GlobalModal
+			<Modal
 				title="Select Pages to Generate Quiz"
 				open={isPageSelectorOpen}
 				onClose={() => setIsPageSelectorOpen(false)}
 			>
 				<PageSelector pages={pages} onGenerate={handleGenerate} />
-			</GlobalModal>
+			</Modal>
 			{loading && (
 				<div className="fixed w-full h-full inset-0 bg-white z-[1000] flex items-center justify-center rounded">
 					<GeneratingLoader />

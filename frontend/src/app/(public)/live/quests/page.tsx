@@ -46,7 +46,7 @@ import {
 } from "@/socket/quest-socket";
 import moment from "moment";
 import { setQuestData } from "@/stores/features/questQuestionTimeSlice";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 
 type Task = {
 	[x: string]: any;
@@ -809,7 +809,7 @@ export default function LiveQuiz() {
 					)}
 				</>
 			)}
-			<GlobalModal
+			<Modal
 				title="End Live Session"
 				open={endModalOpen}
 				onClose={() => setEndModalOpen(false)}
@@ -849,7 +849,7 @@ export default function LiveQuiz() {
 						</button>
 					</div>
 				</div>
-			</GlobalModal>
+			</Modal>
 		</div>
 	);
 }

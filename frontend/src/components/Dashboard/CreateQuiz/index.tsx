@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 import { FaPlus } from "react-icons/fa6";
 import { ImFilesEmpty } from "react-icons/im";
 import classNames from "classnames";
@@ -199,7 +199,7 @@ function CreateQuiz() {
 				</div>
 			</div>
 
-			<GlobalModal
+			<Modal
 				title="Create a new quiz"
 				open={isModalOpen}
 				onClose={() => setIsModalOpen(false)}
@@ -273,7 +273,7 @@ function CreateQuiz() {
 						</div>
 					</div>
 				</div>
-			</GlobalModal>
+			</Modal>
 		</div>
 	);
 }

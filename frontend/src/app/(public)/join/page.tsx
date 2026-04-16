@@ -6,7 +6,7 @@ import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
 import moment from "moment";
 import { useRouter } from "next/navigation";
-import GlobalModal from "@/components/globalModal";
+import { Modal } from "@/components/ui";
 import { toast } from "react-toastify";
 
 function JoinPage() {
@@ -90,7 +90,7 @@ function JoinPage() {
 
   return (
     <div className="h-screen quiz_play_bg">
-      <GlobalModal title="Enter Join Code" open={isModalStatus} width={400} onClose={handleClose}>
+      <Modal title="Enter Join Code" open={isModalStatus} width={400} onClose={handleClose}>
         <div className="flex flex-col items-center">
           <Image src={"/images/logo/logo.svg"} alt="Logo" width={176} height={32} />
           <div className="bg-[#fff] p-[15px] w-full md:w-[320px] rounded-[10px] mt-[20px]">
@@ -113,7 +113,7 @@ function JoinPage() {
             </button>
           </div>
         </div>
-      </GlobalModal>
+      </Modal>
     </div>
   );
 }

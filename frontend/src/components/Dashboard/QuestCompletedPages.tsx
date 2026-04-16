@@ -8,7 +8,7 @@ import Leaderboard from "./Leaderboard";
 import { clearAppStorage } from "@/utils/storageCleaner";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/stores/store";
-import GlobalBigModal from "../globalBigModal";
+import { Modal } from "@/components/ui";
 import AllQuestResult from "../ResultComponent/AllQuestResult";
 import { clearCache } from "@/stores/features/leaderboardSlice";
 import useLatestQuestSession from "@/hooks/useLatestQuestSession";
@@ -149,14 +149,14 @@ export const QuestCompletedPages: React.FC<QuestProps> = ({ pagesStatus }) => {
 				</div>
 			)}
 
-			<GlobalBigModal
+			<Modal size="xl"
 				// title="Session Results - Aggregated Analytics"
 				title={"Session Results - Aggregated Analytics"}
 				open={isModalStatus}
 				onClose={() => setIsModalStatus(false)}
 			>
 				<AllQuestResult attemId={resultShowAttemId} />
-			</GlobalBigModal>
+			</Modal>
 		</div>
 	);
 };
