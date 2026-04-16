@@ -10,6 +10,9 @@ class QuizSession extends Model
         'quiz_id',
         'title',
         'running_status',
+        'public_channel_key',
+        'current_question_id',
+        'timer_state',
         'session_id',
         'start_datetime',
         'end_datetime',
@@ -23,6 +26,7 @@ class QuizSession extends Model
 
     protected $casts = [
         'running_status' => 'boolean',
+        'timer_state' => 'array',
         'start_datetime' => 'datetime',
         'end_datetime' => 'datetime',
         'is_host_live' => 'boolean',
@@ -37,6 +41,11 @@ class QuizSession extends Model
     public function participants()
     {
         return $this->hasMany(QuizParticipant::class);
+    }
+
+    public function currentQuestion()
+    {
+        return $this->belongsTo(Question::class, 'current_question_id');
     }
 
     // Accessor and Query Scopes

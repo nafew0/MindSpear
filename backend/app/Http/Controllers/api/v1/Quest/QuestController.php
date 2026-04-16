@@ -11,6 +11,8 @@ use App\Http\Requests\Quest\Quest\StoreRequest;
 use App\Http\Requests\Quest\Quest\UpdateRequest;
 use App\Models\Quest\Quest;
 use App\Models\Quest\QuestSession;
+use App\Services\Live\LiveSessionService;
+use App\Services\Live\ParticipantTokenService;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
@@ -39,6 +41,7 @@ class QuestController extends ApiBaseController
 
         return null;
     }
+
     /**
      * Display a listing of the resource.
      */
@@ -409,6 +412,7 @@ class QuestController extends ApiBaseController
 
             if ($runningSession) {
                 $quest->update(['status' => Quest::STATUS_RUNNING]);
+                app(LiveSessionService::class)->ensurePublicChannelKey($runningSession);
 
                 return $this->okResponse(
                     ['quest' => $quest, 'questSession' => $runningSession],
@@ -439,9 +443,22 @@ class QuestController extends ApiBaseController
                 ]);
             }
 
+            $liveSessions = app(LiveSessionService::class);
+            $liveSessions->ensurePublicChannelKey($questSession);
+
             $quest->update([
                 'status' => $questSession->running_status ? Quest::STATUS_RUNNING : Quest::STATUS_INITIATED,
             ]);
+
+            $payload = [
+                'session_id' => $questSession->id,
+                'public_channel_key' => $questSession->public_channel_key,
+                'public_channel' => $liveSessions->publicChannel(LiveSessionService::MODULE_QUEST, $questSession->public_channel_key),
+                'running_status' => (bool) $questSession->running_status,
+            ];
+
+            $liveSessions->broadcastPublic(LiveSessionService::MODULE_QUEST, $questSession, 'session.started', $payload);
+            $liveSessions->broadcastHost(LiveSessionService::MODULE_QUEST, $questSession, 'session.started', $payload);
 
             return $this->okResponse(['quest' => $quest, 'questSession' => $questSession], __('Quest session started successfully.'));
         } catch (Exception $e) {
@@ -504,6 +521,18 @@ class QuestController extends ApiBaseController
                 'status' => Quest::STATUS_ENDED,
             ]);
 
+            app(ParticipantTokenService::class)->revokeForSession(LiveSessionService::MODULE_QUEST, $questSession->id);
+            app(LiveSessionService::class)->broadcastPublic(LiveSessionService::MODULE_QUEST, $questSession, 'session.ended', [
+                'session_id' => $questSession->id,
+                'running_status' => false,
+                'end_datetime' => optional($questSession->end_datetime)->toISOString(),
+            ]);
+            app(LiveSessionService::class)->broadcastHost(LiveSessionService::MODULE_QUEST, $questSession, 'session.ended', [
+                'session_id' => $questSession->id,
+                'running_status' => false,
+                'end_datetime' => optional($questSession->end_datetime)->toISOString(),
+            ]);
+
             return $this->okResponse(['questSession' => $questSession], __('Quest session ended successfully.'));
         } catch (Exception $e) {
             Log::error('Error ending quest session: ' . $e->getMessage(), [
@@ -538,6 +567,16 @@ class QuestController extends ApiBaseController
 
         $questSession->quest->update([
             'status' => $validatedData['running_status'] ? Quest::STATUS_RUNNING : Quest::STATUS_INITIATED,
+        ]);
+
+        $eventName = $validatedData['running_status'] ? 'session.resumed' : 'session.paused';
+        app(LiveSessionService::class)->broadcastPublic(LiveSessionService::MODULE_QUEST, $questSession, $eventName, [
+            'session_id' => $questSession->id,
+            'running_status' => (bool) $validatedData['running_status'],
+        ]);
+        app(LiveSessionService::class)->broadcastHost(LiveSessionService::MODULE_QUEST, $questSession, $eventName, [
+            'session_id' => $questSession->id,
+            'running_status' => (bool) $validatedData['running_status'],
         ]);
 
         return $this->okResponse(['questSession' => $questSession], __('Quest session status updated successfully.'));

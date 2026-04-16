@@ -16,6 +16,8 @@ use App\Http\Requests\Quiz\Quiz\UpdateRequest;
 use App\Models\Quiz\Quiz;
 use App\Models\Quiz\QuizSession;
 use App\Models\Quiz\BankQuestion as QuizBankQuestion;
+use App\Services\Live\LiveSessionService;
+use App\Services\Live\ParticipantTokenService;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
@@ -44,6 +46,7 @@ class QuizController extends ApiBaseController
 
         return null;
     }
+
     /**
      * Display a listing of the quizes.
      */
@@ -414,6 +417,19 @@ class QuizController extends ApiBaseController
                 ]);
             }
 
+            $liveSessions = app(LiveSessionService::class);
+            $liveSessions->ensurePublicChannelKey($quizSession);
+
+            $payload = [
+                'session_id' => $quizSession->id,
+                'public_channel_key' => $quizSession->public_channel_key,
+                'public_channel' => $liveSessions->publicChannel(LiveSessionService::MODULE_QUIZ, $quizSession->public_channel_key),
+                'running_status' => (bool) $quizSession->running_status,
+            ];
+
+            $liveSessions->broadcastPublic(LiveSessionService::MODULE_QUIZ, $quizSession, 'session.started', $payload);
+            $liveSessions->broadcastHost(LiveSessionService::MODULE_QUIZ, $quizSession, 'session.started', $payload);
+
             return $this->okResponse(['quiz' => $quiz, 'quizSession' => $quizSession], __('Quiz session started successfully.'));
         } catch (Exception $e) {
             Log::error('Error hosting quiz session: ' . $e->getMessage(), [
@@ -475,6 +491,18 @@ class QuizController extends ApiBaseController
                 'join_code' => null,
             ]);
 
+            app(ParticipantTokenService::class)->revokeForSession(LiveSessionService::MODULE_QUIZ, $quizSession->id);
+            app(LiveSessionService::class)->broadcastPublic(LiveSessionService::MODULE_QUIZ, $quizSession, 'session.ended', [
+                'session_id' => $quizSession->id,
+                'running_status' => false,
+                'end_datetime' => optional($quizSession->end_datetime)->toISOString(),
+            ]);
+            app(LiveSessionService::class)->broadcastHost(LiveSessionService::MODULE_QUIZ, $quizSession, 'session.ended', [
+                'session_id' => $quizSession->id,
+                'running_status' => false,
+                'end_datetime' => optional($quizSession->end_datetime)->toISOString(),
+            ]);
+
             return $this->okResponse(['quizSession' => $quizSession], __('Quiz session ended successfully.'));
         } catch (Exception $e) {
             Log::error('Error ending quiz session: ' . $e->getMessage(), [
@@ -505,6 +533,16 @@ class QuizController extends ApiBaseController
         // Update the status of the existing session
         $quizSession->update([
             'running_status' => $validatedData['running_status'],
+        ]);
+
+        $eventName = $validatedData['running_status'] ? 'session.resumed' : 'session.paused';
+        app(LiveSessionService::class)->broadcastPublic(LiveSessionService::MODULE_QUIZ, $quizSession, $eventName, [
+            'session_id' => $quizSession->id,
+            'running_status' => (bool) $validatedData['running_status'],
+        ]);
+        app(LiveSessionService::class)->broadcastHost(LiveSessionService::MODULE_QUIZ, $quizSession, $eventName, [
+            'session_id' => $quizSession->id,
+            'running_status' => (bool) $validatedData['running_status'],
         ]);
 
         return $this->okResponse(['quizSession' => $quizSession], __('Quiz session status updated successfully.'));

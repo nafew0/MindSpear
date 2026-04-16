@@ -10,6 +10,9 @@ class QuestSession extends Model
         'quest_id',
         'title',
         'running_status',
+        'public_channel_key',
+        'current_task_id',
+        'timer_state',
         'session_id',
         'start_datetime',
         'end_datetime',
@@ -18,6 +21,7 @@ class QuestSession extends Model
 
     protected $casts = [
         'running_status' => 'boolean',
+        'timer_state' => 'array',
         'start_datetime' => 'datetime',
         'end_datetime' => 'datetime',
     ];
@@ -30,6 +34,11 @@ class QuestSession extends Model
     public function participants()
     {
         return $this->hasMany(QuestParticipant::class);
+    }
+
+    public function currentTask()
+    {
+        return $this->belongsTo(QuestTask::class, 'current_task_id');
     }
 
     public function scopeIsActive($query)

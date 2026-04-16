@@ -35,7 +35,7 @@ class StartAttemptRequest extends BaseFormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'user_id' => Auth::guard('api')->user()->id,
+            'user_id' => Auth::guard('api')->id(),
         ]);
     }
 

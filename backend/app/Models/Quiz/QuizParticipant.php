@@ -13,6 +13,9 @@ class QuizParticipant extends Model
         'quiz_session_id',
         'is_anonymous',
         'anonymous_details',
+        'participant_token_hash',
+        'participant_token_expires_at',
+        'participant_token_revoked_at',
         'start_time',
         'end_time',
         'score',
@@ -22,6 +25,8 @@ class QuizParticipant extends Model
     protected $casts = [
         'is_anonymous' => 'boolean',
         'anonymous_details' => 'array',
+        'participant_token_expires_at' => 'datetime',
+        'participant_token_revoked_at' => 'datetime',
         'start_time' => 'datetime',
         'end_time' => 'datetime',
         'score' => 'integer',
@@ -29,6 +34,12 @@ class QuizParticipant extends Model
     ];
 
     protected $appends = ['total_score'];
+
+    protected $hidden = [
+        'participant_token_hash',
+        'participant_token_expires_at',
+        'participant_token_revoked_at',
+    ];
 
     public function quiz()
     {

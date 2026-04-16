@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\api\v1\Quest\QuestController;
+use App\Http\Controllers\api\v1\Live\LiveSessionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -24,6 +25,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('start-by-admin/{joinLink}', [QuestController::class, 'getQuestDetailsByJoinLink'])->name('quests.details.start.by.admin');
     });
+});
+
+Route::middleware('auth:sanctum')->prefix('quest-sessions')->group(function () {
+    Route::get('/{sessionId}/state', [LiveSessionController::class, 'questState'])->name('quest.sessions.state');
+    Route::post('/{sessionId}/change-task', [LiveSessionController::class, 'changeQuestTask'])->name('quest.sessions.change.task');
 });
 
 Route::middleware('auth:sanctum')->prefix('quests-public')->group(function () {

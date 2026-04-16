@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\api\v1\Quiz\QuizController;
+use App\Http\Controllers\api\v1\Live\LiveSessionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -29,6 +30,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/status-host-later/{id}', [QuizController::class, 'statusLater'])->name('quiz.status.host.later');
         Route::get('host-later-check/{userId}', [QuizController::class, 'checkHostLater'])->name('quiz.check.host.later');
     });
+});
+
+Route::middleware('auth:sanctum')->prefix('quiz-sessions')->group(function () {
+    Route::get('/{sessionId}/state', [LiveSessionController::class, 'quizState'])->name('quiz.sessions.state');
+    Route::post('/{sessionId}/change-question', [LiveSessionController::class, 'changeQuizQuestion'])->name('quiz.sessions.change.question');
 });
 
 Route::middleware('auth:sanctum')->prefix('quizes-public')->group(function () {

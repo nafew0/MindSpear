@@ -17,6 +17,9 @@ use App\Models\Quiz\Quiz;
 use App\Models\Quiz\QuizParticipant;
 use App\Models\Quiz\QuizSession;
 use App\Models\Quiz\UserQuizAnswer;
+use App\Services\Live\LiveAggregateService;
+use App\Services\Live\LiveSessionService;
+use App\Services\Live\ParticipantTokenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -81,10 +84,20 @@ class QuizAttemptController extends ApiBaseController
                 'status' => 'In Progress',
             ]);
 
+            $participantToken = app(ParticipantTokenService::class)->issue($attempt, $existingSession);
+            $liveSessions = app(LiveSessionService::class);
+            $liveSessions->ensurePublicChannelKey($existingSession);
+            $liveSessions->broadcastParticipantJoined(LiveSessionService::MODULE_QUIZ, $existingSession, (int) $attempt->id);
+
             DB::commit();
 
             return $this->okResponse(
-                ['attempt' => $attempt->load(['quiz', 'user'])],
+                [
+                    'attempt' => app(ParticipantTokenService::class)->sanitizeParticipant($attempt->load(['quiz', 'user'])),
+                    'participant_token' => $participantToken,
+                    'public_channel_key' => $existingSession->public_channel_key,
+                    'public_channel' => $liveSessions->publicChannel(LiveSessionService::MODULE_QUIZ, $existingSession->public_channel_key),
+                ],
                 __('Quiz attempt started successfully')
             );
         } catch (\Exception $e) {
@@ -133,6 +146,12 @@ class QuizAttemptController extends ApiBaseController
 
             if (strtolower($attempt->status) !== 'in progress') {
                 return $this->badRequestResponse([], __('This quiz attempt is no longer active'));
+            }
+
+            if (! app(ParticipantTokenService::class)->validateRequest($request, $attempt)) {
+                DB::rollBack();
+
+                return $this->unauthorizedResponse([], __('Invalid or expired participant token.'));
             }
 
             // Ensure answer_data is always an associative array (column is non-null JSON)
@@ -187,6 +206,23 @@ class QuizAttemptController extends ApiBaseController
                 ]);
             } else {
                 $data = $answerData;
+            }
+
+            if ($attempt->quiz_session_id) {
+                $session = $attempt->quizSession;
+
+                if ($session) {
+                    app(LiveSessionService::class)->broadcastHost(LiveSessionService::MODULE_QUIZ, $session, 'answer.submitted', [
+                        'session_id' => $attempt->quiz_session_id,
+                        'participant_id' => $attempt->id,
+                        'question_id' => (int) $validated['question_id'],
+                    ]);
+                    app(LiveAggregateService::class)->recordAnswer(
+                        LiveSessionService::MODULE_QUIZ,
+                        (int) $attempt->quiz_session_id,
+                        (int) $validated['question_id'],
+                    );
+                }
             }
 
             DB::commit();
@@ -248,12 +284,20 @@ class QuizAttemptController extends ApiBaseController
                 );
             }
 
+            if (! app(ParticipantTokenService::class)->validateRequest($request, $attempt)) {
+                DB::rollBack();
+
+                return $this->unauthorizedResponse([], __('Invalid or expired participant token.'));
+            }
+
             if (strtolower($validated['status']) === 'completed') {
                 $this->completeAttempt($attempt);
             }
 
             $attempt->status = $validated['status'];
             $attempt->save();
+
+            $this->broadcastAttemptStatus($attempt, $validated['status']);
 
             DB::commit();
 
@@ -453,6 +497,10 @@ class QuizAttemptController extends ApiBaseController
             }
 
             $attempt = $this->createNewAttemptQuiz($quizSession->quiz, $quizSession, $userId, $request);
+            $participantToken = app(ParticipantTokenService::class)->issue($attempt, $quizSession);
+            $liveSessions = app(LiveSessionService::class);
+            $liveSessions->ensurePublicChannelKey($quizSession);
+            $liveSessions->broadcastParticipantJoined(LiveSessionService::MODULE_QUIZ, $quizSession, (int) $attempt->id);
 
             DB::commit();
 
@@ -460,7 +508,10 @@ class QuizAttemptController extends ApiBaseController
                 [
                     'quiz' => $quizSession->quiz,
                     'session' => $quizSession,
-                    'attempt' => $attempt,
+                    'attempt' => app(ParticipantTokenService::class)->sanitizeParticipant($attempt),
+                    'participant_token' => $participantToken,
+                    'public_channel_key' => $quizSession->public_channel_key,
+                    'public_channel' => $liveSessions->publicChannel(LiveSessionService::MODULE_QUIZ, $quizSession->public_channel_key),
                 ],
                 __('Quiz attempt started successfully.')
             );
@@ -604,7 +655,14 @@ class QuizAttemptController extends ApiBaseController
             //     __('Quest attempt started successfully.')
             // );
 
-            return $this->okResponse(['quiz' => $quizSession->quiz, 'session' => $quizSession], __('Quiz retrieved successfully.'));
+            app(LiveSessionService::class)->ensurePublicChannelKey($quizSession);
+
+            return $this->okResponse([
+                'quiz' => $quizSession->quiz,
+                'session' => $quizSession,
+                'public_channel_key' => $quizSession->public_channel_key,
+                'public_channel' => app(LiveSessionService::class)->publicChannel(LiveSessionService::MODULE_QUIZ, $quizSession->public_channel_key),
+            ], __('Quiz retrieved successfully.'));
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Quiz join by code failed: ' . $e->getMessage());
@@ -733,6 +791,8 @@ class QuizAttemptController extends ApiBaseController
 
             $attempt->status = $request->status;
             $attempt->save();
+
+            $this->broadcastAttemptStatus($attempt, $request->status);
 
             DB::commit();
 
@@ -1897,5 +1957,42 @@ class QuizAttemptController extends ApiBaseController
             'score' => 0,
             'status' => 'In Progress',
         ]);
+    }
+
+    private function broadcastAttemptStatus(QuizParticipant $attempt, string $status): void
+    {
+        $session = $attempt->quizSession;
+
+        if (! $session) {
+            return;
+        }
+
+        $payload = [
+            'session_id' => $session->id,
+            'participant_id' => $attempt->id,
+            'status' => $attempt->status,
+            'score' => $attempt->score,
+            'ended_at' => optional($attempt->end_time)->toISOString(),
+        ];
+
+        app(LiveSessionService::class)->broadcastHost(
+            LiveSessionService::MODULE_QUIZ,
+            $session,
+            'participant.status.updated',
+            $payload,
+        );
+
+        if (in_array(strtolower($status), ['completed', 'abandoned'], true)) {
+            app(ParticipantTokenService::class)->revokeParticipant($attempt);
+        }
+
+        if (strtolower($status) === 'completed') {
+            app(LiveSessionService::class)->broadcastParticipantCompleted(
+                LiveSessionService::MODULE_QUIZ,
+                $session,
+                $attempt,
+                $payload,
+            );
+        }
     }
 }

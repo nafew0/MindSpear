@@ -17,6 +17,9 @@ use App\Models\Quest\QuestParticipant;
 use App\Models\Quest\QuestSession;
 use App\Models\Quest\QuestTask;
 use App\Models\Quest\QuestTaskCompletion;
+use App\Services\Live\LiveAggregateService;
+use App\Services\Live\LiveSessionService;
+use App\Services\Live\ParticipantTokenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -70,10 +73,20 @@ class QuestAttemptController extends ApiBaseController
                 'status' => 'In Progress',
             ]);
 
+            $participantToken = app(ParticipantTokenService::class)->issue($attempt, $existingSession);
+            $liveSessions = app(LiveSessionService::class);
+            $liveSessions->ensurePublicChannelKey($existingSession);
+            $liveSessions->broadcastParticipantJoined(LiveSessionService::MODULE_QUEST, $existingSession, (int) $attempt->id);
+
             DB::commit();
 
             return $this->okResponse(
-                ['attempt' => $attempt],
+                [
+                    'attempt' => app(ParticipantTokenService::class)->sanitizeParticipant($attempt),
+                    'participant_token' => $participantToken,
+                    'public_channel_key' => $existingSession->public_channel_key,
+                    'public_channel' => $liveSessions->publicChannel(LiveSessionService::MODULE_QUEST, $existingSession->public_channel_key),
+                ],
                 __('Quest attempt started successfully')
             );
         } catch (\Exception $e) {
@@ -103,6 +116,12 @@ class QuestAttemptController extends ApiBaseController
                 return $this->badRequestResponse([], __('This quest attempt is no longer active'));
             }
 
+            if (! app(ParticipantTokenService::class)->validateRequest($request, $attempt)) {
+                DB::rollBack();
+
+                return $this->unauthorizedResponse([], __('Invalid or expired participant token.'));
+            }
+
             // Check prerequisites
             if (! $this->checkPrerequisites($attemptId, $validated['task_id'])) {
                 return $this->badRequestResponse(
@@ -124,6 +143,23 @@ class QuestAttemptController extends ApiBaseController
                     'completed_at' => now(),
                 ]
             );
+
+            if ($attempt->quest_session_id) {
+                $session = $attempt->questSession;
+
+                if ($session) {
+                    app(LiveSessionService::class)->broadcastHost(LiveSessionService::MODULE_QUEST, $session, 'answer.submitted', [
+                        'session_id' => $attempt->quest_session_id,
+                        'participant_id' => $attempt->id,
+                        'task_id' => (int) $validated['task_id'],
+                    ]);
+                    app(LiveAggregateService::class)->recordAnswer(
+                        LiveSessionService::MODULE_QUEST,
+                        (int) $attempt->quest_session_id,
+                        (int) $validated['task_id'],
+                    );
+                }
+            }
 
             DB::commit();
 
@@ -165,13 +201,20 @@ class QuestAttemptController extends ApiBaseController
                 );
             }
 
+            if (! app(ParticipantTokenService::class)->validateRequest($request, $attempt)) {
+                DB::rollBack();
+
+                return $this->unauthorizedResponse([], __('Invalid or expired participant token.'));
+            }
+
             if (strtolower($validated['status']) === 'completed') {
-                // Mark the attempt as completed
-                $attempt->end_time = now();
+                $attempt->end_time = $validated['end_time'] ?? now();
             }
 
             $attempt->status = $validated['status'];
             $attempt->save();
+
+            $this->broadcastAttemptStatus($attempt, $validated['status']);
 
             DB::commit();
 
@@ -369,13 +412,20 @@ class QuestAttemptController extends ApiBaseController
             }
 
             $attempt = $this->createNewAttempt($quest, $userId, $request);
+            $participantToken = app(ParticipantTokenService::class)->issue($attempt, $existingSession);
+            $liveSessions = app(LiveSessionService::class);
+            $liveSessions->ensurePublicChannelKey($existingSession);
+            $liveSessions->broadcastParticipantJoined(LiveSessionService::MODULE_QUEST, $existingSession, (int) $attempt->id);
 
             DB::commit();
 
             return $this->createdResponse(
                 [
                     'quest' => $quest,
-                    'attempt' => $attempt,
+                    'attempt' => app(ParticipantTokenService::class)->sanitizeParticipant($attempt),
+                    'participant_token' => $participantToken,
+                    'public_channel_key' => $existingSession->public_channel_key,
+                    'public_channel' => $liveSessions->publicChannel(LiveSessionService::MODULE_QUEST, $existingSession->public_channel_key),
                 ],
                 __('Quest attempt started successfully.')
             );
@@ -466,7 +516,14 @@ class QuestAttemptController extends ApiBaseController
             //     __('Quest attempt started successfully.')
             // );
 
-            return $this->okResponse(['quest' => $quest, 'session' => $existingSession], __('Quest retrieved successfully.'));
+            app(LiveSessionService::class)->ensurePublicChannelKey($existingSession);
+
+            return $this->okResponse([
+                'quest' => $quest,
+                'session' => $existingSession,
+                'public_channel_key' => $existingSession->public_channel_key,
+                'public_channel' => app(LiveSessionService::class)->publicChannel(LiveSessionService::MODULE_QUEST, $existingSession->public_channel_key),
+            ], __('Quest retrieved successfully.'));
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Quest join by code failed: ' . $e->getMessage());
@@ -527,11 +584,13 @@ class QuestAttemptController extends ApiBaseController
             }
 
             if (strtolower($request->status) === 'completed') {
-                // Mark the attempt as completed
+                $attempt->end_time = $request->input('end_time') ?? now();
             }
 
             $attempt->status = $request->status;
             $attempt->save();
+
+            $this->broadcastAttemptStatus($attempt, $request->status);
 
             DB::commit();
 
@@ -603,9 +662,9 @@ class QuestAttemptController extends ApiBaseController
                 return $this->notFoundResponse([], __('Quest not found'));
             }
 
-//            if ($quest->creator_id !== auth()->id()) {
-//                return $this->forbiddenResponse([], __('You are not allowed to access this quest.'));
-//            }
+            //            if ($quest->creator_id !== auth()->id()) {
+            //                return $this->forbiddenResponse([], __('You are not allowed to access this quest.'));
+            //            }
 
             // Check if this quest has any ranking tasks
             $hasRankingTasks = QuestTask::where('quest_id', $questId)
@@ -724,9 +783,9 @@ class QuestAttemptController extends ApiBaseController
                 return $this->notFoundResponse([], __('Quest not found'));
             }
 
-//            if ($quest->creator_id !== auth()->id()) {
-//                return $this->forbiddenResponse([], __('You are not allowed to access this quest.'));
-//            }
+            //            if ($quest->creator_id !== auth()->id()) {
+            //                return $this->forbiddenResponse([], __('You are not allowed to access this quest.'));
+            //            }
 
             $questSessions = QuestSession::where('quest_id', $questId)
                 ->orderBy('created_at', 'desc')
@@ -1743,5 +1802,41 @@ class QuestAttemptController extends ApiBaseController
             ->count();
 
         return $completedCount === count($prerequisiteIds);
+    }
+
+    private function broadcastAttemptStatus(QuestParticipant $attempt, string $status): void
+    {
+        $session = $attempt->questSession;
+
+        if (! $session) {
+            return;
+        }
+
+        $payload = [
+            'session_id' => $session->id,
+            'participant_id' => $attempt->id,
+            'status' => $attempt->status,
+            'ended_at' => optional($attempt->end_time)->toISOString(),
+        ];
+
+        app(LiveSessionService::class)->broadcastHost(
+            LiveSessionService::MODULE_QUEST,
+            $session,
+            'participant.status.updated',
+            $payload,
+        );
+
+        if (in_array(strtolower($status), ['completed', 'abandoned'], true)) {
+            app(ParticipantTokenService::class)->revokeParticipant($attempt);
+        }
+
+        if (strtolower($status) === 'completed') {
+            app(LiveSessionService::class)->broadcastParticipantCompleted(
+                LiveSessionService::MODULE_QUEST,
+                $session,
+                $attempt,
+                $payload,
+            );
+        }
     }
 }
