@@ -3,7 +3,7 @@ import React, { useState } from "react";
 
 import Image from "next/image";
 import Link from "next/link";
-import WaitingRoomComponent from "@/components/Liveui/WatingRoomComponent";
+import WaitingRoomComponent from "@/components/Liveui/WaitingRoomComponent";
 import ChoiceComponent from "@/components/Liveui/ChoiceComponent";
 import MultipleChoiceComponent from "@/components/Liveui/MultipleChoiceComponent";
 import ShortAnswerComponent from "@/components/Liveui/ShortAnswerComponent";

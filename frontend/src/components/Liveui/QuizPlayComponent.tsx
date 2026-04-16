@@ -7,7 +7,7 @@ import QuizLiveFooter from "@/components/Layouts/quiz/QuizLiveFooter";
 import ChoiceComponent from "./ChoiceComponent";
 import ShortAnswerComponent from "./ShortAnswerComponent";
 import QuickFormPreview from "./QuickFormPreview";
-import WatingRoomComponentQuiz from "./WatingRoomComponentQuiz";
+import WaitingRoomComponentQuiz from "./WaitingRoomComponentQuiz";
 import Leaderboard from "@/components/Dashboard/Leaderboard";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
@@ -373,7 +373,7 @@ const TaskNavigator: React.FC<NavigatorProps> = ({ tasks }) => {
 	}, [questionsId, currentQuestion, steps, ordered]);
 
 	const Body: any = currentIsWaiting
-		? WatingRoomComponentQuiz
+		? WaitingRoomComponentQuiz
 		: componentForTaskType(
 				String(
 					(currentTask?.question_type || currentTask?.task_type) ?? ""

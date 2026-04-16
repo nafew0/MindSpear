@@ -10,7 +10,7 @@ import QuestRankingComponent from "./QuestRankingComponent";
 import QuestShortAnswerComponent from "./QuestShortAnswerComponent";
 import QuickFormPreview from "./QuickFormPreview";
 import QuestScalesChoiceComponent from "./QuestScalesChoiceComponent";
-import WatingRoomComponent from "./WatingRoomComponent";
+import WaitingRoomComponent from "./WaitingRoomComponent";
 import { FaUser } from "react-icons/fa";
 // import { toast } from "react-toastify";
 import {
@@ -394,7 +394,7 @@ const TaskNavigator: React.FC<NavigatorProps> = ({ tasks }) => {
 	}, [questionsId, currentQuestion, steps, ordered]);
 
 	const Body: any = currentIsWaiting
-		? WatingRoomComponent
+		? WaitingRoomComponent
 		: componentForTaskType(
 				String(
 					(currentTask?.question_type || currentTask?.task_type) ?? ""

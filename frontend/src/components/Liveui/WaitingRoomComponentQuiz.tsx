@@ -4,7 +4,7 @@ import React from "react";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-const WatingRoomComponentQuiz: React.FC = () => {
+const WaitingRoomComponentQuiz: React.FC = () => {
 	const searchParams = useSearchParams();
 	// const questId = searchParams.get("qid");
 	// const userId = searchParams.get("ujid");
@@ -66,4 +66,4 @@ const WatingRoomComponentQuiz: React.FC = () => {
 	);
 };
 
-export default WatingRoomComponentQuiz;
+export default WaitingRoomComponentQuiz;
