@@ -1,5 +1,5 @@
 import Link from "next/link";
-import HeaderPublic from "@/components/Layouts/publicLayout/Header";
+import HeaderPublic from "@/components/Layouts/PublicLayout/Header";
 export default function NotFound() {
 	return (
 		<>
