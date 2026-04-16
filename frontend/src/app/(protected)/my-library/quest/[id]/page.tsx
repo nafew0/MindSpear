@@ -1,4 +1,4 @@
-import QuestView from "@/views/quest/QuestView";
+import QuestView from "@/features/quest/views/QuestView";
 function QuestDetailsPage() {
 	return (
 		<div className="h-screen">

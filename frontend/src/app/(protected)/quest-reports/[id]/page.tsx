@@ -2,9 +2,9 @@
 "use client";
 import React, { useEffect, useState } from "react";
 
-import Summary from "@/components/QuestReports/Summary";
-import Participants from "@/components/QuestReports/Participants";
-// import Questions from "@/components/QuestReports/Questions";
+import Summary from "@/features/quest/components/QuestReports/Summary";
+import Participants from "@/features/quest/components/QuestReports/Participants";
+// import Questions from "@/features/quest/components/QuestReports/Questions";
 import moment from "@/lib/dayjs";
 import { useParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";

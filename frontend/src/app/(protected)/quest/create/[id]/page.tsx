@@ -1,4 +1,4 @@
-import QuestLayoutView from "@/components/Dashboard/Quest/QuestLayoutView";
+import QuestLayoutView from "@/features/quest/components/Quest/QuestLayoutView";
 
 function QuestCreatePage() {
 	return (

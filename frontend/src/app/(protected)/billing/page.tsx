@@ -4,10 +4,10 @@
 import { useState } from 'react';
 import { Subscription, Invoice, PaymentMethod, BillingOverviewType, } from '@/types/billing';
 import { CreditCard, FileText, Calendar, Settings } from 'lucide-react';
-import BillingOverview from '@/views/web/billing/BillingOverview';
-import CurrentPlan from '@/views/web/billing/CurrentPlan';
-import PaymentMethods from '@/views/web/billing/PaymentMethods';
-import BillingHistory from '@/views/web/billing/BillingHistory';
+import BillingOverview from '@/features/dashboard/web/billing/BillingOverview';
+import CurrentPlan from '@/features/dashboard/web/billing/CurrentPlan';
+import PaymentMethods from '@/features/dashboard/web/billing/PaymentMethods';
+import BillingHistory from '@/features/dashboard/web/billing/BillingHistory';
 
 const BillingPage = () => {
 	const [activeTab, setActiveTab] = useState<'overview' | 'plan' | 'payment' | 'history'>('overview');

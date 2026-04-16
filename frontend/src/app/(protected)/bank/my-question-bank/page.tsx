@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import MyQuestionBank from "@/components/QuestionBank/MyQuestionBank";
+import MyQuestionBank from "@/features/dashboard/question-bank/components/QuestionBank/MyQuestionBank";
 
 const TABS = [
 	"My Question Bank",

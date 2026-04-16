@@ -1,5 +1,5 @@
 'use client'
-import Signin from "@/components/Auth/Signin";
+import Signin from "@/features/auth/components/Auth/Signin";
 import Image from "next/image";
 import Link from "next/link";
 

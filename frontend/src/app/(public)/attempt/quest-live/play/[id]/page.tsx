@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import QuestPlayComponent from "@/components/Liveui/QuestPlayComponent";
+import QuestPlayComponent from "@/features/live/components/Liveui/QuestPlayComponent";
 import { normalizeTasks } from "@/utils/quickFormTransform";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";

@@ -1,0 +1,436 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+"use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import {
+	connectSocket,
+	emitSubmitTask,
+	// getSocket,
+	waitForAnswerProcessedQuestOnce,
+} from "@/socket/quest-socket";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { upsertAnswer } from "@/features/live/store/leaderboardAnswersSlice";
+import { useDispatch } from "react-redux";
+import moment from "@/lib/dayjs";
+import axiosInstance from "@/utils/axiosInstance";
+import { AxiosError } from "axios";
+import { TimerCacheManager } from "@/utils/timerCacheUtils";
+import SharedQuestTimer from "@/components/SharedQuestTimer";
+import { IoMdHappy } from "react-icons/io";
+
+type TaskQuestion = {
+	id: number | string;
+	text?: string;
+	label?: string;
+};
+
+type TaskItem = {
+	id?: number;
+	title?: string;
+	task_type?: string;
+	description?: string | null;
+	questions?: TaskQuestion[];
+};
+
+type Props = {
+	task?: TaskItem;
+	value?: string | null;
+	onChange?: (val: string) => void;
+};
+
+const QuestShortAnswerComponent: React.FC<Props> = ({
+	task,
+	value,
+	onChange,
+}) => {
+	const dispatch = useDispatch();
+	const [answer, setAnswer] = useState(value ?? "");
+	const [answersList, setAnswersList] = useState<string[]>([]);
+	const [submitted, setSubmitted] = useState(false);
+	const [error, setError] = useState("");
+	const searchParams = useSearchParams();
+	const userId = searchParams.get("ujid");
+	const [watingData, setwatingData] = useState(true);
+	const [currentTimeGet, setcurrentTimeGet] = useState<number>(0);
+	const [chalangeData, setchalangeData] = useState<any>({});
+	console.log(chalangeData);
+
+	const handleTimeUpdate = (
+		remaining: number,
+		elapsed: number,
+		total: number
+	) => {
+		console.log(total, "total");
+		console.log(elapsed, "total");
+		console.log(remaining, "total");
+		setcurrentTimeGet(remaining);
+	};
+	const maxWords = 5;
+	console.log(task, "task");
+
+	const joinid = searchParams.get("jid");
+	const attempId = searchParams.get("aid");
+
+	const startRef = useRef<number>(Date.now());
+
+	useEffect(() => {
+		if (typeof window !== "undefined" && !navigator.onLine) {
+			console.warn("Offline — skipping API call");
+			return;
+		}
+
+		const dataFetch = async () => {
+			try {
+				const response = await axiosInstance.get(
+					`/quest-attempts-url/show-by-link/${joinid}`
+				);
+				setchalangeData(response?.data?.data?.quest);
+			} catch (error) {
+				const axiosError = error as AxiosError<{ message?: string }>;
+				console.error("Unexpected error:", axiosError.message);
+			}
+		};
+		dataFetch();
+	}, [joinid]);
+
+	useEffect(() => {
+		setAnswer("");
+		setAnswersList([]);
+		setSubmitted(false);
+		setError("");
+		startRef.current = Date.now();
+	}, [task?.id]);
+
+	useEffect(() => {
+		if (value !== undefined && value !== null) {
+			setAnswer(value);
+			setSubmitted(false);
+			setError("");
+		}
+	}, [value]);
+
+	const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+		setAnswer(e.target.value);
+		setError("");
+		setSubmitted(false);
+	};
+	// const handleDefaultChange = (e: any) => {
+	// 	setAnswer(e);
+	// 	setError("");
+	// 	setSubmitted(false);
+	// };
+
+	const wordCount = answer.trim()
+		? answer.trim().split(/\s+/).filter(Boolean).length
+		: 0;
+
+	const dataNew: any = task;
+	console.log(dataNew, "dataNewdataNewdataNew");
+
+	// ✅ Debounced live upsert while the user types (also sets selected_time)
+	useEffect(() => {
+		const t = setTimeout(() => {
+			if (!task?.id) return;
+			const trimmed = answer.trim();
+			const elapsedSec = Math.max(
+				0,
+				Math.round((Date.now() - startRef.current) / 1000)
+			);
+
+			dispatch(
+				upsertAnswer({
+					id: (task?.id as number | string) ?? 0,
+					quiz_id: (task as any)?.quiz_id ?? null,
+					serial_number: (task as any)?.serial_number ?? null,
+					title: (task as any)?.title ?? null,
+					question_type:
+						(task as any)?.question_type ??
+						(task as any)?.task_type ??
+						null,
+					selected_time: elapsedSec,
+					source_content_url:
+						(task as any)?.source_content_url ?? null,
+					questions: trimmed ? [{ id: 0, text: trimmed }] : [],
+				})
+			);
+		}, 300); // 300ms debounce
+
+		return () => clearTimeout(t);
+	}, [answer, answersList, task?.id, dispatch]);
+
+	console.log(answer, "answeransweransweransweranswer");
+
+	const reqSoketData = (list: any[]) => {
+		emitSubmitTask({
+			userId: `${userId}`,
+			questionId: dataNew?.id,
+			userName: `${userId}`,
+			questionTitle: `${task?.title}`,
+			questionType: `${task?.task_type}`,
+			selectedOption: list,
+			optionType: "text",
+		});
+		setwatingData(true);
+	};
+
+	const saveAnswer = async (nextList: any) => {
+		try {
+			const currentTime = moment().format("YYYY-MM-DD HH:mm:ss");
+
+			// const rankIndexList = ranked.map((_, i) => i + 1);
+			const payload = {
+				task_id: task?.id,
+				completion_data: {
+					start_time: currentTime,
+					selected_option: nextList,
+				},
+				time_taken_seconds: currentTimeGet,
+			};
+			await axiosInstance.post(
+				`/quest-attempts/${attempId}/answer`,
+				payload
+			);
+		} catch (error) {
+			console.error("Error saving answer:", error);
+		}
+	};
+
+	const handleSubmit = async () => {
+		const trimmed = answer.trim();
+		if (!trimmed) {
+			// setError("Please write your answer.");
+			return;
+		}
+		const nextList = [...answersList, trimmed];
+		setAnswersList(nextList);
+		setAnswer("");
+		setSubmitted(true);
+		setError("");
+		// (Optional) Upsert again on submit to be absolutely sure
+		const elapsedSec = Math.max(
+			0,
+			Math.round((Date.now() - startRef.current) / 1000)
+		);
+		await saveAnswer(nextList);
+		dispatch(
+			upsertAnswer({
+				id: (task?.id as number | string) ?? 0,
+				quiz_id: (task as any)?.quiz_id ?? null,
+				serial_number: (task as any)?.serial_number ?? null,
+				title: (task as any)?.title ?? null,
+				question_type:
+					(task as any)?.question_type ??
+					(task as any)?.task_type ??
+					null,
+				selected_time: elapsedSec,
+				source_content_url: (task as any)?.source_content_url ?? null,
+				questions: [{ id: 0, text: trimmed }],
+			})
+		);
+
+		// const existing = getSocket();
+		// if (existing?.connected) {
+		// 	reqSoketData(nextList);
+		// } else {
+		// 	connectSocket().then(() => reqSoketData(nextList));
+		// }
+
+		reqSoketData(nextList);
+		const submitStatusCheck = await waitForAnswerProcessedQuestOnce();
+		if (!submitStatusCheck) {
+			connectSocket().then(() => {
+				reqSoketData(nextList);
+			});
+		}
+
+		setError("");
+		setSubmitted(true);
+		onChange?.(trimmed);
+	};
+
+	const handleExpire = () => {
+		if (!task?.id) return;
+
+		const key = `timeExpired_${task.id}`;
+		const raw = localStorage.getItem(key);
+		console.log(raw, "rawrawrawrawrawrawrawraw");
+
+		const saved = setTaskExpired(task.id);
+		const ok =
+			saved?.status === "completed" &&
+			String(saved?.taskId ?? task.id) === String(task.id);
+		if (ok) {
+			setwatingData(false);
+		}
+	};
+	useEffect(() => {
+		if (!task?.id) return;
+		const key = `timeExpired_${task.id}`;
+		const userStatus: any = localStorage.getItem(key);
+		if (userStatus !== null) {
+			const savedState = JSON.parse(userStatus);
+			if (
+				savedState?.status === "completed" ||
+				(savedState?.submitStatus === "completed" &&
+					task.id === savedState?.taskId)
+			) {
+				setwatingData(false);
+			}
+		} else {
+			setwatingData(true);
+		}
+	}, [dataNew?.id]);
+
+	const onExpireWrapped = useCallback(() => {
+		if (dataNew?.id != null) TimerCacheManager.markCompleted(dataNew.id);
+		if (typeof handleExpire === "function") handleExpire();
+	}, [dataNew?.id, handleExpire]);
+
+	useEffect(() => {
+		const onStorage = (e: StorageEvent) => {
+			if (e.key === `timeExpired_${task?.id}`) {
+				// re-run your same logic
+				try {
+					const parsed = e.newValue ? JSON.parse(e.newValue) : null;
+					const ok =
+						parsed?.status === "completed" &&
+						String(parsed?.taskId ?? task?.id) === String(task?.id);
+					setwatingData(!!ok);
+				} catch {
+					setwatingData(e.newValue === "completed");
+				}
+			}
+		};
+		window.addEventListener("storage", onStorage);
+		return () => window.removeEventListener("storage", onStorage);
+	}, [task?.id]);
+
+	const setTaskExpired = (taskId: string | number) => {
+		const key = `timeExpired_${taskId}`;
+		const payload = {
+			status: "completed",
+			submitStatus: "complited",
+			taskId,
+			ts: Date.now(),
+		};
+		localStorage.setItem(key, JSON.stringify(payload));
+		setwatingData(false);
+		return payload;
+	};
+
+	const htmlToText = (html?: string) => {
+		if (!html) return "";
+		const stripped = html.replace(/<[^>]*>/g, " ");
+		if (typeof window !== "undefined") {
+			const div = document.createElement("div");
+			div.innerHTML = stripped;
+			const text = div.textContent || div.innerText || "";
+			return text
+				.replace(/\u00a0/g, " ")
+				.replace(/\s+/g, " ")
+				.trim();
+		}
+		return stripped
+			.replace(/\u00a0/g, " ")
+			.replace(/\s+/g, " ")
+			.trim();
+	};
+
+	console.log(task, "tasktasktasktask");
+
+	const rowNumber =
+		task?.task_type === "shortanswer"
+			? 3
+			: task?.task_type === "longanswer"
+				? 5
+				: 1;
+
+	return (
+		<div className="flex flex-col justify-center items-center px-4">
+			{watingData ? (
+				<div className="max-w-xl w-full space-y-6">
+					<h2 className="text-2xl font-semibold text-gray-900 text-center">
+						{htmlToText(task?.title)}
+					</h2>
+					<button
+						className="hidden"
+						onClick={() => onExpireWrapped()}
+					>
+						{" "}
+						All QuizTimer Clear{" "}
+					</button>
+
+					<div className="flex justify-center items-center">
+						<SharedQuestTimer
+							attemptId={`attempt-${dataNew?.id}`}
+							onTimeUpdate={handleTimeUpdate}
+							onExpire={handleExpire}
+						/>
+					</div>
+
+					<div className="bg-white p-6 rounded-xl shadow-sm border space-y-4">
+						<textarea
+							value={answer}
+							onChange={handleChange}
+							placeholder="Type your answer here..."
+							rows={rowNumber}
+							className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+						/>
+
+						<div className=" justify-between text-sm text-gray-500 hidden">
+							<span>
+								{wordCount}/{maxWords} words
+							</span>
+							{error && (
+								<span className="text-red-500">{error}</span>
+							)}
+						</div>
+
+						<div className="grid grid-cols-1 md:grid-cols-3  gap-4">
+							{task?.questions
+								?.filter((q: any) => q?.text !== "Option 1")
+								.map((item: any, i) => (
+									<div
+										onClick={() => {
+											setAnswer(item?.text);
+											setSubmitted(false);
+										}}
+										className="border px-3 cursor-pointer hover:bg-primary hover:text-white 
+  border-[#2222] py-2 text-sm bg-[#eeeeee] rounded-xl shadow-sm flex items-center justify-center"
+										key={i}
+									>
+										{item?.text}
+									</div>
+								))}
+						</div>
+
+						{submitted && (
+							<p className="text-sm text-green-600">
+								Answer submitted successfully!
+							</p>
+						)}
+
+						<div className="text-center">
+							<button
+								onClick={handleSubmit}
+								disabled={!answer.trim()}
+								className="bg-primary text-white px-6 py-2 rounded-lg disabled:opacity-50"
+							>
+								Submit
+							</button>
+						</div>
+					</div>
+				</div>
+			) : (
+				<div className="flex justify-center items-center">
+					<h3 className="md:text-[30px] font-bold text-[18px] flex flex-col justify-center items-center pt-30">
+						<IoMdHappy className="mb-[30px] text-[100px]" />
+						Please wait for the presenter to change slides.
+					</h3>
+				</div>
+			)}
+		</div>
+	);
+};
+
+export default QuestShortAnswerComponent;

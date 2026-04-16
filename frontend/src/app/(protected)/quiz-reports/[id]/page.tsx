@@ -3,9 +3,9 @@
 import { Quiz } from "@/types/types";
 import React, { useEffect, useState } from "react";
 
-import Summary from "@/components/QuizReports/Summary";
-import Participants from "@/components/QuizReports/Participants";
-import Questions from "@/components/QuizReports/Questions";
+import Summary from "@/features/quiz/components/QuizReports/Summary";
+import Participants from "@/features/quiz/components/QuizReports/Participants";
+import Questions from "@/features/quiz/components/QuizReports/Questions";
 import moment from "@/lib/dayjs";
 import { useParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";

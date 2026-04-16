@@ -1,6 +1,6 @@
 "use client";
 import React from 'react'
-import QuestAttemptForm from '@/components/Liveui/QuestAttemptForm'
+import QuestAttemptForm from '@/features/live/components/Liveui/QuestAttemptForm'
 function QuizAttempt() {
 
   return (

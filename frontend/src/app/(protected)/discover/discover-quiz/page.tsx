@@ -1,6 +1,6 @@
 "use client";
 
-import QuizTab from "@/views/discover/QuizTab";
+import QuizTab from "@/features/dashboard/discover/QuizTab";
 import Title from "../../../../components/ui/Title";
 
 export default function Discover() {

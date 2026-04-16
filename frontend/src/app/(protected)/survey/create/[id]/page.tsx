@@ -1,4 +1,4 @@
-import SurveyLayoutView from "@/components/Dashboard/Survey/SurveyLayoutView";
+import SurveyLayoutView from "@/features/survey/components/Survey/SurveyLayoutView";
 
 function SurveyCreatePage() {
 	return (

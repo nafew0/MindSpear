@@ -1,8 +1,8 @@
 "use client";
 import React from "react";
 import { useSearchParams } from "next/navigation";
-import QuizAttemptForm from "@/components/Liveui/QuizAttemptForm";
-import QuestPlay from "@/views/quest/QuestPlay";
+import QuizAttemptForm from "@/features/live/components/Liveui/QuizAttemptForm";
+import QuestPlay from "@/features/quest/views/QuestPlay";
 
 function QuestLivePage() {
 	const searchParams = useSearchParams();

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import GoogleFormStyleSurvey from "@/components/Survey/GoogleFormStyleSurvey";
+import GoogleFormStyleSurvey from "@/features/survey/components/Survey/GoogleFormStyleSurvey";
 import { useParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { toast } from "react-toastify";

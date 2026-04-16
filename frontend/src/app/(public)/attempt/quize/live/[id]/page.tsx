@@ -1,8 +1,8 @@
 "use client";
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from "next/navigation";
-import QuizAttemptForm from '@/components/Liveui/QuizAttemptForm'
-import QuizPlayComponent from '@/components/Liveui/QuizPlayComponent';
+import QuizAttemptForm from '@/features/live/components/Liveui/QuizAttemptForm'
+import QuizPlayComponent from '@/features/live/components/Liveui/QuizPlayComponent';
 import axiosInstance from '@/utils/axiosInstance';
 import { AxiosError } from 'axios';
 import { normalizeTasks } from '@/utils/quickFormTransform';

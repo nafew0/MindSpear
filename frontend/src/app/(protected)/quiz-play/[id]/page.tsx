@@ -3,7 +3,7 @@
 import { Quiz } from "@/types/types";
 import React, { useEffect, useState, useRef } from "react";
 
-import Summary from "@/components/QuizReports/Summary";
+import Summary from "@/features/quiz/components/QuizReports/Summary";
 import moment from "@/lib/dayjs";
 import { useParams, useRouter } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";

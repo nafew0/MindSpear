@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
 
-import QuizEditPages from "@/components/Dashboard/QuizEdit/QuizEditPages";
+import QuizEditPages from "@/features/quiz/components/QuizEdit/QuizEditPages";
 import { ApiQuestion } from "@/types/types";
 import { toast } from "react-toastify";
 

@@ -18,9 +18,9 @@ import { HorizontalBarChart as GlobalHorizantalBarChart } from "@/components/cha
 import Image from "next/image";
 import { getSocket } from "@/socket/quest-socket";
 import DOMPurify from "dompurify";
-import QuickFormCreatorView from "@/components/Liveui/QuickFormCreatorView";
+import QuickFormCreatorView from "@/features/live/components/Liveui/QuickFormCreatorView";
 // import { ScalesChart } from "@/components/charts";
-import QuickShortAndLongAnswer from "@/components/Liveui/QuickShortAndLongAnswer";
+import QuickShortAndLongAnswer from "@/features/live/components/Liveui/QuickShortAndLongAnswer";
 import { useSelector } from "react-redux";
 import { AllScalesChart } from "@/components/charts";
 

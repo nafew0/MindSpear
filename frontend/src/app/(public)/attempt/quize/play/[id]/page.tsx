@@ -2,7 +2,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import QuizPlayComponent from "@/components/Liveui/QuizPlayComponent";
+import QuizPlayComponent from "@/features/live/components/Liveui/QuizPlayComponent";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
 import { normalizeTasks } from "@/utils/quickFormTransform";

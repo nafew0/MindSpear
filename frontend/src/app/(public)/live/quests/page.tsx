@@ -17,7 +17,7 @@ import {
 	// setCurrentQsentId,
 	forceEndLive,
 } from "@/features/live/store/leaderboardSlice";
-import QuestCompletedPages from "@/components/Dashboard/QuestCompletedPages";
+import QuestCompletedPages from "@/features/quest/components/QuestCompletedPages";
 import { AxiosError } from "axios";
 import { useSearchParams } from "next/navigation";
 

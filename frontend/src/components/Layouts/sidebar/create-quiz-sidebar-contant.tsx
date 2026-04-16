@@ -26,7 +26,7 @@ import { setDropdownOpen } from "@/features/dashboard/store/dropdownSlice";
 import axiosInstance from "@/utils/axiosInstance";
 import { Quiz } from "@/types/types";
 import Image from "next/image";
-import PdfModal from "@/components/Dashboard/PdfQuiz/PdfModal";
+import PdfModal from "@/features/quiz/components/PdfQuiz/PdfModal";
 
 interface MenuItem {
 	key: string;

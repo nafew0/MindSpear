@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useEffect } from "react";
-import CreateQuiz from "@/components/Dashboard/CreateQuiz";
-import CreateSurvey from "@/components/Dashboard/CreateSurvey";
-import CreateQuest from "@/components/Dashboard/CreateQuest";
+import CreateQuiz from "@/features/quiz/components/CreateQuiz";
+import CreateSurvey from "@/features/survey/components/CreateSurvey";
+import CreateQuest from "@/features/quest/components/CreateQuest";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/stores/store";
 import { setMultipleSelectedItems } from "@/features/quiz/store/quizItems/quizSlice"
-import ReportDashboard from "@/views/dashboard/ReportDashboard";
-import StatsOverview from "@/views/dashboard/StatsOverview";
-// import ReportSlider from "@/views/dashboard/ReportSlider";
+import ReportDashboard from "@/features/dashboard/views/ReportDashboard";
+import StatsOverview from "@/features/dashboard/views/StatsOverview";
+// import ReportSlider from "@/features/dashboard/views/ReportSlider";
 
 interface UserInfoState {
 	id: number;

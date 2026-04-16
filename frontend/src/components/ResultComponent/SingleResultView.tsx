@@ -11,8 +11,8 @@ import { HorizontalBarChart as GlobalHorizantalBarChart } from "@/components/cha
 // import HorizontalProgressBars from "@/components/charts";
 import { WordCloud as D3WordCloud } from "@/components/charts";
 import { BarChart as GlobalBarChart } from "@/components/charts";
-import QuickFormAnswerView from "@/components/Liveui/QuickFormAnswerView";
-import QuickShortAndLongAnswer from "@/components/Liveui/QuickShortAndLongAnswer";
+import QuickFormAnswerView from "@/features/live/components/Liveui/QuickFormAnswerView";
+import QuickShortAndLongAnswer from "@/features/live/components/Liveui/QuickShortAndLongAnswer";
 import { ScalesChart } from "@/components/charts";
 
 // -------------------------------- Types --------------------------------

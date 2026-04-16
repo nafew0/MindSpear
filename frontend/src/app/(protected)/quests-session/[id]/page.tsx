@@ -3,7 +3,7 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 
-import Summary from "@/components/QuestReports/Summary";
+import Summary from "@/features/quest/components/QuestReports/Summary";
 import { useParams, useRouter } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { useDispatch, useSelector } from "react-redux";

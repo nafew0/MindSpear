@@ -11,7 +11,7 @@ import "@ant-design/v5-patch-for-react-19";
 import { Provider as ReduxProvider } from "react-redux";
 import { store } from "@/stores/store";
 import { SurveyProvider } from "@/contexts/SurveyContext";
-import SurveyDataInitializer from "@/components/Dashboard/Survey/SurveyDataInitializer";
+import SurveyDataInitializer from "@/features/survey/components/Survey/SurveyDataInitializer";
 
 export default function ProtectedLayout({
 	children,

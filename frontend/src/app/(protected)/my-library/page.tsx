@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import NewQuiz from "@/components/Library/NewQuiz";
-import NewSurvey from "@/components/Library/NewSurvey";
-import NewQuest from "@/components/Library/NewQuest";
+import NewQuiz from "@/features/dashboard/components/Library/NewQuiz";
+import NewSurvey from "@/features/dashboard/components/Library/NewSurvey";
+import NewQuest from "@/features/dashboard/components/Library/NewQuest";
 
 const TABS = ["Quiz", "Survey", "Quest"] as const;
 type TabType = (typeof TABS)[number];

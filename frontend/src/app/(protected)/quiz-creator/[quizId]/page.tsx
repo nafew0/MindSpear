@@ -2,16 +2,16 @@
 import React, { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/stores/store';
-import QuizCreatorPreview from '@/components/Dashboard/CreateQuiz/QuizCreatorPreview';
-import TrueFalseCreatorPreview from '@/components/Dashboard/CreateQuiz/TrueFalseCreatorPreview';
-import SortAnswerCreatorPreview from '@/components/Dashboard/CreateQuiz/SortAnswerCreatorPreview';
-import FillInTheBlanksCreatorPreview from '@/components/Dashboard/CreateQuiz/FillInTheBlanksCreatorPreview';
+import QuizCreatorPreview from '@/features/quiz/components/CreateQuiz/QuizCreatorPreview';
+import TrueFalseCreatorPreview from '@/features/quiz/components/CreateQuiz/TrueFalseCreatorPreview';
+import SortAnswerCreatorPreview from '@/features/quiz/components/CreateQuiz/SortAnswerCreatorPreview';
+import FillInTheBlanksCreatorPreview from '@/features/quiz/components/CreateQuiz/FillInTheBlanksCreatorPreview';
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from 'axios';
 import { useParams } from "next/navigation";
 import { setQuiz } from "@/features/quiz/store/quizInformationSlice";
 import type { Quiz } from "@/types/types";
-import PdfModal from '@/components/Dashboard/PdfQuiz/PdfModal';
+import PdfModal from '@/features/quiz/components/PdfQuiz/PdfModal';
 import { toast } from 'react-toastify';
 
 

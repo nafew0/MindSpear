@@ -1,4 +1,4 @@
-import SurveyView from "@/views/survey/SurveyView";
+import SurveyView from "@/features/survey/views/SurveyView";
 
 
 function SurveyDetailsPage() {

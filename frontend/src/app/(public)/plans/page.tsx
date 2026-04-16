@@ -2,8 +2,8 @@
 'use client';
 
 import { PlanSection, } from '@/types/plan';
-import PlanCard from '@/views/web/plans/PlanCard';
-import PlanComparison from '@/views/web/plans/PlanComparison';
+import PlanCard from '@/features/dashboard/web/plans/PlanCard';
+import PlanComparison from '@/features/dashboard/web/plans/PlanComparison';
 
 
 const PlanPage = () => {
