@@ -6,7 +6,7 @@ import {
 	Dropdown,
 	DropdownContent,
 	DropdownTrigger,
-} from "@/components/ui/dropdown";
+} from "@/components/ui/Dropdown";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";

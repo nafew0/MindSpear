@@ -6,7 +6,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/ui/Table";
 // import axiosInstance from '@/utils/axiosInstance';
 // import { AxiosError } from 'axios';
 // import { PiWarningCircle } from "react-icons/pi";

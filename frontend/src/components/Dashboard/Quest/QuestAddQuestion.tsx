@@ -9,7 +9,7 @@ import {
 	Dropdown,
 	DropdownContent,
 	DropdownTrigger,
-} from "@/components/ui/dropdown";
+} from "@/components/ui/Dropdown";
 import { useDispatch, useSelector } from "react-redux";
 import {
 	setHoveredItem,

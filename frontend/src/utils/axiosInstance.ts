@@ -4,6 +4,7 @@ import axios, {
 	InternalAxiosRequestConfig,
 	AxiosHeaders,
 } from "axios";
+import { apiConfig } from "@/config/api";
 
 interface ApiResponse<T = unknown> {
 	data: T;
@@ -12,10 +13,7 @@ interface ApiResponse<T = unknown> {
 	statusCode: number;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-const resolvedBaseURL =
-	API_URL && API_URL.trim().length > 0 ? API_URL : undefined;
-if (!resolvedBaseURL && typeof window !== "undefined") {
+if (!apiConfig.baseURL && typeof window !== "undefined") {
 	console.warn(
 		"NEXT_PUBLIC_API_BASE_URL is not defined; axios will use relative URLs."
 	);
@@ -25,12 +23,10 @@ interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
 	_retry?: boolean;
 }
 const axiosInstance: AxiosInstance = axios.create({
-	baseURL: resolvedBaseURL,
-	headers: {
-		"Content-Type": "application/json",
-	},
+	baseURL: apiConfig.baseURL,
+	headers: apiConfig.jsonHeaders,
 	// withCredentials: true,
-	timeout: 10000,
+	timeout: apiConfig.timeoutMs,
 	// withCredentials: true,
 });
 

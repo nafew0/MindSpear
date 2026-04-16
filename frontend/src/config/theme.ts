@@ -1,0 +1,63 @@
+export const theme = {
+	colors: {
+		primary: {
+			DEFAULT: "#F79945",
+			light: "#F9B474",
+			dark: "#E07D2A",
+			50: "#FFF5EB",
+			100: "#FFE8D1",
+			200: "#FFD1A3",
+			300: "#FFBA75",
+			400: "#F79945",
+			500: "#E07D2A",
+			600: "#C46620",
+			700: "#A85016",
+			800: "#8C3A0C",
+			900: "#702402",
+		},
+		secondary: {
+			DEFAULT: "#BC5EB3",
+			light: "#D080C8",
+			dark: "#9A3F92",
+			50: "#FBF0FA",
+			100: "#F5DCF3",
+			200: "#E9B8E4",
+			300: "#D894D2",
+			400: "#BC5EB3",
+			500: "#9A3F92",
+			600: "#7E2D78",
+			700: "#621C5E",
+			800: "#460C44",
+			900: "#2A002A",
+		},
+		success: "#22AD5C",
+		danger: "#F23030",
+		warning: "#F59E0B",
+		info: "#3C50E0",
+	},
+	chart: {
+		palette: [
+			"#F79945",
+			"#BC5EB3",
+			"#3C50E0",
+			"#22AD5C",
+			"#F23030",
+			"#F59E0B",
+			"#6366F1",
+			"#EC4899",
+			"#14B8A6",
+			"#F97316",
+		],
+		gradients: {
+			primary: ["#F79945", "#E07D2A"],
+			secondary: ["#BC5EB3", "#9A3F92"],
+		},
+		responsive: {
+			mobile: { width: "100%", height: 250 },
+			tablet: { width: "100%", height: 350 },
+			desktop: { width: "100%", height: 400 },
+		},
+	},
+} as const;
+
+export type Theme = typeof theme;

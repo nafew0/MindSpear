@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss";
 import defaultTheme from "tailwindcss/defaultTheme";
+import { theme as appTheme } from "./src/config/theme";
 
 const config: Config = {
 	content: ["./src/**/*.{js,jsx,tsx}", "./src/css/style.css"],
@@ -18,8 +19,12 @@ const config: Config = {
 				current: "currentColor",
 				transparent: "transparent",
 				white: "#FFFFFF",
-				primary: "#F79945",
-				secondary: "#BC5EB3",
+				primary: appTheme.colors.primary,
+				secondary: appTheme.colors.secondary,
+				success: appTheme.colors.success,
+				danger: appTheme.colors.danger,
+				warning: appTheme.colors.warning,
+				info: appTheme.colors.info,
 				stroke: "#E6EBF1",
 				"stroke-dark": "#27303E",
 				dark: {

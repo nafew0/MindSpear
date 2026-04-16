@@ -10,7 +10,7 @@ import {
 	Dropdown,
 	DropdownContent,
 	DropdownTrigger,
-} from "@/components/ui/dropdown";
+} from "@/components/ui/Dropdown";
 import { useSurvey } from "@/contexts/SurveyContext";
 import { setDropdownOpen } from "@/stores/features/dropdownSlice";
 import { useDispatch } from "react-redux";
