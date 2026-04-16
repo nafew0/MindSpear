@@ -1,4 +1,4 @@
-import NewSurvey from "@/components/Library/NewSurvey";
+import NewSurvey from "@/features/dashboard/components/Library/NewSurvey";
 
 function SurveyPage() {
 	return (

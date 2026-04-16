@@ -1,4 +1,4 @@
-import QuestionBankCategories from "@/components/QuestionBank/QuestionBankCategories";
+import QuestionBankCategories from "@/features/dashboard/question-bank/components/QuestionBank/QuestionBankCategories";
 
 const page = () => {
 	return (

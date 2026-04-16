@@ -1,4 +1,4 @@
-import SurveyTab from "@/views/discover/SurveyTab";
+import SurveyTab from "@/features/dashboard/discover/SurveyTab";
 import Title from "../../../../components/ui/Title";
 
 const page = () => {

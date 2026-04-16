@@ -443,6 +443,7 @@ const RenderQuestionInput: React.FC<RenderQuestionInputProps> = ({
 	onOptionClick,
 	options,
 }) => {
+	const [wordInput, setWordInput] = useState("");
 	const questionType = normalizeQuestionType(question.question_type);
 
 	switch (questionType) {
@@ -677,7 +678,6 @@ const RenderQuestionInput: React.FC<RenderQuestionInputProps> = ({
 			);
 
 		case "wordcloud":
-			const [wordInput, setWordInput] = React.useState("");
 			const words = Array.isArray(response) ? response : [];
 			return (
 				<div className="space-y-3">

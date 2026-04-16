@@ -1,4 +1,4 @@
-import NewQuiz from "@/components/Library/NewQuiz";
+import NewQuiz from "@/features/dashboard/components/Library/NewQuiz";
 
 function QuizPage() {
 	return (

@@ -1,4 +1,4 @@
-import QuestTab from "@/views/discover/QuestTab";
+import QuestTab from "@/features/dashboard/discover/QuestTab";
 import Title from "../../../../components/ui/Title";
 
 const page = () => {

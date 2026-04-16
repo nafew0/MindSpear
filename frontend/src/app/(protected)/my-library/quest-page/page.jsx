@@ -1,4 +1,4 @@
-import NewQuest from "@/components/Library/NewQuest";
+import NewQuest from "@/features/dashboard/components/Library/NewQuest";
 function QuestPage() {
 	return (
 		<div className="h-screen">
