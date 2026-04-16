@@ -1,0 +1,21 @@
+.page_title {
+	padding: 65px 0 45px;
+	position: relative;
+}
+.b_ground {
+	/* background-image: -webkit-gradient(linear,left top,right top,from(#2f2cd8),to(#8481f5)); */
+	background-image: linear-gradient(90deg,#2f2cd8,#8481f5);
+	padding: 25px;
+	border-radius: 24px;
+	max-width: 90%;
+	align-items: center;
+	-webkit-box-shadow: 0 36px 48px rgba(108,105,237,.24);
+	box-shadow: 0 36px 48px rgba(108,105,237,.24);
+	margin-bottom: 30px;
+	-webkit-transition: all .3s ease-in-out;
+	transition: all .3s ease-in-out;
+}
+.top_rank .d-flex.crown .rank_icon {
+	/* background-image: -webkit-gradient(linear,left bottom,left top,from(hsla(58,88%,76%,.3)),to(rgba(253,230,54,.3))); */
+	background-image: linear-gradient(0deg,hsla(58,88%,76%,.3),rgba(253,230,54,.3));
+}

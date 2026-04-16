@@ -1,0 +1,93 @@
+import { FaRegQuestionCircle } from "react-icons/fa";
+import { FcSurvey } from "react-icons/fc";
+import { RiTimerLine } from "react-icons/ri";
+
+
+import * as Icons from "../icons";
+
+export const NAV_DATA = [
+	{
+		label: "MAIN MENU",
+		items: [
+			{
+				title: "Dashboard",
+				url: "/dashboard",
+				icon: Icons.FourCircle,
+				items: [],
+			},
+
+			{
+				title: "My Library",
+				url: "/my-library",
+				icon: Icons.HomeIcon,
+				items: [
+					{
+						title: "Quiz",
+						url: "/my-library/quiz-page",
+						icon: "/images/icons/quiz.svg",
+					},
+						{
+							title: "Survey",
+							url: "/my-library/survey-page",
+							icon:  "/images/icons/survey.svg",
+						},
+					{
+						title: "Quest",
+						url: "/my-library/quest-page",
+						icon:  "/images/icons/quest.svg",
+					},
+				],
+			},
+
+						{
+				title: "Discover",
+				url: "/discover",
+				icon: Icons.Calendar,
+						items: [
+						{
+						title: "Quiz",
+						url: "/discover/discover-quiz",
+						icon: "/images/icons/quiz.svg",
+					},
+					{
+						title: "Survey",
+						url: "/discover/discover-survey",
+						icon: "/images/icons/survey.svg",
+					},
+					{
+						title: "Quest",
+						url: "/discover/discover-quest",
+						icon: "/images/icons/quest.svg",
+					},
+				],
+			},
+
+
+			{
+				title: "Question Bank",
+				url: "/bank",
+				icon: Icons.User,
+				items: [
+						{
+						title: "My Bank",
+						url: "/bank/my-question-bank",
+						icon: "/images/icons/mybank.svg",
+					},
+					{
+						title: "Public Bank",
+						url: "/bank/public-question-bank",
+						icon: "/images/icons/publicbank.svg",
+					},
+					{
+						title: "Categories",
+						url: "/bank/categories",
+						icon: "/images/icons/categories.svg",
+					},
+				],
+			},
+	
+	
+		],
+	},
+
+];

@@ -1,0 +1,42 @@
+html { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+
+/* Primary color is set via PanelProvider ->colors(). */
+
+.fi-body.fi-auth {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(245, 158, 11, 0.15), transparent 60%),
+    radial-gradient(900px 500px at 110% 10%, rgba(59, 130, 246, 0.08), transparent 60%),
+    linear-gradient(180deg, #0b1220 0%, #0e1628 100%);
+  min-height: 100vh;
+}
+
+.fi-auth-card {
+  border-radius: 18px !important;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.20),
+    0 8px 10px -6px rgba(0, 0, 0, 0.20) !important;
+  overflow: hidden;
+}
+
+/* Brand area on auth */
+.fi-auth-header .fi-logo, .fi-topbar .fi-logo {
+  display: flex;
+  align-items: center;
+}
+.fi-auth-header .fi-logo svg { height: 40px; width: auto; }
+.fi-topbar .fi-logo svg { height: 28px; width: auto; }
+
+.fi-topbar .fi-logo img { height: 28px; }
+.fi-auth-header .fi-logo img { height: 36px; }
+
+.fi-input, .fi-textarea, .fi-select, .fi-checkbox, .fi-radio { border-radius: 10px; }
+.fi-btn-primary { border-radius: 10px; }
+
+.fi-body.fi-auth::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: url('/images/admin-bg.svg') no-repeat right bottom / 640px auto;
+  opacity: 0.15;
+  pointer-events: none;
+}

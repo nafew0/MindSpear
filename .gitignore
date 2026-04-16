@@ -1,0 +1,63 @@
+# OS / editor metadata
+.DS_Store
+Thumbs.db
+*:Zone.Identifier
+*.Zone.Identifier
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+vendor/
+
+# Frontend builds
+.next/
+out/
+build/
+dist/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Laravel generated files
+backend/public/build/
+backend/public/hot
+backend/public/storage
+backend/storage/*.key
+backend/storage/logs/
+backend/storage/framework/cache/data/
+backend/storage/framework/sessions/
+backend/storage/framework/testing/
+backend/storage/framework/views/
+backend/bootstrap/cache/*.php
+backend/.phpunit.cache/
+backend/.phpunit.result.cache
+
+# Local databases and runtime artifacts
+*.sqlite
+*.sqlite-*
+*.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDEs
+.idea/
+.vscode/
+.fleet/
+.nova/
+.zed/
+
+# Deployment / local tooling
+.vercel/
+auth.json
+
+# Local AI/tooling state
+.claude/settings.local.json

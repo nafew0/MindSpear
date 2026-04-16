@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="143px" height="112px" viewBox="0 0 143 112" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 52.6 (67491) - http://www.bohemiancoding.com/sketch -->
+    <title>ic/challenge@1x</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <rect id="path-1" x="0" y="0" width="143" height="112"/>
+        <path d="M57.6,16.1248 C57.6,17.1008 57.1616,18.016 56.4,18.624 L51.1808,22.8 C51.184,22.6656 51.2,22.5344 51.2,22.4 L51.2,9.6 L57.6,9.6 L57.6,16.1248 Z M7.6032,18.6272 C6.8384,18.016 6.4,17.1008 6.4,16.1248 L6.4,9.6 L12.8,9.6 L12.8,22.4 C12.8,22.5344 12.816,22.6656 12.8192,22.8 L7.6032,18.6272 Z M38.4,57.6 L25.6,57.6 L25.6,54.4 L38.4,54.4 L38.4,57.6 Z M60.8,3.2 L50.3104,3.2 C49.2,1.296 47.1584,0 44.8,0 L19.2,0 C16.8416,0 14.8,1.296 13.6896,3.2 L3.2,3.2 C1.4336,3.2 0,4.6336 0,6.4 L0,16.1248 C0,19.056 1.312,21.7888 3.6032,23.6224 L16.9728,34.3168 C19.8624,37.952 24.032,40.5088 28.8,41.312 L28.8,48 L22.4,48 C20.6336,48 19.2,49.4336 19.2,51.2 L19.2,57.6 L16,57.6 L16,64 L22.4,64 L41.6,64 L48,64 L48,57.6 L44.8,57.6 L44.8,51.2 C44.8,49.4336 43.3664,48 41.6,48 L35.2,48 L35.2,41.312 C39.968,40.5088 44.1376,37.952 47.0272,34.3168 L60.4,23.6224 C62.688,21.7888 64,19.056 64,16.1248 L64,6.4 C64,4.6336 62.5664,3.2 60.8,3.2 L60.8,3.2 Z" id="path-3"/>
+        <filter x="-4.4%" y="-9.3%" width="108.8%" height="118.6%" filterUnits="objectBoundingBox" id="filter-5">
+            <feOffset dx="0" dy="1" in="SourceAlpha" result="shadowOffsetOuter1"/>
+            <feGaussianBlur stdDeviation="0.5" in="shadowOffsetOuter1" result="shadowBlurOuter1"/>
+            <feColorMatrix values="0 0 0 0 0   0 0 0 0 0   0 0 0 0 0  0 0 0 0.2 0" type="matrix" in="shadowBlurOuter1" result="shadowMatrixOuter1"/>
+            <feMerge>
+                <feMergeNode in="shadowMatrixOuter1"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </filter>
+        <path d="M4.21875,3.83749563 L0.78125,3.83749563 L2.5,1.09375 L4.21875,3.83749563 Z" id="path-6"/>
+        <path d="M0.625,2.50059908 L2.5,0.625 L4.375,2.50011982 L2.5,4.375 L0.625,2.50059908 Z" id="path-8"/>
+        <path d="M2.5,4.21875 C1.55076059,4.21875 0.78125,3.44923941 0.78125,2.5 C0.78125,1.55076059 1.55076059,0.78125 2.5,0.78125 C3.44923941,0.78125 4.21875,1.55076059 4.21875,2.5 C4.21875,3.44923941 3.44923941,4.21875 2.5,4.21875 Z" id="path-10"/>
+        <path d="M1.09375,1.09375 L3.90625,1.09375 L3.90625,3.90625 L1.09375,3.90625 L1.09375,1.09375 Z" id="path-12"/>
+        <path d="M4.21875,3.83749563 L0.78125,3.83749563 L2.5,1.09375 L4.21875,3.83749563 Z" id="path-14"/>
+        <path d="M0.625,2.50059908 L2.5,0.625 L4.375,2.50011982 L2.5,4.375 L0.625,2.50059908 Z" id="path-16"/>
+        <path d="M2.5,4.21875 C1.55076059,4.21875 0.78125,3.44923941 0.78125,2.5 C0.78125,1.55076059 1.55076059,0.78125 2.5,0.78125 C3.44923941,0.78125 4.21875,1.55076059 4.21875,2.5 C4.21875,3.44923941 3.44923941,4.21875 2.5,4.21875 Z" id="path-18"/>
+        <path d="M1.09375,1.09375 L3.90625,1.09375 L3.90625,3.90625 L1.09375,3.90625 L1.09375,1.09375 Z" id="path-20"/>
+        <path d="M4.21875,3.83749563 L0.78125,3.83749563 L2.5,1.09375 L4.21875,3.83749563 Z" id="path-22"/>
+        <path d="M0.625,2.50059908 L2.5,0.625 L4.375,2.50011982 L2.5,4.375 L0.625,2.50059908 Z" id="path-24"/>
+        <path d="M2.5,4.21875 C1.55076059,4.21875 0.78125,3.44923941 0.78125,2.5 C0.78125,1.55076059 1.55076059,0.78125 2.5,0.78125 C3.44923941,0.78125 4.21875,1.55076059 4.21875,2.5 C4.21875,3.44923941 3.44923941,4.21875 2.5,4.21875 Z" id="path-26"/>
+        <path d="M1.09375,1.09375 L3.90625,1.09375 L3.90625,3.90625 L1.09375,3.90625 L1.09375,1.09375 Z" id="path-28"/>
+    </defs>
+    <g id="ic/challenge" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <mask id="mask-2" fill="white">
+            <use xlink:href="#path-1"/>
+        </mask>
+        <g id="Mask" fill-rule="nonzero"/>
+        <g id="Report-type/Challenge" mask="url(#mask-2)">
+            <g transform="translate(40.000000, 10.000000)">
+                <mask id="mask-4" fill="white">
+                    <use xlink:href="#path-3"/>
+                </mask>
+                <use id="Icon" stroke="none" fill="#FFA602" fill-rule="evenodd" xlink:href="#path-3"/>
+            </g>
+        </g>
+        <g id="Group" filter="url(#filter-5)" mask="url(#mask-2)">
+            <g transform="translate(27.000000, 62.000000)" id="phone">
+                <g transform="translate(14.277660, 20.774902) rotate(-9.000000) translate(-14.277660, -20.774902) translate(3.777660, 2.174902)">
+                    <g stroke-width="1" fill-rule="evenodd" transform="translate(10.500000, 18.500000) rotate(-360.000000) translate(-10.500000, -18.500000) ">
+                        <path d="M2,0 L19,0 C20.1045695,-2.02906125e-16 21,0.8954305 21,2 L21,35 C21,36.1045695 20.1045695,37 19,37 L2,37 C0.8954305,37 1.3527075e-16,36.1045695 0,35 L0,2 C-1.3527075e-16,0.8954305 0.8954305,2.02906125e-16 2,0 Z" id="bg" fill="#FFFFFF" fill-rule="nonzero"/>
+                        <path d="M1,0 L20,0 C20.5522847,-1.01453063e-16 21,0.44771525 21,1 L21,36 C21,36.5522847 20.5522847,37 20,37 L1,37 C0.44771525,37 6.76353751e-17,36.5522847 0,36 L0,1 C-6.76353751e-17,0.44771525 0.44771525,1.01453063e-16 1,0 Z M2.10526316,1.63235294 C1.55297841,1.63235294 1.10526316,2.08006819 1.10526316,2.63235294 L1.10526316,32.7352941 C1.10526316,33.2875789 1.55297841,33.7352941 2.10526316,33.7352941 L18.8947368,33.7352941 C19.4470216,33.7352941 19.8947368,33.2875789 19.8947368,32.7352941 L19.8947368,2.63235294 C19.8947368,2.08006819 19.4470216,1.63235294 18.8947368,1.63235294 L2.10526316,1.63235294 Z" id="frame" fill="#0F0A00" fill-rule="nonzero"/>
+                        <g id="Group" transform="translate(1.657895, 17.955882)">
+                            <rect id="Rectangle" fill="#E21B3C" fill-rule="nonzero" x="0" y="0.293616442" width="8.56578947" height="7.07352941" rx="1"/>
+                            <g id="Shape/Triangle" transform="translate(1.657895, 1.088235)">
+                                <mask id="mask-7" fill="white">
+                                    <use xlink:href="#path-6"/>
+                                </mask>
+                                <use id="Icon" fill="#000000" fill-rule="nonzero" xlink:href="#path-6"/>
+                                <g id="Grey-scale/White/100%" mask="url(#mask-7)" fill="#FFFFFF" fill-rule="evenodd">
+                                    <rect id="color" x="0" y="0" width="5" height="5"/>
+                                </g>
+                            </g>
+                        </g>
+                        <g id="Group" transform="translate(10.500000, 17.955882)">
+                            <rect id="Rectangle" fill="#1268CE" fill-rule="nonzero" x="0.276315789" y="0.293616442" width="8.56578947" height="7.07352941" rx="1"/>
+                            <g id="Shape/Diamond" transform="translate(2.210526, 1.632353)">
+                                <mask id="mask-9" fill="white">
+                                    <use xlink:href="#path-8"/>
+                                </mask>
+                                <g id="Icon" fill-rule="nonzero"/>
+                                <g id="Grey-scale/White/100%" mask="url(#mask-9)" fill="#FFFFFF" fill-rule="evenodd">
+                                    <rect id="color" x="0" y="0" width="5" height="5"/>
+                                </g>
+                            </g>
+                        </g>
+                        <g id="Group" transform="translate(1.657895, 25.573529)">
+                            <rect id="Rectangle" fill="#FFA602" fill-rule="nonzero" x="2.84217094e-14" y="0.277875569" width="8.56578947" height="7.07352941" rx="1"/>
+                            <g id="Shape/Circle" transform="translate(1.657895, 1.088235)">
+                                <mask id="mask-11" fill="white">
+                                    <use xlink:href="#path-10"/>
+                                </mask>
+                                <g id="Icon" fill-rule="nonzero"/>
+                                <g id="Grey-scale/White/100%" mask="url(#mask-11)" fill="#FFFFFF" fill-rule="evenodd">
+                                    <rect id="color" x="0" y="0" width="5" height="5"/>
+                                </g>
+                            </g>
+                        </g>
+                        <g id="Group" transform="translate(10.500000, 25.573529)">
+                            <rect id="Rectangle" fill="#288F0D" fill-rule="nonzero" x="0.276315789" y="0.277875569" width="8.56578947" height="7.07352941" rx="1"/>
+                            <g id="Shape/Square" transform="translate(2.210526, 1.088235)">
+                                <mask id="mask-13" fill="white">
+                                    <use xlink:href="#path-12"/>
+                                </mask>
+                                <use id="Icon" fill="#000000" fill-rule="nonzero" xlink:href="#path-12"/>
+                                <g id="Grey-scale/White/100%" mask="url(#mask-13)" fill="#FFFFFF" fill-rule="evenodd">
+                                    <rect id="color" x="0" y="0" width="5" height="5"/>
+                                </g>
+                            </g>
+                        </g>
+                    </g>
+                    <rect id="Rectangle" fill="#CCCCCC" fill-rule="nonzero" x="1.65789474" y="2.17647059" width="17.6842105" height="9.79411765" rx="1"/>
+                    <rect id="Rectangle" fill="#B2B2B2" fill-rule="nonzero" x="2.76315789" y="13.0588235" width="15.4736842" height="1.08823529" rx="0.544117647"/>
+                    <rect id="Rectangle" fill="#B2B2B2" fill-rule="nonzero" x="6.63157895" y="14.6911765" width="7.73684211" height="1.08823529" rx="0.544117647"/>
+                </g>
+                <g transform="translate(48.874718, 21.933745) rotate(16.000000) translate(-48.874718, -21.933745) translate(38.374718, 3.333745)">
+                    <g stroke-width="1" fill-rule="evenodd" transform="translate(10.500000, 18.500000) rotate(-360.000000) translate(-10.500000, -18.500000) ">
+                        <path d="M2,0 L19,0 C20.1045695,-2.02906125e-16 21,0.8954305 21,2 L21,35 C21,36.1045695 20.1045695,37 19,37 L2,37 C0.8954305,37 1.3527075e-16,36.1045695 0,35 L0,2 C-1.3527075e-16,0.8954305 0.8954305,2.02906125e-16 2,0 Z" id="bg" fill="#FFFFFF" fill-rule="nonzero"/>
+                        <path d="M1,0 L20,0 C20.5522847,-1.01453063e-16 21,0.44771525 21,1 L21,36 C21,36.5522847 20.5522847,37 20,37 L1,37 C0.44771525,37 6.76353751e-17,36.5522847 0,36 L0,1 C-6.76353751e-17,0.44771525 0.44771525,1.01453063e-16 1,0 Z M2.10526316,1.63235294 C1.55297841,1.63235294 1.10526316,2.08006819 1.10526316,2.63235294 L1.10526316,32.7352941 C1.10526316,33.2875789 1.55297841,33.7352941 2.10526316,33.7352941 L18.8947368,33.7352941 C19.4470216,33.7352941 19.8947368,33.2875789 19.8947368,32.7352941 L19.8947368,2.63235294 C19.8947368,2.08006819 19.4470216,1.63235294 18.8947368,1.63235294 L2.10526316,1.63235294 Z" id="frame" fill="#0F0A00" fill-rule="nonzero"/>
+                        <g id="Group" transform="translate(1.657895, 17.955882)">
+                            <rect id="Rectangle" fill="#E21B3C" fill-rule="nonzero" x="0" y="0.293616442" width="8.56578947" height="7.07352941" rx="1"/>
+                            <g id="Shape/Triangle" transform="translate(1.657895, 1.088235)">
+                                <mask id="mask-15" fill="white">
+                                    <use xlink:href="#path-14"/>
+                                </mask>
+                                <use id="Icon" fill="#000000" fill-rule="nonzero" xlink:href="#path-14"/>
+                                <g id="Grey-scale/White/100%" mask="url(#mask-15)" fill="#FFFFFF" fill-rule="evenodd">
+                                    <rect id="color" x="0" y="0" width="5" height="5"/>
+                                </g>
+                            </g>
+                        </g>
+                        <g id="Group" transform="translate(10.500000, 17.955882)">
+                            <rect id="Rectangle" fill="#1268CE" fill-rule="nonzero" x="0.276315789" y="0.293616442" width="8.56578947" height="7.07352941" rx="1"/>
+                            <g id="Shape/Diamond" transform="translate(2.210526, 1.632353)">
+                                <mask id="mask-17" fill="white">
+                                    <use xlink:href="#path-16"/>
+                                </mask>
+                                <g id="Icon" fill-rule="nonzero"/>
+                                <g id="Grey-scale/White/100%" mask="url(#mask-17)" fill="#FFFFFF" fill-rule="evenodd">
+                                    <rect id="color" x="0" y="0" width="5" height="5"/>
+                                </g>
+                            </g>
+                        </g>
+                        <g id="Group" transform="translate(1.657895, 25.573529)">
+                            <rect id="Rectangle" fill="#FFA602" fill-rule="nonzero" x="2.84217094e-14" y="0.277875569" width="8.56578947" height="7.07352941" rx="1"/>
+                            <g id="Shape/Circle" transform="translate(1.657895, 1.088235)">
+                                <mask id="mask-19" fill="white">
+                                    <use xlink:href="#path-18"/>
+                                </mask>
+                                <g id="Icon" fill-rule="nonzero"/>
+                                <g id="Grey-scale/White/100%" mask="url(#mask-19)" fill="#FFFFFF" fill-rule="evenodd">
+                                    <rect id="color" x="0" y="0" width="5" height="5"/>
+                                </g>
+                            </g>
+                        </g>
+                        <g id="Group" transform="translate(10.500000, 25.573529)">
+                            <rect id="Rectangle" fill="#288F0D" fill-rule="nonzero" x="0.276315789" y="0.277875569" width="8.56578947" height="7.07352941" rx="1"/>
+                            <g id="Shape/Square" transform="translate(2.210526, 1.088235)">
+                                <mask id="mask-21" fill="white">
+                                    <use xlink:href="#path-20"/>
+                                </mask>
+                                <use id="Icon" fill="#000000" fill-rule="nonzero" xlink:href="#path-20"/>
+                                <g id="Grey-scale/White/100%" mask="url(#mask-21)" fill="#FFFFFF" fill-rule="evenodd">
+                                    <rect id="color" x="0" y="0" width="5" height="5"/>
+                                </g>
+                            </g>
+                        </g>
+                    </g>
+                    <rect id="Rectangle" fill="#CCCCCC" fill-rule="nonzero" x="1.65789474" y="2.17647059" width="17.6842105" height="9.79411765" rx="1"/>
+                    <rect id="Rectangle" fill="#B2B2B2" fill-rule="nonzero" x="2.76315789" y="13.0588235" width="15.4736842" height="1.08823529" rx="0.544117647"/>
+                    <rect id="Rectangle" fill="#B2B2B2" fill-rule="nonzero" x="6.63157895" y="14.6911765" width="7.73684211" height="1.08823529" rx="0.544117647"/>
+                </g>
+                <g transform="translate(78.469946, 21.622751) rotate(-5.000000) translate(-78.469946, -21.622751) translate(67.969946, 2.522751)">
+                    <g stroke-width="1" fill-rule="evenodd" transform="translate(10.500000, 19.000000) rotate(-360.000000) translate(-10.500000, -19.000000) ">
+                        <path d="M2,0 L19,0 C20.1045695,-2.16501571e-15 21,0.8954305 21,2 L21,36 C21,37.1045695 20.1045695,38 19,38 L2,38 C0.8954305,38 1.3527075e-16,37.1045695 0,36 L0,2 C-1.3527075e-16,0.8954305 0.8954305,2.02906125e-16 2,0 Z" id="bg" fill="#FFFFFF" fill-rule="nonzero"/>
+                        <path d="M1,0 L20,0 C20.5522847,-2.06356265e-15 21,0.44771525 21,1 L21,37 C21,37.5522847 20.5522847,38 20,38 L1,38 C0.44771525,38 6.76353751e-17,37.5522847 0,37 L0,1 C-6.76353751e-17,0.44771525 0.44771525,1.01453063e-16 1,0 Z M2.10526316,1.67647059 C1.55297841,1.67647059 1.10526316,2.12418584 1.10526316,2.67647059 L1.10526316,33.6470588 C1.10526316,34.1993436 1.55297841,34.6470588 2.10526316,34.6470588 L18.8947368,34.6470588 C19.4470216,34.6470588 19.8947368,34.1993436 19.8947368,33.6470588 L19.8947368,2.67647059 C19.8947368,2.12418584 19.4470216,1.67647059 18.8947368,1.67647059 L2.10526316,1.67647059 Z" id="frame" fill="#0F0A00" fill-rule="nonzero"/>
+                        <g id="Group" transform="translate(1.657895, 18.441176)">
+                            <rect id="Rectangle" fill="#E21B3C" fill-rule="nonzero" x="0" y="0.301552021" width="8.56578947" height="7.26470588" rx="1"/>
+                            <g id="Shape/Triangle" transform="translate(1.657895, 1.117647)">
+                                <mask id="mask-23" fill="white">
+                                    <use xlink:href="#path-22"/>
+                                </mask>
+                                <use id="Icon" fill="#000000" fill-rule="nonzero" xlink:href="#path-22"/>
+                                <g id="Grey-scale/White/100%" mask="url(#mask-23)" fill="#FFFFFF" fill-rule="evenodd">
+                                    <rect id="color" x="0" y="0" width="5" height="5"/>
+                                </g>
+                            </g>
+                        </g>
+                        <g id="Group" transform="translate(10.500000, 18.441176)">
+                            <rect id="Rectangle" fill="#1268CE" fill-rule="nonzero" x="0.276315789" y="0.301552021" width="8.56578947" height="7.26470588" rx="1"/>
+                            <g id="Shape/Diamond" transform="translate(2.210526, 1.676471)">
+                                <mask id="mask-25" fill="white">
+                                    <use xlink:href="#path-24"/>
+                                </mask>
+                                <g id="Icon" fill-rule="nonzero"/>
+                                <g id="Grey-scale/White/100%" mask="url(#mask-25)" fill="#FFFFFF" fill-rule="evenodd">
+                                    <rect id="color" x="0" y="0" width="5" height="5"/>
+                                </g>
+                            </g>
+                        </g>
+                        <g id="Group" transform="translate(1.657895, 26.264706)">
+                            <rect id="Rectangle" fill="#FFA602" fill-rule="nonzero" x="2.84217094e-14" y="0.285385719" width="8.56578947" height="7.26470588" rx="1"/>
+                            <g id="Shape/Circle" transform="translate(1.657895, 1.117647)">
+                                <mask id="mask-27" fill="white">
+                                    <use xlink:href="#path-26"/>
+                                </mask>
+                                <g id="Icon" fill-rule="nonzero"/>
+                                <g id="Grey-scale/White/100%" mask="url(#mask-27)" fill="#FFFFFF" fill-rule="evenodd">
+                                    <rect id="color" x="0" y="0" width="5" height="5"/>
+                                </g>
+                            </g>
+                        </g>
+                        <g id="Group" transform="translate(10.500000, 26.264706)">
+                            <rect id="Rectangle" fill="#288F0D" fill-rule="nonzero" x="0.276315789" y="0.285385719" width="8.56578947" height="7.26470588" rx="1"/>
+                            <g id="Shape/Square" transform="translate(2.210526, 1.117647)">
+                                <mask id="mask-29" fill="white">
+                                    <use xlink:href="#path-28"/>
+                                </mask>
+                                <use id="Icon" fill="#000000" fill-rule="nonzero" xlink:href="#path-28"/>
+                                <g id="Grey-scale/White/100%" mask="url(#mask-29)" fill="#FFFFFF" fill-rule="evenodd">
+                                    <rect id="color" x="0" y="0" width="5" height="5"/>
+                                </g>
+                            </g>
+                        </g>
+                    </g>
+                    <rect id="Rectangle" fill="#CCCCCC" fill-rule="nonzero" x="1.65789474" y="2.23529412" width="17.6842105" height="10.0588235" rx="1"/>
+                    <rect id="Rectangle" fill="#B2B2B2" fill-rule="nonzero" x="2.76315789" y="13.4117647" width="15.4736842" height="1.11764706" rx="0.558823529"/>
+                    <rect id="Rectangle" fill="#B2B2B2" fill-rule="nonzero" x="6.63157895" y="15.0882353" width="7.73684211" height="1.11764706" rx="0.558823529"/>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

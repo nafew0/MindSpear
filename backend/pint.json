@@ -1,0 +1,33 @@
+{
+    "preset": "laravel",
+    "exclude": [
+        "bootstrap",
+        "config",
+        "database",
+        "public",
+        "storage",
+        "vendor"
+    ],
+    "rules": {
+        "@PSR2": true,
+        "@PSR12": true,
+        "psr_autoloading": true,
+        "ordered_imports": true,
+        "single_quote": true,
+        "array_syntax": {"syntax": "short"},
+        "binary_operator_spaces": {
+            "default": "single_space",
+            "operators": {
+                "=>": "single_space",
+                "=": "single_space"
+            }
+        },
+        "blank_line_after_namespace": true,
+        "blank_line_after_opening_tag": true,
+        "concat_space": {"spacing": "one"},
+        "no_unused_imports": true,
+        "no_extra_blank_lines": true,
+        "trailing_comma_in_multiline": true,
+        "whitespace_after_comma_in_array": true
+    }
+}
