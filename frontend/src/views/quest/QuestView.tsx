@@ -12,7 +12,7 @@ import ConfirmDialog from "@/utils/showConfirmDialog";
 import {
 	setMultipleSelectedItems,
 	setSelectedItem,
-} from "@/stores/features/quizItems/quizSlice";
+} from "@/features/quiz/store/quizItems/quizSlice";
 import { useDispatch } from "react-redux";
 import { Calendar, Pencil, Trash2 } from "lucide-react";
 import { MdOutlinePublic, MdQuiz } from "react-icons/md";
@@ -22,11 +22,11 @@ import { convertTaskData } from "@/utils/questDataTransformer";
 import moment from "@/lib/dayjs";
 import QuestionsResultView from "@/components/ResultComponent/QuestionsResultView";
 import GlobalPagination from "@/components/GlobalPagination";
-import { clearQuestData } from "@/stores/features/questQuestionTimeSlice";
+import { clearQuestData } from "@/features/quest/store/questQuestionTimeSlice";
 import QuestDuplicate from "./QuestDuplicate";
-import { setScope } from "@/stores/features/leaderboardSlice";
+import { setScope } from "@/features/live/store/leaderboardSlice";
 import { toast } from "react-toastify";
-import { deleteQuestById, getQuestById } from "@/services/questService";
+import { deleteQuestById, getQuestById } from "@/features/quest/services/questService";
 
 interface QuizCreatorPreviewProps {
 	quizInformation: ApiQuestion[];

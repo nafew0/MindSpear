@@ -30,14 +30,14 @@ import { CSS } from "@dnd-kit/utilities";
 import ConfirmDialog from "@/utils/showConfirmDialog";
 import { AxiosError } from "axios";
 import Image from "next/image";
-import { removeTask } from "@/stores/features/quickFormSlice";
+import { removeTask } from "@/features/live/store/quickFormSlice";
 import { toast } from "react-toastify";
 import { SurveyQuestion } from "@/types/surveyTypes";
 import axiosInstance from "@/utils/axiosInstance";
 import {
 	deleteSurveyQuestion,
 	createSurveyQuestion,
-} from "@/services/surveyService";
+} from "@/features/survey/services/surveyService";
 
 interface MenuItem {
 	key: string;

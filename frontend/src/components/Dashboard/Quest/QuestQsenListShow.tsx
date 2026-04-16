@@ -15,8 +15,8 @@ import {
 	setMultipleSelectedItems,
 	removeSelectedItem,
 	duplicateItem,
-} from "@/stores/features/quizItems/quizSlice";
-import { clearSelectedItem } from "@/stores/features/quizItems/quizSlice";
+} from "@/features/quiz/store/quizItems/quizSlice";
+import { clearSelectedItem } from "@/features/quiz/store/quizItems/quizSlice";
 
 import {
 	DndContext,
@@ -41,7 +41,7 @@ import axiosInstance from "@/utils/axiosInstance";
 import ConfirmDialog from "@/utils/showConfirmDialog";
 import { AxiosError } from "axios";
 import Image from "next/image";
-import { removeTask } from "@/stores/features/quickFormSlice";
+import { removeTask } from "@/features/live/store/quickFormSlice";
 import { toast } from "react-toastify";
 interface MenuItem {
 	key: string;

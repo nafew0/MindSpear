@@ -17,12 +17,12 @@ import { transformQuestionData } from "@/utils/quizUtils";
 import {
 	setMultipleSelectedItems,
 	setSelectedItem,
-} from "@/stores/features/quizItems/quizSlice";
+} from "@/features/quiz/store/quizItems/quizSlice";
 import { useDispatch } from "react-redux";
 import { Pencil, Trash2 } from "lucide-react";
 import { MdOutlinePublic, MdQuiz } from "react-icons/md";
 import Questions from "@/components/QuizReports/Questions";
-import { clearQuestData } from "@/stores/features/questQuestionTimeSlice";
+import { clearQuestData } from "@/features/quest/store/questQuestionTimeSlice";
 import QuizQuestionsResultView from "@/components/ResultComponent/QuizQuestionsResultView";
 import GlobalPagination from "@/components/GlobalPagination";
 import { toast } from "react-toastify";

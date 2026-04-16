@@ -14,13 +14,13 @@ import { DatePicker } from "antd";
 import dayjs from "dayjs";
 import { Switch } from "@/components/FormElements/switch";
 import moment from "@/lib/dayjs";
-import { setQuest } from "@/stores/features/questInformationSlice";
+import { setQuest } from "@/features/quest/store/questInformationSlice";
 import { RootState } from "@/stores/store";
 
 import {
 	setQuestSession,
 	clearQuestSession,
-} from "@/stores/features/questSessionSlice";
+} from "@/features/quest/store/questSessionSlice";
 
 import {
 	connectSocket,

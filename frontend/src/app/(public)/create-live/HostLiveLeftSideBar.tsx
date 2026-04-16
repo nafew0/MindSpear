@@ -13,7 +13,7 @@ import { Modal } from "@/components/ui";
 
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/stores/store";
-import { setScope } from "@/stores/features/leaderboardSlice";
+import { setScope } from "@/features/live/store/leaderboardSlice";
 
 interface HostLiveLeftSideBarProps {
 	onChartTypeChange: (type: "bar" | "donut" | "dots" | "pie") => void;

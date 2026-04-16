@@ -9,12 +9,12 @@ import Questions from "@/components/QuizReports/Questions";
 import moment from "@/lib/dayjs";
 import { useParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
-import { setQuiz } from "@/stores/features/quizInformationSlice";
+import { setQuiz } from "@/features/quiz/store/quizInformationSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { AxiosError } from "axios";
 import { useDebounce } from "@/hooks/useDebounce";
 import QuizQuestionsResultView from "@/components/ResultComponent/QuizQuestionsResultView";
-import { clearQuestData } from "@/stores/features/questQuestionTimeSlice";
+import { clearQuestData } from "@/features/quest/store/questQuestionTimeSlice";
 import GlobalPagination from "@/components/GlobalPagination";
 import { toast } from "react-toastify";
 

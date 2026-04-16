@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDispatch, useSelector } from "react-redux";
-import { registerUser, clearError } from "@/stores/features/authSlice";
+import { registerUser, clearError } from "@/features/auth/store/authSlice";
 import type { RootState, AppDispatch } from "@/stores/store";
 import Image from "next/image";
 import Link from "next/link";

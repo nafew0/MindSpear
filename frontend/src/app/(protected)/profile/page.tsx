@@ -8,7 +8,7 @@ import { api } from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
 import "react-toastify/dist/ReactToastify.css";
 import { useDispatch } from "react-redux";
-import { updateProfilePicture } from "@/stores/features/authSlice";
+import { updateProfilePicture } from "@/features/auth/store/authSlice";
 import type { AppDispatch } from "@/stores/store";
 import { FiUser, FiMail, FiPhone, FiBriefcase, FiMapPin, FiCamera } from "react-icons/fi";
 import ProfileSkeleton from "@/components/loading/ProfileSkeleton";

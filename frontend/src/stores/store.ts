@@ -3,24 +3,23 @@ import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import storage from "redux-persist/lib/storage";
 import { persistReducer, persistStore } from "redux-persist";
 
-import authReducer from "./features/authSlice";
-import dropdownReducer from "./features/dropdownSlice";
-import quizReducer from "./features/quizItems/quizSlice";
-import quizInformationReducer from "./features/quizInformationSlice";
-import questInformationReducer from "./features/questInformationSlice";
-import surveyInformationReducer from "./survey/surveyInformationSlice";
-import leaderboardReducer from "./features/leaderboardSlice";
-import answersReducer from "./features/leaderboardAnswersSlice";
-import questSessionReducer from "./features/questSessionSlice";
-import questQuestionTimeReducer from "./features/questQuestionTimeSlice";
-import contentEditorReducer from "./features/contentEditorSlice";
-import questionBankReducer from "./features/questionBank/questionBankSlice";
-import surveyQuestionsReducer from "./survey/surveyQuestionsSlice";
-import activeSurveyPageReducer from "./survey/activeSurveyPageSlice";
-import surveyReducer from "./survey/surveySlice";
+import authReducer from "@/features/auth/store/authSlice";
+import dropdownReducer from "@/features/dashboard/store/dropdownSlice";
+import contentEditorReducer from "@/features/dashboard/store/contentEditorSlice";
+import questionBankReducer from "@/features/dashboard/question-bank/store/questionBankSlice";
+import leaderboardReducer from "@/features/live/store/leaderboardSlice";
+import answersReducer from "@/features/live/store/leaderboardAnswersSlice";
+import quickForm from "@/features/live/store/quickFormSlice";
+import questInformationReducer from "@/features/quest/store/questInformationSlice";
+import questQuestionTimeReducer from "@/features/quest/store/questQuestionTimeSlice";
+import questSessionReducer from "@/features/quest/store/questSessionSlice";
+import quizInformationReducer from "@/features/quiz/store/quizInformationSlice";
+import quizReducer from "@/features/quiz/store/quizItems/quizSlice";
+import activeSurveyPageReducer from "@/features/survey/store/activeSurveyPageSlice";
+import surveyInformationReducer from "@/features/survey/store/surveyInformationSlice";
+import surveyQuestionsReducer from "@/features/survey/store/surveyQuestionsSlice";
+import surveyReducer from "@/features/survey/store/surveySlice";
 
-// import quickFormReducer from "./features/quickForm.slice";
-import quickForm from "./features/quickFormSlice";
 const persistConfig = {
 	key: "root",
 	storage,
@@ -54,7 +53,7 @@ const rootReducer = combineReducers({
 	answers: answersReducer,
 	quickForm: quickForm,
 	questSession: questSessionReducer,
-		questTime: questQuestionTimeReducer,
+	questTime: questQuestionTimeReducer,
 	contentEditor: contentEditorReducer,
 	questionBank: questionBankReducer,
 	surveyQuestions: surveyQuestionsReducer,

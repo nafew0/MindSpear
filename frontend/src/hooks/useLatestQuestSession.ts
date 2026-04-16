@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { getQuestById } from "@/services/questService";
+import { getQuestById } from "@/features/quest/services/questService";
 import { AxiosError } from "axios";
 
 type QuestSession = any;

@@ -10,7 +10,7 @@ import { ContentEditor } from "@/components/editor/ContentEditor";
 import {
 	initializeContent,
 	resetEditor,
-} from "@/stores/features/contentEditorSlice";
+} from "@/features/dashboard/store/contentEditorSlice";
 import { RootState } from "@/stores/store";
 import React from "react";
 

@@ -14,8 +14,8 @@ import type {
 	SurveyQuestion,
 } from "@/types/surveyTypes";
 import type { Quiz } from "@/types/types";
-import * as surveyItemReducers from "@/stores/features/surveyItems/items";
-import * as surveyOptionReducers from "@/stores/features/surveyItems/options";
+import * as surveyItemReducers from "@/features/survey/store/surveyItems/items";
+import * as surveyOptionReducers from "@/features/survey/store/surveyItems/options";
 import {
 	createSurveyPage,
 	deleteSurveyPage,
@@ -26,7 +26,7 @@ import {
 	deleteSurveyQuestion,
 	updateSurveyQuestion,
 	getSurveyDetailsById,
-} from "@/services/surveyService";
+} from "@/features/survey/services/surveyService";
 
 interface SurveyState {
 	surveyId: string | null;

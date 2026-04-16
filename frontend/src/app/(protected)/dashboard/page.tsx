@@ -6,7 +6,7 @@ import CreateSurvey from "@/components/Dashboard/CreateSurvey";
 import CreateQuest from "@/components/Dashboard/CreateQuest";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/stores/store";
-import { setMultipleSelectedItems } from "@/stores/features/quizItems/quizSlice"
+import { setMultipleSelectedItems } from "@/features/quiz/store/quizItems/quizSlice"
 import ReportDashboard from "@/views/dashboard/ReportDashboard";
 import StatsOverview from "@/views/dashboard/StatsOverview";
 // import ReportSlider from "@/views/dashboard/ReportSlider";

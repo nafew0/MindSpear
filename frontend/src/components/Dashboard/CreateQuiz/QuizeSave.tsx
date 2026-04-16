@@ -15,7 +15,7 @@ import { SiKdenlive } from "react-icons/si";
 import { persistor } from "@/stores/store";
 import { convertDataToQuestions } from "@/utils/quizUtils";
 import { Quiz } from "@/types/types";
-import { clearQuiz } from "@/stores/features/quizInformationSlice";
+import { clearQuiz } from "@/features/quiz/store/quizInformationSlice";
 import { IoSaveSharp } from "react-icons/io5";
 interface QuizState {
 	quiz: Quiz;

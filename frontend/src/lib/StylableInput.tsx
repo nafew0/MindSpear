@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { FaBold, FaItalic, FaUnderline, FaLink } from "react-icons/fa";
 import { RootState } from "@/stores/store";
 import DOMPurify from "dompurify";
-import { updateQuizTitle } from "@/stores/features/quizItems/quizSlice";
+import { updateQuizTitle } from "@/features/quiz/store/quizItems/quizSlice";
 import { useSurveyOptional } from "@/contexts/SurveyContext";
 import { useDispatch, useSelector } from "react-redux";
 import { BiDotsHorizontalRounded } from "react-icons/bi";

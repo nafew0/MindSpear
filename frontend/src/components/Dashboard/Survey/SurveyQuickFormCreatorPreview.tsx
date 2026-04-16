@@ -25,8 +25,8 @@ import {
 	setOptionText,
 	removeOption,
 	pasteOptionsReplace,
-} from "@/stores/features/quickFormSlice";
-import { selectTaskById } from "@/stores/features/selectors";
+} from "@/features/live/store/quickFormSlice";
+import { selectTaskById } from "@/features/live/store/selectors";
 import { FaRegClock } from "react-icons/fa6";
 import { Trash2 } from "lucide-react";
 

@@ -13,7 +13,7 @@ import {
 	updateLimitedTimeTitle,
 	removeSelectedItem,
 	updatePoints,
-} from "@/stores/features/quizItems/quizSlice";
+} from "@/features/quiz/store/quizItems/quizSlice";
 
 import StylableInput from "@/lib/StylableInput";
 import StylableInputFile from "@/lib/StylableInputFile";

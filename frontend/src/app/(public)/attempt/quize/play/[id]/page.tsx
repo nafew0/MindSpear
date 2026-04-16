@@ -10,7 +10,7 @@ import moment from "@/lib/dayjs";
 
 import { waitForQuizJoinedOnce } from "@/socket/socket";
 import { useDispatch } from "react-redux";
-import { setQuestData } from "@/stores/features/questQuestionTimeSlice";
+import { setQuestData } from "@/features/quest/store/questQuestionTimeSlice";
 
 function QuizAttempt() {
 	const dispatch = useDispatch();

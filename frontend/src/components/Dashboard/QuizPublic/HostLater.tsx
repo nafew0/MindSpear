@@ -9,7 +9,7 @@ import { useForm, Controller } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
-import { setQuiz } from "@/stores/features/quizInformationSlice";
+import { setQuiz } from "@/features/quiz/store/quizInformationSlice";
 import { useDispatch } from "react-redux";
 import { DatePicker } from "antd";
 import dayjs from "dayjs";
@@ -19,7 +19,7 @@ import moment from "@/lib/dayjs";
 import {
 	setQuestSession,
 	// clearQuestSession,
-} from "@/stores/features/questSessionSlice";
+} from "@/features/quest/store/questSessionSlice";
 import { toast } from "react-toastify";
 
 const quizSchema = z

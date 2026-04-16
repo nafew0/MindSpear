@@ -9,11 +9,11 @@ import FillInTheBlanksCreatorPreview from '@/components/Dashboard/CreateQuiz/Fil
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from 'axios';
 import { useParams } from "next/navigation";
-import { setQuiz } from "@/stores/features/quizInformationSlice";
+import { setQuiz } from "@/features/quiz/store/quizInformationSlice";
 import type { Quiz } from "@/types/types";
 import { PiWarningCircle } from 'react-icons/pi';
 import { transformQuestionData } from '@/utils/quizUtils';
-import { setMultipleSelectedItems } from '@/stores/features/quizItems/quizSlice';
+import { setMultipleSelectedItems } from '@/features/quiz/store/quizItems/quizSlice';
 import { toast } from 'react-toastify';
 
 interface QuizItem {

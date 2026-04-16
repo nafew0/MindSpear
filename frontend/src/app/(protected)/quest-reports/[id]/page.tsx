@@ -10,7 +10,7 @@ import { useParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { useDispatch } from "react-redux";
 import { AxiosError } from "axios";
-import { setQuest } from "@/stores/features/questInformationSlice";
+import { setQuest } from "@/features/quest/store/questInformationSlice";
 
 const TABS = ["Summary", "Participants", "Questions"] as const;
 type TabType = (typeof TABS)[number];

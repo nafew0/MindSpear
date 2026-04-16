@@ -16,7 +16,7 @@ import {
 } from "@/socket/quest-socket";
 import { useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
-import { upsertAnswer } from "@/stores/features/leaderboardAnswersSlice";
+import { upsertAnswer } from "@/features/live/store/leaderboardAnswersSlice";
 import { useDispatch, useSelector } from "react-redux";
 // import { RootState } from "@/services/redux/store";
 import moment from "@/lib/dayjs";

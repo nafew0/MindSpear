@@ -17,7 +17,7 @@ import {
 	deleteColumn,
 	uploadImageToBlock,
 	removeImageFromBlock,
-} from "@/stores/features/contentEditorSlice";
+} from "@/features/dashboard/store/contentEditorSlice";
 import { RootState } from "@/stores/store";
 import { ContentBlock } from "@/types/content";
 

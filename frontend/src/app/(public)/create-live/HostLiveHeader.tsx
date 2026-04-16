@@ -4,7 +4,7 @@
 import { IoIosClose } from "react-icons/io";
 import Image from "next/image";
 import Link from "next/link";
-import { clearCache } from "@/stores/features/leaderboardSlice";
+import { clearCache } from "@/features/live/store/leaderboardSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { emitEndQuest, setCurrentQuest } from "@/socket/quest-socket";
 import { useSearchParams, useRouter, useParams } from "next/navigation";

@@ -8,10 +8,10 @@ import { useParams, useRouter } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { useDispatch, useSelector } from "react-redux";
 import { AxiosError } from "axios";
-import { setQuest } from "@/stores/features/questInformationSlice";
+import { setQuest } from "@/features/quest/store/questInformationSlice";
 import { RootState } from "@/stores/store";
 
-import { clearCache } from "@/stores/features/leaderboardSlice";
+import { clearCache } from "@/features/live/store/leaderboardSlice";
 import { clearAppStorage } from "@/utils/storageCleaner";
 import {
 	connectSocket,
@@ -30,7 +30,7 @@ import {
 import {
 	setQuestData,
 	// clearQuestData,
-} from "@/stores/features/questQuestionTimeSlice";
+} from "@/features/quest/store/questQuestionTimeSlice";
 
 import { CirclePlay, Users } from "lucide-react";
 import moment from "@/lib/dayjs";

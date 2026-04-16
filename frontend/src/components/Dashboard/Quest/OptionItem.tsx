@@ -4,13 +4,13 @@ import {
 	updateOptionText,
 	updateOptionColor,
 	removeQuestOption,
-} from "@/stores/features/quizItems/quizSlice";
+} from "@/features/quiz/store/quizItems/quizSlice";
 import { IoClose, IoReorderTwo } from "react-icons/io5";
 import { RootState } from "@/stores/store";
 import { cn } from "@/lib/utils";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { addQuestOptionsFromPaste } from "@/stores/features/quizItems/quizSlice";
+import { addQuestOptionsFromPaste } from "@/features/quiz/store/quizItems/quizSlice";
 
 
 interface OptionItemProps {

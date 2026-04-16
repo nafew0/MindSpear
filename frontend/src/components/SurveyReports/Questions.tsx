@@ -15,7 +15,7 @@ import { useParams } from "next/navigation";
 import { RiDeleteBin7Fill } from "react-icons/ri";
 import Image from "next/image";
 import ConfirmDialog from "@/utils/showConfirmDialog";
-import { removeSelectedItem } from "@/stores/features/quizItems/quizSlice";
+import { removeSelectedItem } from "@/features/quiz/store/quizItems/quizSlice";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 

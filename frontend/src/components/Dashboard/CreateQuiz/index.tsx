@@ -7,8 +7,8 @@ import classNames from "classnames";
 import {
 	addNewItem,
 	clearMultipleSelectedItems,
-} from "@/stores/features/quizItems/quizSlice";
-import { clearQuiz, setQuiz } from "@/stores/features/quizInformationSlice";
+} from "@/features/quiz/store/quizItems/quizSlice";
+import { clearQuiz, setQuiz } from "@/features/quiz/store/quizInformationSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/stores/store";
 import axiosInstance from "@/utils/axiosInstance";

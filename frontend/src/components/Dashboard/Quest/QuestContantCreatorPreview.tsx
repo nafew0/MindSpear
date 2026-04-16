@@ -10,13 +10,13 @@ import axiosInstance from "@/utils/axiosInstance";
 import ConfirmDialog from "@/utils/showConfirmDialog";
 import { mainTemplates, allTemplateCategories } from "@/constants/templates";
 import { Select } from "@/components/FormElements/select";
-import { selectTaskById } from "@/stores/features/selectors";
+import { selectTaskById } from "@/features/live/store/selectors";
 import { FaRegClock } from "react-icons/fa6";
 import { motion } from "framer-motion";
 import {
 	updateLimitedTimeTitle,
 	contantData,
-} from "@/stores/features/quizItems/quizSlice";
+} from "@/features/quiz/store/quizItems/quizSlice";
 import { Trash2 } from "lucide-react";
 import { TemplateCard } from "@/components/editor/TemplateCard";
 import { Modal } from "@/components/ui";
@@ -26,7 +26,7 @@ import { ContentEditor } from "@/components/editor/ContentEditor";
 import {
 	initializeContent,
 	// resetEditor,
-} from "@/stores/features/contentEditorSlice";
+} from "@/features/dashboard/store/contentEditorSlice";
 // import { TemplateSelector } from "@/components/editor/TemplateSelector";
 
 // import { Upload } from "antd";

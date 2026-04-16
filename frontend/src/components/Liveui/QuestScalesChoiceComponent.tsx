@@ -12,7 +12,7 @@ import {
 } from "@/socket/quest-socket";
 import { useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
-import { upsertAnswer } from "@/stores/features/leaderboardAnswersSlice";
+import { upsertAnswer } from "@/features/live/store/leaderboardAnswersSlice";
 import { useDispatch } from "react-redux";
 import moment from "@/lib/dayjs";
 import { AxiosError } from "axios";

@@ -6,11 +6,11 @@ import Image from "next/image";
 import axiosInstance from "@/utils/axiosInstance";
 import { Quiz } from "@/types/types";
 import { useDispatch } from "react-redux";
-import { setQuest } from "@/stores/features/questInformationSlice";
+import { setQuest } from "@/features/quest/store/questInformationSlice";
 import {
 	addNewQuestItem,
 	setSelectedItem,
-} from "@/stores/features/quizItems/quizSlice";
+} from "@/features/quiz/store/quizItems/quizSlice";
 import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import moment from "@/lib/dayjs";

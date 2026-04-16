@@ -16,7 +16,7 @@ import type { AppDispatch } from "@/stores/store";
 import { persistor } from "@/stores/store";
 import { useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
-import { clearAuth, logoutUser } from "@/stores/features/authSlice";
+import { clearAuth, logoutUser } from "@/features/auth/store/authSlice";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/stores/store";
 import { BadgePercent } from "lucide-react";

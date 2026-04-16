@@ -1,7 +1,7 @@
 import React from "react";
 import Image from "next/image";
 import axiosInstance from "@/utils/axiosInstance";
-import { addNewItem } from "@/stores/features/quizItems/quizSlice";
+import { addNewItem } from "@/features/quiz/store/quizItems/quizSlice";
 import { useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
 

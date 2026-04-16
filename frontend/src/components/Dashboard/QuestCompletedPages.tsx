@@ -10,7 +10,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/stores/store";
 import { Modal } from "@/components/ui";
 import AllQuestResult from "../ResultComponent/AllQuestResult";
-import { clearCache } from "@/stores/features/leaderboardSlice";
+import { clearCache } from "@/features/live/store/leaderboardSlice";
 import useLatestQuestSession from "@/hooks/useLatestQuestSession";
 export type QuestProps = {
 	pagesStatus?: string;

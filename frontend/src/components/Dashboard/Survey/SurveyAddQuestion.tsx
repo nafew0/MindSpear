@@ -12,14 +12,14 @@ import {
 	DropdownTrigger,
 } from "@/components/ui/Dropdown";
 import { useSurvey } from "@/contexts/SurveyContext";
-import { setDropdownOpen } from "@/stores/features/dropdownSlice";
+import { setDropdownOpen } from "@/features/dashboard/store/dropdownSlice";
 import { useDispatch } from "react-redux";
 import Image from "next/image";
 import PdfModal from "@/components/Dashboard/PdfQuiz/PdfModal";
 import { useParams } from "next/navigation";
 import { FilePlus2 } from "lucide-react";
 import { SurveyQuestion } from "@/types/surveyTypes";
-import { SurveyQuestionRequest } from "@/services/surveyService";
+import { SurveyQuestionRequest } from "@/features/survey/services/surveyService";
 import { toast } from "react-toastify";
 
 interface MenuItem {

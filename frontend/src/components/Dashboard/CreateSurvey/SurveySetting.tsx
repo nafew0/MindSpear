@@ -15,7 +15,7 @@ import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
-import { setSurvey } from "@/stores/survey/surveyInformationSlice";
+import { setSurvey } from "@/features/survey/store/surveyInformationSlice";
 import { useSurveyOptional } from "@/contexts/SurveyContext";
 import moment from "@/lib/dayjs";
 import { DatePicker } from "antd";

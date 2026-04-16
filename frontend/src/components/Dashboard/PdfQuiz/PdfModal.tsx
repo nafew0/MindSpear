@@ -7,7 +7,7 @@ import { RootState } from "@/stores/store";
 import { extractPdfThumbnails } from "@/utils/pdfUtils";
 import PageSelector from "@/views/dashboard/quiz/PdfSelector";
 import { transformQuestionData } from "@/utils/quizUtils";
-import { setMultipleSelectedItems } from "@/stores/features/quizItems/quizSlice";
+import { setMultipleSelectedItems } from "@/features/quiz/store/quizItems/quizSlice";
 import { useParams, useRouter } from "next/navigation";
 import { AxiosError } from "axios";
 import axiosInstance from "@/utils/axiosInstance";

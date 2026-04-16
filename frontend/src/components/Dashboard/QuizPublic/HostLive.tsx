@@ -8,7 +8,7 @@ import { useForm, Controller } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
-import { setQuiz } from "@/stores/features/quizInformationSlice";
+import { setQuiz } from "@/features/quiz/store/quizInformationSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { DatePicker } from "antd";
 import dayjs from "dayjs";
@@ -25,8 +25,8 @@ import { RootState } from "@/stores/store";
 import {
 	setQuestSession,
 	clearQuestSession,
-} from "@/stores/features/questSessionSlice";
-import { setScope } from "@/stores/features/leaderboardSlice";
+} from "@/features/quest/store/questSessionSlice";
+import { setScope } from "@/features/live/store/leaderboardSlice";
 import { toast } from "react-toastify";
 
 const quizSchema = z

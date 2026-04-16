@@ -9,7 +9,7 @@ import FillInTheBlanksCreatorPreview from '@/components/Dashboard/CreateQuiz/Fil
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from 'axios';
 import { useParams } from "next/navigation";
-import { setQuiz } from "@/stores/features/quizInformationSlice";
+import { setQuiz } from "@/features/quiz/store/quizInformationSlice";
 import type { Quiz } from "@/types/types";
 import PdfModal from '@/components/Dashboard/PdfQuiz/PdfModal';
 import { toast } from 'react-toastify';

@@ -20,8 +20,8 @@ import {
 	setHoveredItem,
 	clearHoveredItem,
 	addNewItem,
-} from "@/stores/features/quizItems/quizSlice";
-import { setDropdownOpen } from "@/stores/features/dropdownSlice";
+} from "@/features/quiz/store/quizItems/quizSlice";
+import { setDropdownOpen } from "@/features/dashboard/store/dropdownSlice";
 // import { RootState } from '@/services/redux/store';
 import axiosInstance from "@/utils/axiosInstance";
 import { Quiz } from "@/types/types";

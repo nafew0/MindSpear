@@ -27,7 +27,7 @@ import {
 import { cacheJoin, getCachedJoin } from "@/socket/quest-socket";
 import moment from "@/lib/dayjs";
 import { useDispatch, useSelector } from "react-redux";
-import { setQuestData } from "@/stores/features/questQuestionTimeSlice";
+import { setQuestData } from "@/features/quest/store/questQuestionTimeSlice";
 import axiosInstance from "@/utils/axiosInstance";
 
 export type TaskType =

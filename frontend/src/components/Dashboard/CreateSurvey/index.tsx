@@ -6,12 +6,12 @@ import Image from "next/image";
 import axiosInstance from "@/utils/axiosInstance";
 import { Survey } from "@/types/types";
 import { useDispatch } from "react-redux";
-import { setSurvey } from "@/stores/survey/surveyInformationSlice";
+import { setSurvey } from "@/features/survey/store/surveyInformationSlice";
 import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import moment from "@/lib/dayjs";
 import { toast } from "react-toastify";
-import { createSurvey } from "@/services/surveyService";
+import { createSurvey } from "@/features/survey/services/surveyService";
 
 interface SurveyApiResponse {
 	data: Survey;

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
-import { loginWithMicrosoft } from "@/stores/features/authSlice";
+import { loginWithMicrosoft } from "@/features/auth/store/authSlice";
 import type { AppDispatch, RootState } from "@/stores/store";
 
 export default function MicrosoftCallbackPage() {

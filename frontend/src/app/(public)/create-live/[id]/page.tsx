@@ -15,7 +15,7 @@ import {
 	clearCache,
 	userQuizCompletedLastSlider,
 	setCurrentQsentId,
-} from "@/stores/features/leaderboardSlice";
+} from "@/features/live/store/leaderboardSlice";
 import QuestCompletedPages from "@/components/Dashboard/QuestCompletedPages";
 import { AxiosError } from "axios";
 import { useSearchParams, useParams } from "next/navigation";
@@ -57,7 +57,7 @@ import {
 	waitForQuestCompletedAll,
 } from "@/socket/quest-socket";
 import moment from "@/lib/dayjs";
-import { setQuestData } from "@/stores/features/questQuestionTimeSlice";
+import { setQuestData } from "@/features/quest/store/questQuestionTimeSlice";
 import { Modal } from "@/components/ui";
 
 type Task = {

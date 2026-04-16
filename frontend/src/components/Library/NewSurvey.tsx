@@ -14,7 +14,7 @@ import ConfirmDialog from "@/utils/showConfirmDialog";
 import QuizSkeleton from "../loading/QuizSkeleton";
 import { IoDuplicateOutline } from "react-icons/io5";
 import { Tooltip } from "react-tooltip";
-import { deleteSurveyById } from "@/services/surveyService";
+import { deleteSurveyById } from "@/features/survey/services/surveyService";
 import Title from "../ui/Title";
 
 export default function NewSurvey() {

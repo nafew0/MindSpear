@@ -19,7 +19,7 @@ import {
 	setMultipleSelectedItems,
 	removeSelectedItem,
 	duplicateItem,
-} from "@/stores/features/quizItems/quizSlice";
+} from "@/features/quiz/store/quizItems/quizSlice";
 import {
 	DndContext,
 	closestCenter,

@@ -16,8 +16,8 @@ import {
 	clearHoveredItem,
 	addNewQuestItem,
 	setSelectedItem,
-} from "@/stores/features/quizItems/quizSlice";
-import { setDropdownOpen } from "@/stores/features/dropdownSlice";
+} from "@/features/quiz/store/quizItems/quizSlice";
+import { setDropdownOpen } from "@/features/dashboard/store/dropdownSlice";
 import axiosInstance from "@/utils/axiosInstance";
 import Image from "next/image";
 import PdfModal from "@/components/Dashboard/PdfQuiz/PdfModal";

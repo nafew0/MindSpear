@@ -3,7 +3,7 @@
 import { connectSocket, getSocket, submitAnswer } from "@/socket/socket";
 import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { upsertAnswer } from "@/stores/features/leaderboardAnswersSlice";
+import { upsertAnswer } from "@/features/live/store/leaderboardAnswersSlice";
 import { useDispatch } from "react-redux";
 import moment from "@/lib/dayjs";
 import axiosInstance from "@/utils/axiosInstance";

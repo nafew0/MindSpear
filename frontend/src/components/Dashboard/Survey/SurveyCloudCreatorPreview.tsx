@@ -11,7 +11,7 @@ import {
 	removeSelectedItem,
 	// updatePoints,
 	reorderOptions,
-} from "@/stores/features/quizItems/quizSlice";
+} from "@/features/quiz/store/quizItems/quizSlice";
 import StylableInput from "@/lib/StylableInput";
 import { Select } from "@/components/FormElements/select";
 import { FaRegClock } from "react-icons/fa";

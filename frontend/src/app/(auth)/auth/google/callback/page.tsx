@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
-import { loginWithGoogle } from "@/stores/features/authSlice";
+import { loginWithGoogle } from "@/features/auth/store/authSlice";
 import type { AppDispatch, RootState } from "@/stores/store";
 
 export default function GoogleCallbackPage() {

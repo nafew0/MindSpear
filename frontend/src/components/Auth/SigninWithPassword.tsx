@@ -6,7 +6,7 @@ import React, { useState, useEffect } from "react";
 import InputGroup from "../FormElements/InputGroup";
 import { Checkbox } from "../FormElements/checkbox";
 import { useDispatch, useSelector } from "react-redux";
-import { loginUser, clearError } from "@/stores/features/authSlice";
+import { loginUser, clearError } from "@/features/auth/store/authSlice";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";

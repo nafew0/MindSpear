@@ -21,7 +21,7 @@ import QuestionsResultView from "@/components/ResultComponent/QuestionsResultVie
 import GlobalPagination from "@/components/GlobalPagination";
 import { toast } from "react-toastify";
 import Questions from "@/components/SurveyReports/Questions";
-import { getSurveyDetailsById } from "@/services/surveyService";
+import { getSurveyDetailsById } from "@/features/survey/services/surveyService";
 
 interface SurveyData {
 	id: number;

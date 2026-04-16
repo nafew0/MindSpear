@@ -38,7 +38,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {
 	// updateLimitedTimeTitle,
 	contantData,
-} from "@/stores/features/quizItems/quizSlice";
+} from "@/features/quiz/store/quizItems/quizSlice";
 
 interface TextImageBlockProps {
 	block: ContentBlock;

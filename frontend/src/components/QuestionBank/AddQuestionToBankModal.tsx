@@ -11,7 +11,7 @@ import {
 	setFormData,
 	resetState,
 	setSuccess
-} from "@/stores/features/questionBank/questionBankSlice";
+} from "@/features/dashboard/question-bank/store/questionBankSlice";
 import axiosInstance from "@/utils/axiosInstance";
 import { Modal } from "@/components/ui";
 import Select from "react-select";

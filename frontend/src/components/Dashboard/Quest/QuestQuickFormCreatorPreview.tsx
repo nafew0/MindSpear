@@ -23,12 +23,12 @@ import {
 	setOptionText,
 	removeOption,
 	pasteOptionsReplace,
-} from "@/stores/features/quickFormSlice";
-import { selectTaskById } from "@/stores/features/selectors";
+} from "@/features/live/store/quickFormSlice";
+import { selectTaskById } from "@/features/live/store/selectors";
 import { FaRegClock } from "react-icons/fa6";
 import {
 	updateLimitedTimeTitle,
-} from "@/stores/features/quizItems/quizSlice";
+} from "@/features/quiz/store/quizItems/quizSlice";
 import { Trash2 } from "lucide-react";
 import { CustomSelect } from "@/components/FormElements/CustomSelect";
 

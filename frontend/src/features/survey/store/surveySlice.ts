@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { initialState } from "./initialState";
-import * as surveyItemReducers from "../features/surveyItems/items";
-import * as surveyOptionReducers from "../features/surveyItems/options";
+import * as surveyItemReducers from "./surveyItems/items";
+import * as surveyOptionReducers from "./surveyItems/options";
 import { SurveyItem } from "@/types/surveyTypes";
 
 interface TrueFalseOption {
