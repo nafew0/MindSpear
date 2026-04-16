@@ -10,7 +10,7 @@ import {
 
 import { useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
-import { upsertAnswer } from "@/stores/features/ledaerboardAnswersSlice";
+import { upsertAnswer } from "@/stores/features/leaderboardAnswersSlice";
 import { useDispatch, useSelector } from "react-redux";
 
 import moment from "moment";

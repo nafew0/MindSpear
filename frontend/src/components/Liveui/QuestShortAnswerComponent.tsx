@@ -9,7 +9,7 @@ import {
 } from "@/socket/quest-socket";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { upsertAnswer } from "@/stores/features/ledaerboardAnswersSlice";
+import { upsertAnswer } from "@/stores/features/leaderboardAnswersSlice";
 import { useDispatch } from "react-redux";
 import moment from "moment";
 import axiosInstance from "@/utils/axiosInstance";

@@ -10,7 +10,7 @@ import quizInformationReducer from "./features/quizInformationSlice";
 import questInformationReducer from "./features/questInformationSlice";
 import surveyInformationReducer from "./survey/surveyInformationSlice";
 import leaderboardReducer from "./features/leaderboardSlice";
-import answersReducer from "./features/ledaerboardAnswersSlice";
+import answersReducer from "./features/leaderboardAnswersSlice";
 import questSessionReducer from "./features/questSessionSlice";
 import questQsenTimeReducer from "./features/questQsenTimeSlice";
 import contentEditorReducer from "./features/contentEditorSlice";

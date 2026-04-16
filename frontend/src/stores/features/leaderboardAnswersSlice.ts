@@ -20,7 +20,7 @@ export type LeaderboardAnswer = {
 // IMPORTANT: keep state as a plain array so `state.answers` IS the array.
 const initialState: LeaderboardAnswer[] = [];
 
-const ledaerboardAnswersSlice = createSlice({
+const leaderboardAnswersSlice = createSlice({
   name: "answers",
   initialState,
   reducers: {
@@ -34,5 +34,5 @@ const ledaerboardAnswersSlice = createSlice({
   },
 });
 
-export const { upsertAnswer, resetAnswers } = ledaerboardAnswersSlice.actions;
-export default ledaerboardAnswersSlice.reducer;
+export const { upsertAnswer, resetAnswers } = leaderboardAnswersSlice.actions;
+export default leaderboardAnswersSlice.reducer;
