@@ -19,10 +19,10 @@ import ConfirmDialog from "@/utils/showConfirmDialog";
 import OptionList from "./OptionList";
 
 import dynamic from "next/dynamic";
-// import HorizontalProgressBars from "@/components/Chart/HorizontalProgressBars";
+// import HorizontalProgressBars from "@/components/charts";
 const HorizontalProgressBars = dynamic(
 	() =>
-		import("@/components/Chart/HorizontalProgressBars").then((m) => m.default ?? m),
+		import("@/components/charts").then((m) => m.HorizontalProgressBars),
 	{ ssr: false, loading: () => <div>Loading word cloud…</div> }
 );
 

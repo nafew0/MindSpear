@@ -8,21 +8,21 @@ import React, {
 	useRef,
 	useState,
 } from "react";
-import GlobalBarChart from "@/components/Chart/GlobalBarChart";
-import GlobalDonutChart from "@/components/Chart/GlobaldonutChart";
-import GlobalPieChart from "@/components/Chart/GlobalPieChart";
-// import AnimatedWordCloud from "@/components/Chart/AnimatedWordCloud";
-// import HorizontalProgressBars from "@/components/Chart/HorizontalProgressBars";
-import D3WordCloud, { Word } from "@/components/Chart/D3WordCloud";
-import GlobalHorizantalBarChart from "@/components/Chart/GlobalHorizantalBarChart";
+import { BarChart as GlobalBarChart } from "@/components/charts";
+import { DonutChart as GlobalDonutChart } from "@/components/charts";
+import { PieChart as GlobalPieChart } from "@/components/charts";
+// import AnimatedWordCloud from "@/components/charts/AnimatedWordCloud";
+// import HorizontalProgressBars from "@/components/charts";
+import { WordCloud as D3WordCloud, type Word } from "@/components/charts";
+import { HorizontalBarChart as GlobalHorizantalBarChart } from "@/components/charts";
 import Image from "next/image";
 import { getSocket } from "@/socket/quest-socket";
 import DOMPurify from "dompurify";
 import QuickFormCreatorView from "@/components/Liveui/QuickFormCreatorView";
-// import { ScalesChart } from "@/components/Chart/ScalesChart";
+// import { ScalesChart } from "@/components/charts";
 import QuickShortAndLongAnswer from "@/components/Liveui/QuickShortAndLongAnswer";
 import { useSelector } from "react-redux";
-import { AllScalesChart } from "@/components/Chart/AllScalesChart";
+import { AllScalesChart } from "@/components/charts";
 
 interface QuestionViewProps {
 	currentView: any;

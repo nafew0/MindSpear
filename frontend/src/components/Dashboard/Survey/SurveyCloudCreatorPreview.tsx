@@ -18,7 +18,7 @@ import { FaRegClock } from "react-icons/fa";
 // import { VscActivateBreakpoints } from "react-icons/vsc";
 import axiosInstance from "@/utils/axiosInstance";
 import ConfirmDialog from "@/utils/showConfirmDialog";
-import D3WordCloud, { Word } from "@/components/Chart/D3WordCloud";
+import { WordCloud as D3WordCloud, type Word } from "@/components/charts";
 import OptionList from "./OptionList";
 
 const QuestWordCloudCreatorPreview: React.FC<{ id: string }> = ({ id }) => {

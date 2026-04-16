@@ -53,9 +53,9 @@ export const theme = {
 			secondary: ["#BC5EB3", "#9A3F92"],
 		},
 		responsive: {
-			mobile: { width: "100%", height: 250 },
-			tablet: { width: "100%", height: 350 },
-			desktop: { width: "100%", height: 400 },
+			mobile: { breakpoint: 480, width: "100%", height: 250 },
+			tablet: { breakpoint: 768, width: "100%", height: 350 },
+			desktop: { breakpoint: 1024, width: "100%", height: 400 },
 		},
 	},
 } as const;

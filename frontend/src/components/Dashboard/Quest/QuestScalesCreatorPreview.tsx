@@ -24,9 +24,7 @@ import { CustomSelect } from "@/components/FormElements/CustomSelect";
 import { Trash2 } from "lucide-react";
 const HorizontalProgressBars = dynamic(
 	() =>
-		import("@/components/Chart/HorizontalProgressBars").then(
-			(m) => m.default ?? m
-		),
+		import("@/components/charts").then((m) => m.HorizontalProgressBars),
 	{ ssr: false, loading: () => <div>Loading word cloud…</div> }
 );
 

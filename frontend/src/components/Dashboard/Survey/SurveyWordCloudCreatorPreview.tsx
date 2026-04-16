@@ -9,7 +9,7 @@ import { Select } from "@/components/FormElements/select";
 import { FaRegClock } from "react-icons/fa";
 import axiosInstance from "@/utils/axiosInstance";
 import ConfirmDialog from "@/utils/showConfirmDialog";
-import D3WordCloud, { Word } from "@/components/Chart/D3WordCloud";
+import { WordCloud as D3WordCloud, type Word } from "@/components/charts";
 import OptionList from "./OptionList";
 
 const SurveyWordCloudCreatorPreview: React.FC<{ id: string }> = ({ id }) => {

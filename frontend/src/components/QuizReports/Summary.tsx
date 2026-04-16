@@ -3,7 +3,7 @@
 import { Quiz } from '@/types/types';
 import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux';
-import RadialBarCharts from '@/components/Chart/RadialBarCharts';
+import { RadialMetricChart as RadialBarCharts } from "@/components/charts";
 import QRCodeGenerator from '@/components/QRCodeGenerator';
 
 

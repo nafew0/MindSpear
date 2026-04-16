@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react'
-import RadialBarCharts from '@/components/Chart/RadialBarCharts';
+import { RadialMetricChart as RadialBarCharts } from "@/components/charts";
 import QRCodeGenerator from '@/components/QRCodeGenerator';
 import { useParams } from "next/navigation";
 import axiosInstance from '@/utils/axiosInstance';

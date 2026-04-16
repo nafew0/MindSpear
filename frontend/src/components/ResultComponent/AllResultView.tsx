@@ -7,13 +7,13 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 
 // ⬇️ Bring your chart components (adjust paths if needed)
-import GlobalHorizantalBarChart from "@/components/Chart/GlobalHorizantalBarChart";
-// import HorizontalProgressBars from "@/components/Chart/HorizontalProgressBars";
-import D3WordCloud from "@/components/Chart/D3WordCloud";
-import GlobalBarChart from "@/components/Chart/GlobalBarChart";
+import { HorizontalBarChart as GlobalHorizantalBarChart } from "@/components/charts";
+// import HorizontalProgressBars from "@/components/charts";
+import { WordCloud as D3WordCloud } from "@/components/charts";
+import { BarChart as GlobalBarChart } from "@/components/charts";
 import QuickFormAnswerView from "@/components/Liveui/QuickFormAnswerView";
 import QuickShortAndLongAnswer from "@/components/Liveui/QuickShortAndLongAnswer";
-import { AllScalesChart } from "../Chart/AllScalesChart";
+import { AllScalesChart } from "@/components/charts";
 
 // -------------------------------- Types --------------------------------
 export type TabItem = {

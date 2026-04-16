@@ -19,9 +19,7 @@ import { CustomSelect } from "@/components/FormElements/CustomSelect";
 import { Trash2 } from "lucide-react";
 const GlobalGridMapChart = dynamic(
 	() =>
-		import("@/components/Chart/GlobalGridMapChart").then(
-			(m) => m.default ?? m
-		),
+		import("@/components/charts").then((m) => m.TreemapChart),
 	{ ssr: false, loading: () => <div>Loading word cloud…</div> }
 );
 

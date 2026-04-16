@@ -10,7 +10,7 @@ import axiosInstance from "@/utils/axiosInstance";
 import ConfirmDialog from "@/utils/showConfirmDialog";
 import ChartTypeSelector from "./ChartTypeSelector";
 import OptionList from "./OptionList";
-import GlobalHorizantalBarChart from "@/components/Chart/GlobalHorizantalBarChart";
+import { HorizontalBarChart as GlobalHorizantalBarChart } from "@/components/charts";
 
 const SurveyRankingCreatorPreview: React.FC<{ id: string }> = ({ id }) => {
 	const params = useParams();

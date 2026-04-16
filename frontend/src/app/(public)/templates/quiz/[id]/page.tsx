@@ -21,9 +21,9 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Import chart components
-import GlobalBarChart from "@/components/Chart/GlobalBarChart";
-import GlobalHorizantalBarChart from "@/components/Chart/GlobalHorizantalBarChart";
-import D3WordCloud from "@/components/Chart/D3WordCloud";
+import { BarChart as GlobalBarChart } from "@/components/charts";
+import { HorizontalBarChart as GlobalHorizantalBarChart } from "@/components/charts";
+import { WordCloud as D3WordCloud } from "@/components/charts";
 
 // -------------------------------- Types --------------------------------
 interface User {

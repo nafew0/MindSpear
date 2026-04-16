@@ -20,7 +20,7 @@ import ConfirmDialog from "@/utils/showConfirmDialog";
 // import QuestionChart from "./QuestionChart";
 import ChartTypeSelector from "./ChartTypeSelector";
 import OptionList from "./OptionList";
-import GlobalHorizantalBarChart from "@/components/Chart/GlobalHorizantalBarChart";
+import { HorizontalBarChart as GlobalHorizantalBarChart } from "@/components/charts";
 import { CustomSelect } from "@/components/FormElements/CustomSelect";
 import { Trash2 } from "lucide-react";
 

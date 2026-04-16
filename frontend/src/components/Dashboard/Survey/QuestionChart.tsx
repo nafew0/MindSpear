@@ -1,8 +1,8 @@
 "use client";
 import React from "react";
-import GlobalBarChart from "@/components/Chart/GlobalBarChart";
-import GlobalDonutChart from "@/components/Chart/GlobaldonutChart";
-import GlobalPieChart from "@/components/Chart/GlobalPieChart";
+import { BarChart as GlobalBarChart } from "@/components/charts";
+import { DonutChart as GlobalDonutChart } from "@/components/charts";
+import { PieChart as GlobalPieChart } from "@/components/charts";
 
 interface QuestionChartProps {
 	chartType: "bar" | "pie" | "donut";

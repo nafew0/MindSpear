@@ -19,12 +19,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 
-import GlobalHorizantalBarChart from "@/components/Chart/GlobalHorizantalBarChart";
-import D3WordCloud from "@/components/Chart/D3WordCloud";
-import GlobalBarChart from "@/components/Chart/GlobalBarChart";
+import { HorizontalBarChart as GlobalHorizantalBarChart } from "@/components/charts";
+import { WordCloud as D3WordCloud } from "@/components/charts";
+import { BarChart as GlobalBarChart } from "@/components/charts";
 import QuickFormAnswerView from "@/components/Liveui/QuickFormAnswerView";
 import QuickShortAndLongAnswer from "@/components/Liveui/QuickShortAndLongAnswer";
-import { ScalesChart } from "@/components/Chart/ScalesChart";
+import { ScalesChart } from "@/components/charts";
 
 type Question = { id: number; text: string; color?: string };
 type TaskData = {
