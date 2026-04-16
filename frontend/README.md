@@ -51,7 +51,6 @@ bdren_eduquest_frontend/
 │   │   ├── Layouts/         # Layout components
 │   │   ├── Library/         # Library components
 │   │   ├── Liveui/          # Live UI components
-│   │   ├── loadding/        # Loading components (typo in directory name)
 │   │   ├── loading/         # Loading components
 │   │   ├── QuestionBank/    # Question bank components
 │   │   ├── questions/       # Question components

@@ -16,7 +16,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import ConfirmDialog from "@/utils/showConfirmDialog";
-import QuizSkeleton from "../loadding/QuizSkeleton";
+import QuizSkeleton from "../loading/QuizSkeleton";
 import { Tooltip } from "react-tooltip";
 import Title from "../ui/Title";
 

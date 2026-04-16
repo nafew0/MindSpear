@@ -11,7 +11,7 @@ import GlobalPagination from "../GlobalPagination";
 import Link from "next/link";
 import { Eye, Pencil, FileQuestion, CalendarDays, Trash2 } from "lucide-react";
 import ConfirmDialog from "@/utils/showConfirmDialog";
-import QuizSkeleton from "../loadding/QuizSkeleton";
+import QuizSkeleton from "../loading/QuizSkeleton";
 import { IoDuplicateOutline } from "react-icons/io5";
 import { Tooltip } from "react-tooltip";
 import { deleteSurveyById } from "@/services/surveyService";
