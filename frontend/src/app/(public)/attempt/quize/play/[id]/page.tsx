@@ -6,7 +6,7 @@ import QuizPlayComponent from "@/components/Liveui/QuizPlayComponent";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
 import { normalizeTasks } from "@/utils/quickFormTransform";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 
 import { waitForQuizJoinedOnce } from "@/socket/socket";
 import { useDispatch } from "react-redux";

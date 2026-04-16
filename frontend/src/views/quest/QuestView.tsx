@@ -19,7 +19,7 @@ import { MdOutlinePublic, MdQuiz } from "react-icons/md";
 import Questions from "@/components/QuestReports/Questions";
 import HostLive from "@/components/Dashboard/Quest/HostLive";
 import { convertTaskData } from "@/utils/questDataTransformer";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import QuestionsResultView from "@/components/ResultComponent/QuestionsResultView";
 import GlobalPagination from "@/components/GlobalPagination";
 import { clearQuestData } from "@/stores/features/questQuestionTimeSlice";

@@ -20,7 +20,7 @@ import { AxiosError } from "axios";
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { setQuiz } from "@/stores/features/quizInformationSlice";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { DatePicker } from "antd";
 import dayjs from "dayjs";
 

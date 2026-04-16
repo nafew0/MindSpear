@@ -22,7 +22,7 @@ import axiosInstance from "@/utils/axiosInstance";
 import { upsertAnswer } from "@/stores/features/leaderboardAnswersSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/stores/store";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { AxiosError } from "axios";
 import QuizTimer, { getCurrentTime } from "../GlobalTimer";
 import { TimerCacheManager } from "@/utils/timerCacheUtils";

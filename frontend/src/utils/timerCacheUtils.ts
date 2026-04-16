@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 "use client";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 
 export type AttemptRecord = {
 	timeLimit: number; // seconds

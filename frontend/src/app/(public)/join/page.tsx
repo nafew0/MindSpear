@@ -4,7 +4,7 @@ import Image from "next/image";
 import InputGroup from "@/components/FormElements/InputGroup";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui";
 import { toast } from "react-toastify";

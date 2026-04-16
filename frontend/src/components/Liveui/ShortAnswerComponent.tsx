@@ -5,7 +5,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { upsertAnswer } from "@/stores/features/leaderboardAnswersSlice";
 import { useDispatch } from "react-redux";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import axiosInstance from "@/utils/axiosInstance";
 import { GlobalCountdown } from "../GlobalTimeManage";
 import { AxiosError } from "axios";

@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 import Summary from "@/components/QuestReports/Summary";
 import Participants from "@/components/QuestReports/Participants";
 // import Questions from "@/components/QuestReports/Questions";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { useParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { useDispatch } from "react-redux";

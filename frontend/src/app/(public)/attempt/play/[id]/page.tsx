@@ -8,7 +8,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { transformQuestionData } from "@/utils/quizUtils";
 import FillInTheBlanksComponent from "../FillInTheBlanksComponent";
 import SortAnswerBlanksComponent from "../SortAnswerBlanksComponent";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import ThankYouComponent from "../ThankYouComponent";

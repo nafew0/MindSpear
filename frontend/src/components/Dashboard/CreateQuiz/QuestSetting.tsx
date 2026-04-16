@@ -15,7 +15,7 @@ import { AxiosError } from "axios";
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { setQuest } from "@/stores/features/questInformationSlice";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { DatePicker } from "antd";
 import dayjs from "dayjs";
 

@@ -12,7 +12,7 @@ import {
 	setCurrentQuest,
 	waitForQuestJoinedOnce22,
 } from "@/socket/quest-socket";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { useDispatch } from "react-redux";
 import { setQuestData } from "@/stores/features/questQuestionTimeSlice";
 

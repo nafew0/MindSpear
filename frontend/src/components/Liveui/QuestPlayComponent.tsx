@@ -32,7 +32,7 @@ import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import { useDispatch } from "react-redux";
 import { setQuestData } from "@/stores/features/questQuestionTimeSlice";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 // import { toast } from "react-toastify";
 
 export type TaskType =

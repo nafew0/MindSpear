@@ -17,7 +17,7 @@ import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { setSurvey } from "@/stores/survey/surveyInformationSlice";
 import { useSurveyOptional } from "@/contexts/SurveyContext";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { DatePicker } from "antd";
 import dayjs from "dayjs";
 

@@ -4,7 +4,7 @@ import { Quiz } from "@/types/types";
 import React, { useEffect, useState, useRef } from "react";
 
 import Summary from "@/components/QuizReports/Summary";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { useParams, useRouter } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { setQuiz } from "@/stores/features/quizInformationSlice";

@@ -33,7 +33,7 @@ import {
 } from "@/stores/features/questQuestionTimeSlice";
 
 import { CirclePlay, Users } from "lucide-react";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { toast } from "react-toastify";
 
 interface ActiveUser {

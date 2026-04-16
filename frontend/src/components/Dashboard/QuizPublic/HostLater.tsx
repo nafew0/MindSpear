@@ -14,7 +14,7 @@ import { useDispatch } from "react-redux";
 import { DatePicker } from "antd";
 import dayjs from "dayjs";
 import { Switch } from "@/components/FormElements/switch";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 
 import {
 	setQuestSession,

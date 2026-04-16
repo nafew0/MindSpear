@@ -13,7 +13,7 @@ import {
 } from "@/stores/features/quizItems/quizSlice";
 import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { toast } from "react-toastify";
 
 interface QuizApiResponse {

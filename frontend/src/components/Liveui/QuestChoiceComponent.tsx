@@ -19,7 +19,7 @@ import axiosInstance from "@/utils/axiosInstance";
 import { upsertAnswer } from "@/stores/features/leaderboardAnswersSlice";
 import { useDispatch, useSelector } from "react-redux";
 // import { RootState } from "@/services/redux/store";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { AxiosError } from "axios";
 // import { GlobalCountdown } from "../GlobalTimeManage";
 // import QuizTimer, { getCurrentTime } from "../GlobalTimer";

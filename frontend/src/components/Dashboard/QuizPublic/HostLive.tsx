@@ -13,7 +13,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { DatePicker } from "antd";
 import dayjs from "dayjs";
 import { Switch } from "@/components/FormElements/switch";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { MdLiveTv } from "react-icons/md";
 import {
 	connectSocket,

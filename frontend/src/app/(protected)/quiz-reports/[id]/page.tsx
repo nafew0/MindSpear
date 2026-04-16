@@ -6,7 +6,7 @@ import React, { useEffect, useState } from "react";
 import Summary from "@/components/QuizReports/Summary";
 import Participants from "@/components/QuizReports/Participants";
 import Questions from "@/components/QuizReports/Questions";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { useParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { setQuiz } from "@/stores/features/quizInformationSlice";

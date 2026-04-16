@@ -25,7 +25,7 @@ import {
 } from "@/socket/socket";
 // import axiosInstance from "@/utils/axiosInstance";
 import { cacheJoin, getCachedJoin } from "@/socket/quest-socket";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { useDispatch, useSelector } from "react-redux";
 import { setQuestData } from "@/stores/features/questQuestionTimeSlice";
 import axiosInstance from "@/utils/axiosInstance";

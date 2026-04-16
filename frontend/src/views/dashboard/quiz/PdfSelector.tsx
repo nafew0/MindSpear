@@ -3,7 +3,7 @@ import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
 import React, { useState } from "react";
 import { useParams } from "next/navigation";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 type Page = { id: number; thumbnail: string; text: string };
 
 export default function PageSelector({

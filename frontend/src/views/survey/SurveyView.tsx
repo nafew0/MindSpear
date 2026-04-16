@@ -16,7 +16,7 @@ import {
 	MdQuiz,
 } from "react-icons/md";
 import HostLive from "@/components/Dashboard/Quest/HostLive";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import QuestionsResultView from "@/components/ResultComponent/QuestionsResultView";
 import GlobalPagination from "@/components/GlobalPagination";
 import { toast } from "react-toastify";

@@ -56,7 +56,7 @@ import {
 	emitCompleteQuest,
 	waitForQuestCompletedAll,
 } from "@/socket/quest-socket";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { setQuestData } from "@/stores/features/questQuestionTimeSlice";
 import { Modal } from "@/components/ui";
 

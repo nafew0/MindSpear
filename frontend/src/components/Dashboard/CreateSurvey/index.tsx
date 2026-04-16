@@ -9,7 +9,7 @@ import { useDispatch } from "react-redux";
 import { setSurvey } from "@/stores/survey/surveyInformationSlice";
 import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { toast } from "react-toastify";
 import { createSurvey } from "@/services/surveyService";
 

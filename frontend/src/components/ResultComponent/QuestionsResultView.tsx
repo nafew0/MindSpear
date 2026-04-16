@@ -4,7 +4,7 @@ import React, { useState, useMemo } from "react";
 import { PiWarningCircle } from "react-icons/pi";
 import { FaSpinner } from "react-icons/fa6";
 import { FaFileExcel } from "react-icons/fa";
-import moment from "moment-timezone";
+import moment from "@/lib/dayjs";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
 import { Modal } from "@/components/ui";

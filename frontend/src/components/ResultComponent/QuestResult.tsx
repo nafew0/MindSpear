@@ -9,7 +9,7 @@ import ResultShowModal from "./ResultShowModal";
 import { Modal } from "@/components/ui";
 import { Skeleton } from "antd";
 import { toast } from "react-toastify";
-// import moment from "moment";
+// import moment from "@/lib/dayjs";
 // import Link from "next/link";
 
 function QuestResult() {

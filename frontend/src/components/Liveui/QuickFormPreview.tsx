@@ -5,7 +5,7 @@
 "use client";
 import { QuestionBlock } from "@/components/Dashboard/Quest/QuickFormComponents/quest";
 import axiosInstance from "@/utils/axiosInstance";
-// import moment from "moment";
+// import moment from "@/lib/dayjs";
 import React, { useEffect, useMemo, useState } from "react";
 import { FaChevronDown } from "react-icons/fa";
 import { useSearchParams } from "next/navigation";
@@ -20,7 +20,7 @@ import { AxiosError } from "axios";
 
 import SharedQuestTimer from "../SharedQuestTimer";
 import { IoMdHappy } from "react-icons/io";
-// import moment from "moment";
+// import moment from "@/lib/dayjs";
 
 const CheckboxPreview: React.FC<{
 	options: { id: string; text: string }[];

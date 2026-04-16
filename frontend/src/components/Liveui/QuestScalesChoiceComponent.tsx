@@ -14,7 +14,7 @@ import { useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { upsertAnswer } from "@/stores/features/leaderboardAnswersSlice";
 import { useDispatch } from "react-redux";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { AxiosError } from "axios";
 import ScaleRow, { ScaleOption } from "./Scales/ScaleRow";
 import SharedQuestTimer from "../SharedQuestTimer";

@@ -4,7 +4,7 @@ import QuizDateClose from "@/components/ErrorComponent/QuizDateClose";
 import InputGroup from "@/components/FormElements/InputGroup";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import { useSearchParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { HiUserGroup } from "react-icons/hi";

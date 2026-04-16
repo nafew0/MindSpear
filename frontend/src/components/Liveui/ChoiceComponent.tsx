@@ -13,7 +13,7 @@ import axiosInstance from "@/utils/axiosInstance";
 import { upsertAnswer } from "@/stores/features/leaderboardAnswersSlice";
 import { useDispatch, useSelector } from "react-redux";
 
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import SharedQuestTimer from "../SharedQuestTimer";
 import { AxiosError } from "axios";
 import { IoMdHappy } from "react-icons/io";

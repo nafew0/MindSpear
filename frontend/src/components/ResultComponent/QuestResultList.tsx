@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
 import React, { useEffect, useState } from "react";
-import moment from "moment";
+import moment from "@/lib/dayjs";
 import Link from "next/link";
 import { toast } from "react-toastify";
 
