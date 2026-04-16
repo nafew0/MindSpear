@@ -14,7 +14,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { AxiosError } from "axios";
 import { useDebounce } from "@/hooks/useDebounce";
 import QuizQuestionsResultView from "@/components/ResultComponent/QuizQuestionsResultView";
-import { clearQuestData } from "@/stores/features/questQsenTimeSlice";
+import { clearQuestData } from "@/stores/features/questQuestionTimeSlice";
 import GlobalPagination from "@/components/GlobalPagination";
 import { toast } from "react-toastify";
 

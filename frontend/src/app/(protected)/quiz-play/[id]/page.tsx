@@ -12,7 +12,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {
 	setQuestData,
 	// clearQuestData,
-} from "@/stores/features/questQsenTimeSlice";
+} from "@/stores/features/questQuestionTimeSlice";
 import { Switch } from "antd";
 import {
 	connectSocket,

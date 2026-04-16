@@ -10,7 +10,7 @@ import moment from "moment";
 
 import { waitForQuizJoinedOnce } from "@/socket/socket";
 import { useDispatch } from "react-redux";
-import { setQuestData } from "@/stores/features/questQsenTimeSlice";
+import { setQuestData } from "@/stores/features/questQuestionTimeSlice";
 
 function QuizAttempt() {
 	const dispatch = useDispatch();

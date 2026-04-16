@@ -31,7 +31,7 @@ import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import { useDispatch } from "react-redux";
-import { setQuestData } from "@/stores/features/questQsenTimeSlice";
+import { setQuestData } from "@/stores/features/questQuestionTimeSlice";
 import moment from "moment";
 // import { toast } from "react-toastify";
 

@@ -22,7 +22,7 @@ import { useDispatch } from "react-redux";
 import { Pencil, Trash2 } from "lucide-react";
 import { MdOutlinePublic, MdQuiz } from "react-icons/md";
 import Questions from "@/components/QuizReports/Questions";
-import { clearQuestData } from "@/stores/features/questQsenTimeSlice";
+import { clearQuestData } from "@/stores/features/questQuestionTimeSlice";
 import QuizQuestionsResultView from "@/components/ResultComponent/QuizQuestionsResultView";
 import GlobalPagination from "@/components/GlobalPagination";
 import { toast } from "react-toastify";

@@ -30,7 +30,7 @@ import {
 import {
 	setQuestData,
 	// clearQuestData,
-} from "@/stores/features/questQsenTimeSlice";
+} from "@/stores/features/questQuestionTimeSlice";
 
 import { CirclePlay, Users } from "lucide-react";
 import moment from "moment";

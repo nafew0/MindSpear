@@ -45,7 +45,7 @@ import {
 	waitForQuestCompletedAll,
 } from "@/socket/quest-socket";
 import moment from "moment";
-import { setQuestData } from "@/stores/features/questQsenTimeSlice";
+import { setQuestData } from "@/stores/features/questQuestionTimeSlice";
 import GlobalModal from "@/components/globalModal";
 
 type Task = {

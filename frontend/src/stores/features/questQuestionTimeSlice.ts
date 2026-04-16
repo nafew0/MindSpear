@@ -17,7 +17,7 @@ const initialState: QuestState = {
   questiQsenLateStartTime: null,
 };
 
-const questQsenTimeSlice = createSlice({
+const questQuestionTimeSlice = createSlice({
   name: 'questTime',
   initialState,
   reducers: {
@@ -28,5 +28,5 @@ const questQsenTimeSlice = createSlice({
   },
 });
 
-export const { setQuestData, clearQuestData } = questQsenTimeSlice.actions;
-export default questQsenTimeSlice.reducer;
+export const { setQuestData, clearQuestData } = questQuestionTimeSlice.actions;
+export default questQuestionTimeSlice.reducer;

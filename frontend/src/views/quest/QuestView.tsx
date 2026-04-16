@@ -22,7 +22,7 @@ import { convertTaskData } from "@/utils/QuestConvertDataComponent";
 import moment from "moment";
 import QuestionsResultView from "@/components/ResultComponent/QuestionsResultView";
 import GlobalPagination from "@/components/GlobalPagination";
-import { clearQuestData } from "@/stores/features/questQsenTimeSlice";
+import { clearQuestData } from "@/stores/features/questQuestionTimeSlice";
 import QuestDuplicate from "./QuestDuplicate";
 import { setScope } from "@/stores/features/leaderboardSlice";
 import { toast } from "react-toastify";

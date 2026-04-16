@@ -12,7 +12,7 @@ import surveyInformationReducer from "./survey/surveyInformationSlice";
 import leaderboardReducer from "./features/leaderboardSlice";
 import answersReducer from "./features/leaderboardAnswersSlice";
 import questSessionReducer from "./features/questSessionSlice";
-import questQsenTimeReducer from "./features/questQsenTimeSlice";
+import questQuestionTimeReducer from "./features/questQuestionTimeSlice";
 import contentEditorReducer from "./features/contentEditorSlice";
 import questionBankReducer from "./features/questionBank/questionBankSlice";
 import surveyQuestionsReducer from "./survey/surveyQuestionsSlice";
@@ -54,7 +54,7 @@ const rootReducer = combineReducers({
 	answers: answersReducer,
 	quickForm: quickForm,
 	questSession: questSessionReducer,
-	questTime: questQsenTimeReducer,
+		questTime: questQuestionTimeReducer,
 	contentEditor: contentEditorReducer,
 	questionBank: questionBankReducer,
 	surveyQuestions: surveyQuestionsReducer,

@@ -14,7 +14,7 @@ import {
 } from "@/socket/quest-socket";
 import moment from "moment";
 import { useDispatch } from "react-redux";
-import { setQuestData } from "@/stores/features/questQsenTimeSlice";
+import { setQuestData } from "@/stores/features/questQuestionTimeSlice";
 
 function QuizAttempt() {
 	const searchParams = useSearchParams();
