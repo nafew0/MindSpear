@@ -411,11 +411,15 @@ class QuizAttemptController extends ApiBaseController
     public function getQuizDetailsByJoinLink(string $joinLink): JsonResponse
     {
         try {
-            $quiz = Quiz::with(['questions', 'sessions'])
+            $quiz = Quiz::with([
+                'questions',
+                'sessions' => function ($query) use ($joinLink) {
+                    $query->where('join_link', $joinLink);
+                },
+            ])
                 ->whereHas('sessions', function ($query) use ($joinLink) {
                     $query->where('join_link', $joinLink);
                 })
-                ->where('is_published', true)
                 ->whereNull('deleted_at')
                 ->first();
 
@@ -426,6 +430,10 @@ class QuizAttemptController extends ApiBaseController
             $now = now();
             $session = $quiz->sessions->first();
 
+            if (! $session) {
+                return $this->notFoundResponse([], __('Quiz session not found or not available.'));
+            }
+
             if ($now < $session->start_datetime) {
                 return $this->badRequestResponse([], __('This quiz session is not open yet.'));
             }
@@ -434,8 +442,17 @@ class QuizAttemptController extends ApiBaseController
                 return $this->badRequestResponse([], __('This quiz session has already closed.'));
             }
 
+            app(LiveSessionService::class)->ensurePublicChannelKey($session);
+
             return $this->okResponse(
-                ['quiz' => $quiz],
+                [
+                    'quiz' => $quiz,
+                    'quizSession' => $session,
+                    'session' => $session,
+                    'public_channel_key' => $session->public_channel_key,
+                    'public_channel' => app(LiveSessionService::class)
+                        ->publicChannel(LiveSessionService::MODULE_QUIZ, $session->public_channel_key),
+                ],
                 __('Quiz details retrieved successfully.')
             );
         } catch (\Exception $e) {

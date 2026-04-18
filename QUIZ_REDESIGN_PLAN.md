@@ -2,18 +2,21 @@
 
 > **Goal.** Rebuild the Quiz module so authoring, hosting, and participation feel indistinguishable from AhaSlides. Slide-based editor, per-slide question types, time-weighted scoring with per-slide min/max, QR join, 5-second "Get ready" countdown, animated results, emoji-avatar participants, global leaderboard slide.
 >
-> **Out of scope (for now).** Unscored types (Poll, Word Cloud, Q&A, Rating Scale, etc.), emoji reactions, audience chat, AI option generation, templates marketplace, Spinner Wheel logic that spins during live (simplified — see Phase G). Quest module is not touched by this plan; it will get a Mentimeter-style redesign later and will reuse as much of the slide infrastructure as possible.
+> **Out of scope (for now).** Poll, Word Cloud, Q&A, Rating Scale, emoji reactions, audience chat, AI option generation, templates marketplace, full Spinner Wheel prediction/scoring mode, and other non-core engagement features. Quest module is not touched by this plan; it will get a Mentimeter-style redesign later and will reuse as much of the slide infrastructure as possible.
 >
 > **Scope confirmed with user.**
 > - Quiz only; Quest stays on its current redesign trajectory.
-> - Greenfield data — no migration of existing quizzes/questions/sessions required. Old tables may be dropped after cutover.
-> - Only scored question types from the AhaSlides "Quiz" column: Pick Answer, Short Answer, Spinner Wheel, Match Pairs, Correct Order, Categorise. Plus Content + Heading slides, QR Code slide, and Leaderboard slide.
+> - Greenfield Quiz v2 data — no migration of existing legacy quizzes/questions/sessions required.
+> - Build Quiz v2 alongside the current Quiz v1 flow first. Do **not** drop legacy quiz tables until the v2 vertical slice is proven, the feature flag is enabled for default use, and cutover is complete.
+> - Core slide types: Pick Answer, Short Answer, Match Pairs, Correct Order, Categorise, plus Content + Heading slides, QR Code slide, Leaderboard slide, and a simplified Spinner Wheel engagement slide.
 > - Per-slide min/max points with time-based interpolation (AhaSlides model), plus a global Leaderboard slide.
 > - Core quiz experience only — no emoji reactions, chat, hand-raise, live feedback screen, etc.
 >
-> **Relationship to [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md).** Phases 0–3 of that plan are complete: Reverb is live, Socket.IO is gone, public/private channel split works, participant-token flow is in place. This plan builds *on top of* that realtime foundation — event classes, channel naming, and the participant-token auth pattern are reused. Phase 4+ of the main plan (UI polish, testing, docs) applies to the redesigned Quiz as a whole.
+> **Relationship to [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md).** Phases 0–3 of that plan are complete: Reverb is live, Socket.IO is gone, public/private channel split works, participant-token flow is in place. This plan builds *on top of* that realtime foundation — the existing `LiveSessionService`, generic `LiveBroadcastEvent`, channel split, and participant-token auth pattern are reused unless a dedicated typed event gives clear value. Phase 4+ of the main plan (UI polish, testing, docs) applies to the redesigned Quiz as a whole.
 >
 > **Database decision.** Same as main plan — SQLite acceptable locally, PostgreSQL is production target. Every new migration, JSON filter, aggregate, or raw SQL in this plan must be checked against PostgreSQL before merge.
+
+> **Cutover decision.** Quiz v2 is a build-alongside replacement, not a Phase 1 table drop. The new API uses correctly spelled `/quizzes` routes and a new `quizzes` authoring table while legacy Quiz v1 keeps its current `/quizes` routes and `quizes` table during development. Runtime tables that conflict with legacy names use v2-safe names until cutover. Legacy table removal happens only in the final cutover phase.
 
 ---
 
@@ -42,7 +45,7 @@ A **slide** is the atomic unit. Every slide has: `type`, `position`, `title`, op
 | `match_pairs` | Quiz | Yes | Pairs array (left↔right) | Drag/tap to connect | Shuffled on each participant view |
 | `correct_order` | Quiz | Yes | Ordered items array | Drag to reorder | Shown shuffled |
 | `categorise` | Quiz | Yes | Items + categories | Drag items into category buckets | |
-| `spinner_wheel` | Quiz | Yes | Options array | View-only during spin, tap on landed option | Simplified: host spins, random/weighted landing, all correct-guessers score |
+| `spinner_wheel` | Engagement | No in v1 | Options array | View-only during spin | Simplified: host spins, server picks weighted/random landing. Prediction scoring is v1.1+ |
 | `heading` | Content | No | — | Read-only | Title + subtitle |
 | `content` | Content | No | — | Read-only | Rich text body + optional image |
 | `qr_code` | Content | No | — | Read-only | Auto-shows join code + QR; can be reused mid-deck |
@@ -52,12 +55,14 @@ A **slide** is the atomic unit. Every slide has: `type`, `position`, `title`, op
 
 ### Channels and events (reused from Phase 2/3)
 
-No new channel semantics. Same model:
+Same public/private split as Phase 2/3:
 
 - **Public** `session.quiz.{publicChannelKey}` — all participants + host receive slide-state events.
-- **Private** `host.quiz.{sessionId}` — host-only answer stream, participant join details.
+- **Private** `host.quiz.v2.{sessionId}` during build-alongside — host-only answer stream, participant join details.
 
-New event payloads (not new channels):
+The v2 private channel is namespaced during coexistence so numeric IDs from legacy `quiz_sessions` cannot collide with new session IDs. After cutover, either keep the v2 namespace as the canonical channel or collapse it back to `host.quiz.{sessionId}` in a dedicated cleanup.
+
+New event payloads:
 
 | Event | Channel | Purpose |
 |---|---|---|
@@ -66,6 +71,8 @@ New event payloads (not new channels):
 | `slide.reveal` | Public | After lock: correct answer + aggregate counts + option images |
 | `leaderboard.updated` | Public | Already exists; payload now carries `points_delta` per player (for +94 animation) |
 | `answer.submitted` | Private (host) | Already exists; payload adds `time_to_answer_ms` and `points_awarded` |
+
+Implementation note: prefer routing these events through the existing `LiveSessionService` + generic `LiveBroadcastEvent` layer. Add typed payload DTOs/tests around that layer instead of creating a parallel tree of broadcast classes unless the generic layer becomes a real limitation.
 
 ### Live session state machine (per slide)
 
@@ -81,9 +88,24 @@ reveal           ← results shown to all; host sees "Next" button
 done             ← snapshot saved; move to next slide (back to waiting)
 ```
 
-State lives on `quiz_sessions` (`current_slide_id`, `current_slide_state`, `current_slide_state_started_at`, `timer_state` JSON). On reconnect, clients call `GET /quiz-sessions/{id}/state` and restore from that.
+Session-level state lives on `quiz_v2_sessions` (`current_slide_run_id`, `status`, `timer_state` JSONB). Per-slide runtime state lives on `quiz_v2_session_slide_runs` (`state`, `state_version`, `state_started_at`, `answering_started_at`, `revealed_at`). On reconnect, clients call `GET /quiz-sessions/{id}/state` and restore from that backend snapshot.
 
 **The 5s "Get ready" is configurable** (on/off globally per quiz; default on). AhaSlides uses it to let the question display before the timer starts so late-joiners aren't penalised.
+
+### Session slide snapshots
+
+Authoring slides are mutable. Live sessions must not read scoring, answer keys, timing, or option order directly from the latest authoring slide after the session starts.
+
+When a host starts a session, create one `quiz_v2_session_slide_runs` row per slide with:
+
+- `slide_id` — pointer back to the authoring slide
+- `position` and `type` — copied for fast navigation
+- `slide_snapshot` JSONB — title, body, config, options, correct answers, time/points settings
+- `state` — `waiting|get_ready|answering|reveal|done`
+- `state_version` — incremented on every transition so delayed jobs can safely no-op if stale
+- `eligible_participant_count` — set when the slide enters `answering`, used for "all submitted" checks
+
+Answers reference the slide run, not just the authoring slide. This keeps reports stable even if the quiz is edited after a session.
 
 ### Scoring model (time-weighted, per-slide)
 
@@ -103,38 +125,51 @@ Wrong answer → `0`. Partial credit for multi-select = `points * (correct_selec
 
 - Host = Sanctum-authenticated user, owns the quiz.
 - Participant = anonymous, receives a `participant_token` on join, stored as SHA-256 hash server-side. All answer submissions send `X-Participant-Token`.
-- Emoji avatar + display name stored in `quiz_participants.anonymous_details` JSON (extended).
+- Quiz v2 stores `display_name` and `emoji_avatar` as first-class columns on `quiz_v2_participants`. Legacy Quiz v1 may continue using `quiz_participants.anonymous_details` until cutover.
 
 ---
 
 ## Phase 1 — Data model & core backend
 
-**Goal.** New tables, new models, migrations. Zero UI.
-**Duration.** 2–3 days.
+**Goal.** New v2 tables, models, registry, and migration path. Zero UI.
+**Duration.** 3–4 days.
 
-### 1.1 Drop old quiz structures (greenfield)
+### 1.1 Build v2 schema beside legacy Quiz
 
-Write a single migration that drops: `questions`, `quiz_participants`, `quiz_sessions`, `user_quiz_answers`, `bank_questions` (quiz-only), `quizzes`. Keep Quest + Survey tables untouched. Commit as "drop legacy quiz schema — greenfield for redesign."
+Do **not** drop legacy Quiz tables in this phase. Legacy Quiz v1 continues to use:
+
+- `quizes`
+- `questions`
+- `quiz_sessions`
+- `quiz_participants`
+- `user_quiz_answers`
+- `quiz_origins`
+- quiz bank tables such as `quiz_q_bank_categories`, `quiz_q_banks`, `quiz_q_bank_questions`, `quiz_bank_questions`
+
+Create v2 tables that can coexist with those names. Commit as "add quiz v2 slide schema beside legacy quiz."
 
 ### 1.2 New quiz tables
 
 | Table | Purpose |
 |---|---|
-| `quizzes` | Deck metadata: `id`, `owner_id`, `title`, `description`, `cover_image_path`, `join_code` (unique, 6-char), `settings` (JSON: default_time, default_points_min/max, speed_bonus_enabled, get_ready_seconds=5), `published_at`, timestamps |
-| `quiz_slides` | `id`, `quiz_id`, `type`, `position`, `title`, `body`, `config` (JSON), `time_limit_seconds`, `points_min`, `points_max`, `speed_bonus_enabled`, `get_ready_seconds`, timestamps. Unique `(quiz_id, position)` |
-| `quiz_slide_options` | `id`, `slide_id`, `position`, `label`, `image_path`, `is_correct`, `payload` (JSON: for pair_key, category_key, correct_order_index), timestamps |
-| `quiz_sessions` | `id`, `quiz_id`, `host_user_id`, `public_channel_key`, `join_code` (copied for fast lookup), `status` (pending/live/ended), `current_slide_id`, `current_slide_state` (enum), `current_slide_state_started_at`, `timer_state` (JSON), `started_at`, `ended_at` |
-| `quiz_participants` | `id`, `quiz_session_id`, `display_name`, `emoji_avatar`, `participant_token_hash`, `participant_token_expires_at`, `participant_token_revoked_at`, `total_points`, `joined_at`, `left_at` |
-| `quiz_participant_answers` | `id`, `quiz_participant_id`, `slide_id`, `answer_payload` (JSON), `time_to_answer_ms`, `is_correct`, `points_awarded`, `submitted_at` |
+| `quizzes` | V2 deck metadata: `id`, `owner_id`, `title`, `description`, `cover_image_path`, `settings` (JSONB: default_time, default_points_min/max, speed_bonus_enabled, get_ready_seconds=5), `published_at`, timestamps. This intentionally corrects legacy `quizes`. |
+| `quiz_slides` | `id`, `quiz_id`, `type`, `position`, `title`, `body`, `config` (JSONB), `time_limit_seconds`, `points_min`, `points_max`, `speed_bonus_enabled`, `get_ready_seconds`, timestamps. Unique `(quiz_id, position)` |
+| `quiz_slide_options` | `id`, `slide_id`, `position`, `label`, `image_path`, `is_correct`, `payload` (JSONB: for pair_key, category_key, correct_order_index), timestamps |
+| `quiz_v2_sessions` | `id`, `quiz_id`, `host_user_id`, `public_channel_key`, `join_code`, `status` (pending/live/ended), `current_slide_run_id`, `timer_state` (JSONB), `started_at`, `ended_at` |
+| `quiz_v2_session_slide_runs` | `id`, `quiz_v2_session_id`, `slide_id`, `position`, `type`, `slide_snapshot` (JSONB), `state`, `state_version`, `state_started_at`, `answering_started_at`, `revealed_at`, `eligible_participant_count`, timestamps |
+| `quiz_v2_participants` | `id`, `quiz_v2_session_id`, `display_name`, `emoji_avatar`, `participant_token_hash`, `participant_token_expires_at`, `participant_token_revoked_at`, `total_points`, `joined_at`, `left_at` |
+| `quiz_v2_participant_answers` | `id`, `quiz_v2_participant_id`, `quiz_v2_session_slide_run_id`, `answer_payload` (JSONB), `time_to_answer_ms`, `is_correct`, `points_awarded`, `submitted_at` |
 
 **Indexes to add up-front:**
 - `quiz_slide_options(slide_id, position)`
-- `quiz_participant_answers(quiz_participant_id, slide_id)` unique (one answer per slide per participant)
-- `quiz_sessions(join_code)` unique
-- `quiz_sessions(public_channel_key)` unique
-- `quiz_participants(participant_token_hash)` unique
+- `quiz_v2_session_slide_runs(quiz_v2_session_id, position)` unique
+- `quiz_v2_session_slide_runs(quiz_v2_session_id, slide_id)`
+- `quiz_v2_participant_answers(quiz_v2_participant_id, quiz_v2_session_slide_run_id)` unique (one answer per slide run per participant)
+- `quiz_v2_sessions(join_code)` unique
+- `quiz_v2_sessions(public_channel_key)` unique
+- `quiz_v2_participants(participant_token_hash)` unique
 
-**PostgreSQL check:** test the JSON columns (`settings`, `config`, `payload`, `answer_payload`, `timer_state`) with real queries — we'll need `jsonb_path_query` / `->` operators for analytics. Use `jsonb`, not `json`.
+**PostgreSQL check:** test the JSON columns (`settings`, `config`, `payload`, `slide_snapshot`, `answer_payload`, `timer_state`) with real queries — we'll need `jsonb_path_query` / `->` operators for analytics. Use `jsonb`, not `json`.
 
 ### 1.3 Slide type registry (PHP)
 
@@ -145,32 +180,44 @@ interface SlideTypeContract {
     public function key(): string;                          // 'pick_answer_single'
     public function validateConfig(array $config): array;   // Validator rules
     public function validateAnswer(array $payload): array;  // Validator rules
-    public function score(Slide $slide, array $payload, int $timeToAnswerMs): ScoreResult;
-    public function aggregateForReveal(Slide $slide, Collection $answers): array;
-    public function serializeForPresenter(Slide $slide): array;   // What the host's Present view gets
-    public function serializeForParticipant(Slide $slide): array; // What the participant's screen gets (strips correct-answer info!)
+    public function score(SlideRuntimeContext $context, array $payload, int $timeToAnswerMs): ScoreResult;
+    public function aggregateForReveal(SlideRuntimeContext $context, Collection $answers): array;
+    public function serializeForPresenter(QuizSlide|QuizV2SessionSlideRun $slide): array;   // Host/editor payload
+    public function serializeForParticipant(QuizSlide|QuizV2SessionSlideRun $slide): array; // Participant payload (strips correct-answer info!)
 }
 ```
 
 **Critical:** `serializeForParticipant` must strip `is_correct` from options. Today this is likely leaked.
 
+`SlideRuntimeContext` is a small value object built from the immutable `slide_snapshot` during live scoring/reveal. Authoring validation can still use the editable `QuizSlide` model.
+
 Register types in `QuizServiceProvider`. Controllers dispatch to the registry instead of switch-on-string.
 
-### 1.4 Event classes
+### 1.4 Broadcast event layer
 
-Keep the Phase 2 event classes that still apply (`QuizSessionStarted`, `QuizSessionEnded`, `QuizParticipantJoined`, `QuizParticipantCountUpdated`, `QuizLeaderboardUpdated`). Rename `QuizQuestionChanged` → `QuizSlideChanged` and add:
+Do not build a second broadcast architecture. Reuse the Phase 2/3 live layer:
 
-- `QuizSlideStateChanged` (public) — carries the state machine transition + `seconds_remaining`
-- `QuizSlideReveal` (public) — aggregate + correct option(s) + per-option images
-- `QuizAnswerSubmitted` (private host) — already exists, extend payload
+- `App\Services\Live\LiveSessionService` for channel naming, public/private broadcast routing, and after-commit dispatch
+- `App\Events\Live\LiveBroadcastEvent` for generic Reverb broadcasts
+- frontend `useSessionChannel`, `useHostChannel`, and `useSessionSync` as the base subscription/sync hooks
 
-All events use `ShouldDispatchAfterCommit` — per main plan §2.6.
+Extend `LiveSessionService` with v2 channel helpers rather than hard-coding channel strings in controllers.
+
+Add typed constants/DTOs/tests for the new event payloads:
+
+- `slide.changed` (public) — current slide run + participant-safe slide snapshot
+- `slide.state.changed` (public) — state transition + `state_started_at` + `duration_seconds` + `state_version`
+- `slide.reveal` (public) — aggregate + correct answer payload safe for reveal
+- `answer.submitted` (private host) — individual answer details + `time_to_answer_ms` + `points_awarded`
+- `leaderboard.updated` (public/private as needed) — top N + `points_delta`
+
+All broadcasts must happen after database commit. If using the existing generic event, keep using `LiveSessionService::afterCommit()`; if adding dedicated event classes later, make them after-commit safe too.
 
 ### 1.5 Broadcasts throttling
 
 `AnswerAggregateUpdated`-style events stay on a 250–500ms Redis-backed debounce (main plan §2.8). The reveal event is immediate and final.
 
-**Phase 1 exit criteria:** migrations run clean on PostgreSQL, Tinker can `broadcast(new QuizSlideChanged(...))` successfully, all registry types pass unit tests for `score()`.
+**Phase 1 exit criteria:** migrations run clean on PostgreSQL, the generic live broadcaster can emit `slide.changed`/`slide.state.changed` successfully, and all registry types pass unit tests for `score()` or explicitly return unscored.
 
 ---
 
@@ -178,6 +225,8 @@ All events use `ShouldDispatchAfterCommit` — per main plan §2.6.
 
 **Goal.** CRUD endpoints the slide editor needs. No live-session behaviour yet.
 **Duration.** 2–3 days.
+
+These are Quiz v2 endpoints. Legacy Quiz v1 routes under `/api/v1/quizes` stay in place until the cutover phase.
 
 ### 2.1 Endpoints
 
@@ -207,7 +256,7 @@ When a new slide is appended, backend seeds type-appropriate defaults:
 - `match_pairs` → 3 empty pairs, 45s time
 - `correct_order` → 4 empty items, 30s time
 - `categorise` → 2 categories + 4 items, 45s time
-- `spinner_wheel` → 4 options, no time limit, 100 points (flat)
+- `spinner_wheel` → 4 options, no time limit, no points in v1
 - `heading` → no time, no points
 - `content` → no time, no points
 - `qr_code` → no time, no points, auto-rendered
@@ -219,7 +268,7 @@ Reuse existing file-storage conventions (check `backend/app/Services/` for the c
 
 ### 2.4 Join-code generation
 
-6-character alphanumeric (A-Z, 2-9 — skip 0/O/1/I for legibility). Generate on `POST /quizzes/{id}/start-session`, unique across *active* sessions only (can reuse after session ends). Collision retry: 5 attempts, error if unlucky.
+6-character alphanumeric (A-Z, 2-9 — skip 0/O/1/I for legibility). Generate on `POST /quizzes/{id}/sessions`, unique across all `quiz_v2_sessions` (no reuse). Collision retry: 5 attempts, error if unlucky. Global uniqueness avoids partial-index differences between SQLite/PostgreSQL and keeps support/debugging simpler.
 
 ### 2.5 Validation
 
@@ -232,40 +281,42 @@ All config validation goes through the slide type registry (Phase 1.3). Controll
 ## Phase 3 — Backend live-session API
 
 **Goal.** State-machine endpoints + scoring + leaderboard. Wire Reverb broadcasts.
-**Duration.** 3–4 days.
+**Duration.** 4–5 days.
 
 ### 3.1 New endpoints
 
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/api/v1/quizzes/{id}/sessions` | Host starts a session → returns `{session_id, join_code, public_channel_key}` |
+| `GET` | `/api/v1/quiz-sessions/by-code/{code}` | Join-code lookup for participant join page |
 | `GET` | `/api/v1/quiz-sessions/{id}/state` | Full resync snapshot (from main plan §2.5) |
 | `POST` | `/api/v1/quiz-sessions/{id}/advance` | Host-controlled transitions (next slide, reveal, end) — see 3.2 |
 | `POST` | `/api/v1/quiz-sessions/{id}/end` | Host ends session early |
 | `GET` | `/api/v1/quiz-sessions/{id}/leaderboard` | Current leaderboard (paginated, for Leaderboard slide) |
 | `POST` | `/api/v1/quiz-sessions/{id}/participants/join` | Anonymous join — name + emoji → `{participant_id, participant_token}` |
-| `POST` | `/api/v1/quiz-sessions/{id}/slides/{slideId}/answers` | Submit answer (participant-token auth) |
+| `POST` | `/api/v1/quiz-sessions/{id}/slide-runs/{slideRunId}/answers` | Submit answer (participant-token auth) |
+| `GET` | `/api/v1/quiz-sessions/{id}/slide-runs/{slideRunId}/my-answer` | Participant-specific reveal result |
 
 ### 3.2 Advance endpoint — single entry point for host-driven transitions
 
 Body: `{ action: 'start_slide' | 'reveal' | 'next_slide' | 'previous_slide' | 'jump_to', slide_id?, target_slide_id? }`.
 
-Server enforces legal transitions based on current state. Example: `start_slide` from `waiting` sets state to `get_ready`, schedules a job to flip to `answering` after `get_ready_seconds`, which in turn schedules a job to flip to `reveal` after `time_limit_seconds`. Both jobs broadcast `QuizSlideStateChanged`. Host's "Reveal" button short-circuits the timer.
+Server enforces legal transitions based on current state. Example: `start_slide` from `waiting` sets the current slide run state to `get_ready`, increments `state_version`, schedules a job to flip to `answering` after `get_ready_seconds`, which in turn schedules a job to flip to `reveal` after `time_limit_seconds`. Both transitions broadcast `slide.state.changed`. Host's "Reveal" button short-circuits the timer.
 
-**Why jobs, not timers in the controller?** Reverb doesn't deliver timed broadcasts; Laravel scheduler doesn't run sub-minute. Use `dispatch(new TransitionSlideJob(...))->delay(now()->addSeconds(N))` on Redis queue — guaranteed delivery, cancellable by advancing early.
+**Why jobs, not timers in the controller?** Reverb doesn't deliver timed broadcasts; Laravel scheduler doesn't run sub-minute. Use `dispatch(new TransitionSlideJob(sessionId, slideRunId, expectedStateVersion, action))->delay(now()->addSeconds(N))` on Redis queue. Each delayed job reloads the slide run and no-ops unless `slide_run_id`, `state`, and `state_version` still match, preventing stale delayed jobs from revealing or advancing the wrong slide.
 
 ### 3.3 Scoring service
 
-`app/Services/Quiz/ScoringService.php` — single place that takes `(slide, answerPayload, timeToAnswerMs)` and returns `ScoreResult`. Delegates to slide-type registry. Called from the answer submission controller synchronously (cheap). Points update `quiz_participants.total_points` in the same transaction.
+`app/Services/Quiz/ScoringService.php` — single place that takes `(slideRun, answerPayload, timeToAnswerMs)` and returns `ScoreResult`. Delegates to slide-type registry using the immutable `slide_snapshot`. Called from the answer submission controller synchronously (cheap). Points update `quiz_v2_participants.total_points` in the same transaction.
 
 ### 3.4 Leaderboard service
 
 `app/Services/Quiz/LeaderboardService.php`:
 
-- `currentTopN(session, n)` — order by `total_points DESC, joined_at ASC`, return players with `rank`, `display_name`, `emoji_avatar`, `total_points`, and `points_delta` (points gained on last slide, for the `+94` animation).
-- Cache snapshot in Redis per slide transition (`leaderboard:session:{id}:after:{slideId}`), TTL 1h. Never replay — each request either returns cached or rebuilds.
+- `currentTopN(session, n)` — order by `total_points DESC, joined_at ASC`, return players with `rank`, `display_name`, `emoji_avatar`, `total_points`, and `points_delta` (points gained on last slide run, for the `+94` animation).
+- Cache snapshot in Redis per slide transition (`leaderboard:quiz-v2-session:{id}:after-run:{slideRunId}`), TTL 1h. Never replay — each request either returns cached or rebuilds.
 
-`QuizLeaderboardUpdated` event fires on every `reveal → done` transition.
+`leaderboard.updated` fires through the live broadcast layer on every `reveal → done` transition.
 
 ### 3.5 Participant join with emoji
 
@@ -273,12 +324,12 @@ Server enforces legal transitions based on current state. Example: `start_slide`
 // POST /api/v1/quiz-sessions/{id}/participants/join
 // Body: { display_name, emoji_avatar, join_code }
 
-$session = QuizSession::where('public_channel_key', $pck)->firstOrFail();
+$session = QuizV2Session::where('join_code', $request->join_code)->firstOrFail();
 abort_unless($session->status === 'live', 403, 'Session is not accepting participants.');
 
 $rawToken = Str::random(64);
-$participant = QuizParticipant::create([
-    'quiz_session_id' => $session->id,
+$participant = QuizV2Participant::create([
+    'quiz_v2_session_id' => $session->id,
     'display_name'    => $request->display_name,
     'emoji_avatar'    => $request->emoji_avatar,     // one of a curated ~40 emoji list
     'participant_token_hash' => hash('sha256', $rawToken),
@@ -286,8 +337,8 @@ $participant = QuizParticipant::create([
     'total_points'    => 0,
 ]);
 
-DB::afterCommit(fn () => broadcast(new QuizParticipantJoined(...)));     // private to host
-DB::afterCommit(fn () => broadcast(new QuizParticipantCountUpdated(...))); // public
+app(LiveSessionService::class)->broadcastHost('quiz', $session, 'participant.joined', [...]);
+app(LiveSessionService::class)->broadcastPublic('quiz', $session, 'participant.count.updated', [...]);
 
 return ['participant_id' => $participant->id, 'participant_token' => $rawToken, 'public_channel_key' => $session->public_channel_key];
 ```
@@ -297,25 +348,25 @@ Emoji list is a PHP constant (~40 curated emoji) to prevent garbage input. Rejec
 ### 3.6 Answer submission
 
 ```php
-// POST /api/v1/quiz-sessions/{id}/slides/{slideId}/answers
+// POST /api/v1/quiz-sessions/{id}/slide-runs/{slideRunId}/answers
 // Header: X-Participant-Token
 // Body: { answer_payload: {...}, client_submitted_at: "ISO" }
 
 $participant = ParticipantTokenService::resolve($request->header('X-Participant-Token'), $sessionId);
-abort_if($session->current_slide_id !== $slideId, 409, 'Not the current slide.');
-abort_if($session->current_slide_state !== 'answering', 409, 'Slide is not accepting answers.');
-abort_if(QuizParticipantAnswer::where('quiz_participant_id', $participant->id)->where('slide_id', $slideId)->exists(), 409, 'Already answered.');
+abort_if($session->current_slide_run_id !== $slideRunId, 409, 'Not the current slide.');
+abort_if($slideRun->state !== 'answering', 409, 'Slide is not accepting answers.');
+abort_if(QuizV2ParticipantAnswer::where('quiz_v2_participant_id', $participant->id)->where('quiz_v2_session_slide_run_id', $slideRunId)->exists(), 409, 'Already answered.');
 
-$timeToAnswer = now()->diffInMilliseconds($session->current_slide_state_started_at);
-$result = app(ScoringService::class)->score($slide, $request->answer_payload, $timeToAnswer);
+$timeToAnswer = now()->diffInMilliseconds($slideRun->answering_started_at);
+$result = app(ScoringService::class)->score($slideRun, $request->answer_payload, $timeToAnswer);
 
 DB::transaction(function () use (...) {
-    QuizParticipantAnswer::create([...]);
+    QuizV2ParticipantAnswer::create([...]);
     $participant->increment('total_points', $result->pointsAwarded);
 });
 
-DB::afterCommit(fn () => broadcast(new QuizAnswerSubmitted(...))); // private host
-DB::afterCommit(fn () => broadcast(new QuizAnswerAggregateUpdated(...)))->debounce(500);
+app(LiveSessionService::class)->broadcastHost('quiz', $session, 'answer.submitted', [...]);
+app(QuizV2AggregateService::class)->recordAnswer($session->id, $slideRun->id); // Redis-debounced public aggregate
 
 return ['submitted' => true]; // NEVER return is_correct / points here — participant sees at reveal
 ```
@@ -324,11 +375,12 @@ return ['submitted' => true]; // NEVER return is_correct / points here — parti
 
 ### 3.7 Reveal payload
 
-On `reveal` transition, server computes aggregate and broadcasts `QuizSlideReveal`:
+On `reveal` transition, server computes aggregate and broadcasts `slide.reveal`:
 
 ```json
 {
-  "slide_id": 42,
+  "slide_run_id": 42,
+  "slide_id": 12,
   "type": "pick_answer_single",
   "aggregate": {
     "option_counts": [{"option_id": 1, "count": 77}, {"option_id": 2, "count": 38}, ...],
@@ -340,12 +392,13 @@ On `reveal` transition, server computes aggregate and broadcasts `QuizSlideRevea
 }
 ```
 
-Participant-specific `is_correct` + `points_awarded` comes from a separate `GET /quiz-sessions/{id}/slides/{slideId}/my-answer` (participant-token auth) fetched by client on reveal — keeps the broadcast payload small.
+Participant-specific `is_correct` + `points_awarded` comes from a separate `GET /quiz-sessions/{id}/slide-runs/{slideRunId}/my-answer` (participant-token auth) fetched by client on reveal — keeps the broadcast payload small.
 
 ### 3.8 Tests (Pest, against PostgreSQL)
 
 - Full happy path: create quiz → start session → 3 participants join → answer slide 1 → reveal → leaderboard updated → slide 2 → etc. → end.
-- State-machine edge cases: double-advance, answering-after-reveal, late join (should work but miss past slides).
+- State-machine edge cases: double-advance, stale delayed job no-op via `state_version`, answering-after-reveal, late join (should work but miss past slides).
+- Snapshot stability: edit the authoring slide after session start; the in-progress session still uses the original `slide_snapshot`.
 - Scoring: time interpolation, partial credit, zero on wrong.
 - Token revocation: revoked token rejected.
 - Authorization: non-host calling `/advance` → 403.
@@ -361,7 +414,7 @@ Participant-specific `is_correct` + `points_awarded` comes from a separate `GET 
 
 ### 4.1 Route & layout
 
-Replace `app/(protected)/quiz-creator/` and `app/(protected)/quiz-edit/` with a single slide-based editor at `app/(protected)/quizzes/[id]/edit/`. Old quiz-creator/quiz-edit routes get removed in Phase 8 cleanup.
+Add a single slide-based editor at `app/(protected)/quizzes/[id]/edit/` behind `quiz_v2_enabled`. Legacy `app/(protected)/quiz-creator/` and `app/(protected)/quiz-edit/` stay available until Phase 9 cutover.
 
 Three-panel layout (desktop-first; mobile editor is out of scope for v1):
 
@@ -425,7 +478,7 @@ features/quiz/
 - **Reorder** via `@dnd-kit/core` (already in codebase per main plan §1.5). Server call is the single batch `POST /slides/reorder`.
 - **Duplicate** keyboard shortcut: `Ctrl/Cmd+D`.
 - **Delete** slide via keyboard `Delete` or trash icon; confirm modal.
-- **Add slide** via `+ New slide` button → opens `SlidePicker` modal (image 2, with unscored row hidden in v1).
+- **Add slide** via `+ New slide` button → opens `SlidePicker` modal (image 2, with unsupported rows hidden in v1).
 - **Preview** button in header → read-only full-screen render of the deck in order.
 
 ### 4.4 Per-type editor components
@@ -459,14 +512,14 @@ Per quiz (editor header → Settings modal):
 ## Phase 5 — Frontend: Presenter (Host) mode
 
 **Goal.** Full-screen Present view matching the two host screenshots (QR sidebar + question + bar chart + leaderboard).
-**Duration.** 4 days.
+**Duration.** 4–5 days.
 
 ### 5.1 Route
 
 `app/(protected)/quizzes/[id]/present/` — host-only, Sanctum-guarded. On mount:
 1. `POST /quizzes/{id}/sessions` to create a session
 2. Subscribe to public `session.quiz.{publicChannelKey}` via `useSessionChannel` (already built in main plan §3.3)
-3. Subscribe to private `host.quiz.{sessionId}` via `useHostChannel` (already built)
+3. Subscribe to private `host.quiz.v2.{sessionId}` via `useHostChannel` (extend the existing hook to support the v2 namespace)
 4. Render the current slide's `Presenter` component
 5. Render the host control bar (bottom)
 
@@ -516,7 +569,7 @@ QR Code slide: big centered QR + big join code + "Go to yourdomain.com/QUIZCODE"
 
 ### 5.4 Timer sync
 
-Authoritative timer is on the server (`slide.state.changed` carries `state_started_at` + `duration_seconds`). Frontend only ticks locally between events for smooth UI. On reconnect, `useSessionSync` (already exists) resyncs.
+Authoritative timer is on the server (`slide.state.changed` carries `state_started_at`, `duration_seconds`, and `state_version`). Frontend only ticks locally between events for smooth UI. On reconnect, `useSessionSync` (already exists) resyncs and replaces local state from the backend snapshot.
 
 ### 5.5 Reveal animations
 
@@ -537,7 +590,7 @@ ApexCharts animated bar chart (images on top of bars via chart annotation/SVG ov
 ## Phase 6 — Frontend: Participant view
 
 **Goal.** Mobile-first join + answering flow matching the 6 participant screenshots.
-**Duration.** 3–4 days.
+**Duration.** 4–5 days.
 
 ### 6.1 Routes
 
@@ -545,7 +598,7 @@ ApexCharts animated bar chart (images on top of bars via chart annotation/SVG ov
 - `app/(public)/join/[code]/page.tsx` — enter name + pick emoji avatar (image 4). Calls `/participants/join`.
 - `app/(public)/play/[publicChannelKey]/page.tsx` — the live answering page. Stores participant token in `sessionStorage`.
 
-Delete old `app/(public)/attempt/quize/` and `app/(public)/live/quiz/` routes in Phase 8.
+Keep old `app/(public)/attempt/quize/` and `app/(public)/live/quiz/` routes until Phase 9 cutover.
 
 ### 6.2 Join flow
 
@@ -568,6 +621,8 @@ switch (slideState) {
 }
 ```
 
+The existing `useSessionChannel` currently understands question/task events. Extend it for v2 slide payloads (`currentSlideRunId`, `currentSlide`, `slideState`, `stateVersion`, `secondsRemaining`) while preserving the old event bridge until legacy Quiz is removed.
+
 ### 6.4 Per-type Participant components
 
 Mirror image 6:
@@ -583,7 +638,7 @@ Mirror image 6:
 Show `Submitted` (disabled button) until reveal. On reveal, swap to a per-type reveal component:
 - Correct: big green ✅ + "+ 94 points"
 - Wrong: red ❌ + "0 points" + highlight correct option
-- Tie into `GET /slides/{id}/my-answer` for the authoritative result — don't trust a broadcast.
+- Tie into `GET /quiz-sessions/{id}/slide-runs/{slideRunId}/my-answer` for the authoritative result — don't trust a broadcast.
 
 ### 6.6 Review screen (post-session)
 
@@ -606,8 +661,8 @@ Already handled by `useSessionSync` (main plan §3.8) + `sessionStorage`-stored 
 
 ## Phase 7 — New question types implementation
 
-**Goal.** Implement the five types that don't exist today (Match Pairs, Correct Order, Categorise, Spinner Wheel, Short Answer variant).
-**Duration.** 5–6 days. Parallelisable — one type per dev per day.
+**Goal.** Implement the scored types that don't exist today (Match Pairs, Correct Order, Categorise, Short Answer variant) plus the simplified Spinner Wheel engagement slide.
+**Duration.** 6–8 days. Parallelisable by type after the first vertical slice establishes the pattern.
 
 Each type follows the same pattern (five components already outlined). Notable implementation notes per type:
 
@@ -633,15 +688,15 @@ Simpler than it looks. Author: 2–12 options, each optionally weighted. Live fl
 1. Host clicks Start → server picks weighted-random winner, broadcasts `spin.started` with `target_angle`
 2. All clients animate a 3-second CSS rotation to that angle
 3. Server broadcasts `slide.state.changed → reveal` when animation ends
-4. Everyone sees the landed option. Scoring: *flat* points to anyone who *picked that option before the spin* if author enabled "participant prediction mode"; otherwise the slide is purely a randomiser with 0 points.
+4. Everyone sees the landed option. In v1, this slide is unscored and acts as a randomiser/engagement slide.
 
-v1 ships prediction mode *off* by default — the wheel is mostly for engagement, not scoring. Revisit based on user feedback.
+Prediction scoring is a v1.1+ feature, not a hidden toggle in v1. If added later, it should use the same answer-submit/reveal pipeline as other scored slides and have explicit tests.
 
 ### 7.6 Tests per type
 
-For each: Pest backend test asserting `ScoringService::score()` handles the full truth table (all-correct, all-wrong, partial, empty submission, malformed payload).
+For each scored type: Pest backend test asserting `ScoringService::score()` handles the full truth table (all-correct, all-wrong, partial, empty submission, malformed payload). For Spinner Wheel: assert winner selection is deterministic under a seeded random source, weighted options behave correctly, and no points are awarded in v1.
 
-**Phase 7 exit criteria:** every type round-trips edit → present → answer → reveal with correct points awarded.
+**Phase 7 exit criteria:** every scored type round-trips edit → present → answer → reveal with correct points awarded; Spinner Wheel round-trips edit → present → spin → reveal without awarding points.
 
 ---
 
@@ -658,9 +713,10 @@ For each: Pest backend test asserting `ScoringService::score()` handles the full
 
 ### 8.2 Cleanup
 
-- Delete old quiz routes: `quiz-creator`, `quiz-edit`, `quiz-play`, `quiz-reports` (if it was tied to old model; rebuild on new model if used)
-- Delete old `attempt/quize/play/[id]`, `live/quiz/`, `create-live/` quiz pieces
-- Delete old Redux slices / service files under `features/quiz/` no longer used
+- Clean up only v2-owned dead code in this phase.
+- Do not delete legacy Quiz v1 routes/tables yet unless the cutover phase has already been approved and completed.
+- Mark old quiz routes for removal after cutover: `quiz-creator`, `quiz-edit`, `quiz-play`, `quiz-reports` (if tied to old model), `attempt/quize/play/[id]`, `live/quiz/`, `create-live/`.
+- Mark old Redux slices / service files under `features/quiz/` for removal after no v1 route imports them.
 - Grep for dead imports: `grep -rn "from.*quiz.*Question" frontend/src`
 
 ### 8.3 Load test (reuse main plan §5.2)
@@ -680,28 +736,86 @@ Update `STRUCTURE_AND_DEVELOPMENT_GUIDE.md` with:
 
 Add `QUIZ_ADDING_A_SLIDE_TYPE.md` — step-by-step for future devs.
 
-### 8.5 Feature flag for gradual rollout (optional)
+### 8.5 Feature flag for gradual rollout
 
-If you want beta users only at first, gate the new `/quizzes/[id]/edit` and `/present` routes behind a `quiz_v2_enabled` flag on the user model. Drop the flag after 2 weeks of stability.
+Gate the new `/quizzes/[id]/edit` and `/present` routes behind a `quiz_v2_enabled` flag. Use it in three stages:
+
+1. Internal users only while the `pick_answer_single` vertical slice is stabilising.
+2. Beta users after all v2 slide types pass manual and Pest coverage.
+3. Default-on after load testing and report review pass.
+
+Drop the flag only after the final cutover has been stable for at least 2 weeks.
+
+---
+
+## Phase 9 — Cutover and legacy removal
+
+**Goal.** Make Quiz v2 the default Quiz module and remove old Quiz v1 safely.
+**Duration.** 2–3 days after v2 has been running behind the flag.
+
+### 9.1 Cutover checklist
+
+- Confirm `quiz_v2_enabled` has been default-on for the agreed beta group.
+- Run PostgreSQL test suite and load test.
+- Take a database backup in the target environment.
+- Freeze legacy Quiz creation during cutover, or redirect new creation to v2 only.
+- Verify no frontend route still imports v1 quiz creation/play/report components.
+- Verify no backend route/controller needed by v2 still queries legacy `quizes`, `questions`, `quiz_sessions`, `quiz_participants`, or `user_quiz_answers`.
+
+### 9.2 Legacy cleanup migration
+
+Only after the checklist passes, drop legacy Quiz v1 tables:
+
+- `user_quiz_answers`
+- `quiz_participants`
+- `quiz_sessions`
+- `questions`
+- `quiz_origins`
+- `quiz_q_bank_questions`
+- `quiz_q_banks`
+- `quiz_q_bank_categories`
+- `quiz_bank_questions`
+- `quizes`
+
+Keep Quest and Survey tables untouched.
+
+### 9.3 Naming after cutover
+
+Preferred: keep `quizzes`, `quiz_slides`, `quiz_slide_options`, and the `quiz_v2_*` runtime tables as canonical names, then document them clearly in `STRUCTURE_AND_DEVELOPMENT_GUIDE.md`. Avoid a second rename unless there is a strong reason.
+
+If the team wants clean runtime names (`quiz_sessions`, `quiz_participants`, `quiz_participant_answers`) after legacy removal, do that in a separate post-cutover migration and update models/routes in one dedicated commit.
 
 ---
 
 ## Timeline
 
+Build by vertical slice, not by completing every backend detail before any frontend work. The first full slice is `pick_answer_single`: create deck → add slide → present → join → answer → reveal → leaderboard → reconnect → end. Freeze the contracts from that slice before adding the remaining types.
+
 | Phase | Duration | Parallelisable with |
 |---|---|---|
-| 1. Data model & core backend | 2–3 days | — |
+| 1. Data model & core backend | 3–4 days | — |
 | 2. Authoring API | 2–3 days | Phase 4 can start on mocks |
-| 3. Live-session API | 3–4 days | Phase 5 can start on mocks |
+| 3. Live-session API | 4–5 days | Phase 5 can start on mocks |
 | 4. Editor UI | 4–5 days | Phase 2 |
-| 5. Presenter UI | 4 days | Phase 3 |
-| 6. Participant UI | 3–4 days | Phase 5 (partial) |
-| 7. New question types | 5–6 days | Phase 6 (per-type slices) |
+| 5. Presenter UI | 4–5 days | Phase 3 |
+| 6. Participant UI | 4–5 days | Phase 5 (partial) |
+| 7. New question types | 6–8 days | Phase 6 (per-type slices) |
 | 8. Polish + cleanup + docs | 3–4 days | — |
-| **Total (serial)** | **26–33 days** | |
-| **Total (two devs, parallelised)** | **~18–22 days** | |
+| 9. Cutover + legacy removal | 2–3 days | After beta stability |
+| **Total (serial)** | **32–42 days** | |
+| **Total (two devs, parallelised)** | **~22–30 days** | |
 
-With two devs: dev A owns Phases 1→3→7-backend; dev B owns Phases 4→5→6→7-frontend. Sync at Phase 2 end (API contract freeze) and Phase 3 end (state-machine contract freeze).
+With two devs: dev A owns v2 schema, backend state machine, scoring, and backend tests; dev B owns editor/presenter/participant UI. Sync at the end of the `pick_answer_single` vertical slice, then again after the state-machine contract is stable.
+
+### Recommended vertical-slice order
+
+1. Schema + registry + session slide snapshots.
+2. `pick_answer_single` end-to-end.
+3. `pick_answer_multi` and `short_answer`.
+4. `correct_order`, then `match_pairs`, then `categorise`.
+5. QR, content, heading, and leaderboard polish.
+6. Spinner Wheel unscored engagement slide.
+7. Feature-flag beta, load test, docs, then cutover.
 
 ---
 
@@ -709,13 +823,17 @@ With two devs: dev A owns Phases 1→3→7-backend; dev B owns Phases 4→5→6�
 
 | Decision | Rationale |
 |---|---|
-| Greenfield schema; drop old quiz tables | User confirmed no data-migration requirement. Keeping both would double the surface area of every slide-type handler. |
+| Greenfield v2 data, build beside legacy first | User confirmed no data-migration requirement, but legacy tables stay until the v2 vertical slice and cutover are proven. This reduces rollback risk. |
+| New `quizzes` table corrects legacy `quizes` typo | The new authoring table can coexist with old `quizes`, so this is the safest moment to fix the public spelling for v2. |
+| V2 runtime tables use `quiz_v2_*` names during coexistence | Legacy `quiz_sessions` and `quiz_participants` already exist. Non-conflicting v2 names let both flows run while the feature flag is active. |
 | Single `quiz_slides` table with `type` discriminator + JSON `config` | Matches AhaSlides' own model; makes new slide types additive with no migrations. |
+| Session slide snapshots | Live sessions and reports must remain stable if an author edits a quiz after starting a session. Answers reference immutable slide runs. |
 | Slide type registry on both sides | One class per type, same five hooks. Stops controllers from growing switch statements as types multiply. |
-| Server-authoritative state machine with Redis-queued transition jobs | Reverb isn't a scheduler; Laravel scheduler is minute-granular. Redis-delayed jobs are the only sub-second mechanism that survives server restarts. |
+| Reuse generic `LiveSessionService` + `LiveBroadcastEvent` | Phase 3 already created a working Reverb abstraction. Add typed payloads around it instead of creating a second event architecture. |
+| Server-authoritative state machine with Redis-queued transition jobs and `state_version` guards | Reverb isn't a scheduler; Laravel scheduler is minute-granular. Redis-delayed jobs are needed, but stale jobs must no-op after host-driven transitions. |
 | Opaque answer-submit response + separate `my-answer` endpoint | Prevents leaking correctness before reveal via network-tab inspection. |
 | No emoji reactions, chat, hand-raise, confetti, "sign in to save" | User confirmed: core quiz only. Keeps surface focused; can add later without rework. |
 | 40-emoji curated avatar list, server-validated | Prevents garbage input and makes the leaderboard look consistent. |
-| Spinner Wheel ships without prediction scoring in v1 | Prediction scoring is an engagement feature, not a quiz-core feature. Ship the animation, validate interest, add scoring later. |
+| Spinner Wheel ships unscored in v1 | Prediction scoring is an engagement feature, not quiz-core. Ship the animation/randomiser, validate interest, add scoring later as v1.1+. |
 | Editor is desktop-only in v1 | AhaSlides' own mobile editor is weak. Not worth the build cost pre-validation. |
-| Reuse Phase 2/3 channels + events verbatim | The Reverb architecture is already correct. Only payloads change. |
+| Reuse Phase 2/3 public/private channel split | The Reverb architecture is already correct. V2 namespaces the private channel during coexistence to avoid ID collisions. |

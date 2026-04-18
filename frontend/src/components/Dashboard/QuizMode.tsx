@@ -26,7 +26,9 @@ const QuizMode: React.FC<LeaderboardProps> = ({scope, sessionData}) => {
 	const searchParams = useSearchParams();
 	const params = useParams();
 	const quiz_id = searchParams.get("qid");
-	const sectionId = params.id === "quize" ? sessionData : params.id
+	const sessionId = searchParams.get("sid");
+	const sectionId =
+		params.id === "quize" ? sessionData || sessionId : sessionData || params.id;
 
 	console.log(sectionId, "params.id");
 	
@@ -39,6 +41,8 @@ const QuizMode: React.FC<LeaderboardProps> = ({scope, sessionData}) => {
 	// Mock data - replace with your actual leaderboard data
 
 	useEffect(() => {
+		if (!sectionId) return;
+
 		// if (mode === "quize") {
 		const datafetch = async () => {
 			try {
@@ -67,7 +71,7 @@ const QuizMode: React.FC<LeaderboardProps> = ({scope, sessionData}) => {
 		};
 		datafetch();
 		// }
-	}, [quiz_id]);
+	}, [quiz_id, sectionId]);
 
 	const topThree: any = leaderboardData.slice(0, 3);
 

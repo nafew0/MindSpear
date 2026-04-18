@@ -66,6 +66,7 @@ import {
 	numberResultToScoreMap,
 } from "@/features/live/services/aggregateResults";
 import { endLiveSession } from "@/features/live/services/liveSessionApi";
+import Leaderboard from "@/components/Dashboard/Leaderboard";
 
 type Task = {
 	[x: string]: any;
@@ -203,7 +204,13 @@ function transformData(data: RawData) {
 
 /* Normalize quizeData.questions -> Quest.tasks shape */
 function normalizeQuize(quizeData: any): Quest {
-	const tasks: Task[] = [...quizeData.questions]
+	const quizSession =
+		quizeData.questSession ??
+		quizeData.quizSession ??
+		quizeData.session ??
+		quizeData.sessions?.[0] ??
+		null;
+	const tasks: Task[] = [...(quizeData.questions ?? [])]
 		.map((q, idx): Task => {
 			const colors = (q.options?.color ?? []).map(String);
 			const rawChoices = (q.options?.choices ?? []).filter(
@@ -213,7 +220,7 @@ function normalizeQuize(quizeData: any): Quest {
 			return {
 				id: q.id,
 				quest_id: quizeData.id,
-				session_id: quizeData.questSession.id,
+				session_id: quizSession?.id ?? 0,
 				title: q.question_text,
 				description: null,
 				task_type: mapQuizTypeToTaskType(q.question_type),
@@ -474,19 +481,30 @@ export default function LiveQuiz() {
 								`/quiz-attempts-url/show/${joinlink}`
 							);
 
-							const normalized = normalizeQuize(
-								response?.data?.data?.quiz
-							);
 							const questData = response?.data?.data;
+							const quizSession =
+								questData?.quizSession ??
+								questData?.session ??
+								questData?.quiz?.sessions?.[0] ??
+								null;
+							const normalized = normalizeQuize({
+								...questData?.quiz,
+								questSession: quizSession,
+							});
 							setQuest(normalized);
 
-							setSessionId(questData.questSession.id);
+							if (quizSession?.id) {
+								setSessionId(quizSession.id);
+							}
 							setPublicChannelKey(
-								questData.questSession.public_channel_key ?? null
+								quizSession?.public_channel_key ??
+									questData?.public_channel_key ??
+									publicChannelKeyFromUrl ??
+									null
 							);
 							console.log(
 								"SESSION ID SET:",
-								questData.questSession.id
+								quizSession?.id
 							);
 
 							const unique = uniqueById(
@@ -1245,12 +1263,12 @@ export default function LiveQuiz() {
 		}
 	}, []);
 	const endHostLive = async () => {
-		if (!sessionId) {
+		if (!activeSessionId) {
 			console.error("session_id missing");
 			return;
 		}
 		try {
-			await endLiveSession(liveModule, sessionId);
+			await endLiveSession(liveModule, activeSessionId);
 
 			setEndModalOpen(false);
 			dispatch(forceEndLive());
@@ -1276,7 +1294,11 @@ export default function LiveQuiz() {
 				</div>
 			)}
 			{showLeaderboard ? (
-				<QuestCompletedPages pagesStatus={"creator"} />
+				mode === "quize" ? (
+					<Leaderboard scope={scope} />
+				) : (
+					<QuestCompletedPages pagesStatus={"creator"} />
+				)
 			) : viewModel ? (
 				<HostLiveQuestionView
 					currentView={viewModel.currentView}
@@ -1327,11 +1349,11 @@ export default function LiveQuiz() {
 					<p className="text-gray-700 text-[15px] leading-relaxed">
 						You are currently viewing the{" "}
 						<span className="font-medium">last question</span> of
-						this quest.
+						this {mode === "quize" ? "quiz" : "quest"}.
 					</p>
 
 					<p className="text-gray-700 text-sm font-medium">
-						Do you want to end this quest now?
+						Do you want to end this {mode === "quize" ? "quiz" : "quest"} now?
 					</p>
 
 					<div className="flex justify-end gap-3 pt-3">
@@ -1343,17 +1365,17 @@ export default function LiveQuiz() {
 						</button>
 
 						<button
-							disabled={!sessionId}
+							disabled={!activeSessionId}
 							className={`px-4 py-2 rounded text-white transition
     							${
-									!sessionId
+									!activeSessionId
 										? "bg-gray-400 cursor-not-allowed"
 										: "bg-red-600 hover:bg-red-700"
 								}
   									`}
 							onClick={endHostLive}
 						>
-							End Quest
+							End {mode === "quize" ? "Quiz" : "Quest"}
 						</button>
 					</div>
 				</div>

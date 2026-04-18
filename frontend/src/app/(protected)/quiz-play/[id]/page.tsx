@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 
 import Summary from "@/features/quiz/components/QuizReports/Summary";
 import moment from "@/lib/dayjs";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { setQuiz } from "@/features/quiz/store/quizInformationSlice";
 import { useDispatch, useSelector } from "react-redux";
@@ -32,6 +32,7 @@ interface QuizResponse {
 function QuizReport() {
 	const params = useParams();
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const dispatch = useDispatch();
 	const [response, setresponse] = useState<QuizResponse | any>(null);
 	const [sessionResponse, setSessionResponse] = useState<QuizResponse | any>(
@@ -41,6 +42,8 @@ function QuizReport() {
 	const quizSession = useSelector(
 		(state: any) => state.questSession.questSession
 	);
+	const sessionIdFromUrl = searchParams.get("sid");
+	const activeSessionId = quizSession?.id ?? sessionIdFromUrl;
 	console.log(quizSession, "quizSessionquizSessionquizSession");
 	const { scope } = useSelector((state: any) => state.leaderboard);
 	console.log(scope, "ddddddddddddddddddddddddd");
@@ -83,7 +86,7 @@ function QuizReport() {
 		setQuizCreated(true);
 	}, [response?.quiz.title, params?.id]);
 
-	useHostChannel("quiz", quizSession?.id, {
+	useHostChannel("quiz", activeSessionId, {
 		onParticipantJoined: (payload) => {
 			setparticipantsActiveData(payload);
 			setparticipantsActiveNumber(payload?.participant_count ?? 0);
@@ -103,15 +106,17 @@ function QuizReport() {
 			const responseData = await axiosInstance.get(
 				`/quizes/show/${params?.id}`
 			);
-			const responseQuizSessionData = await axiosInstance.get(
-				`/quizes/show-with-sessions/${quizSession?.id}`
-			);
-			setSessionResponse(responseQuizSessionData?.data.data);
+			if (activeSessionId) {
+				const responseQuizSessionData = await axiosInstance.get(
+					`/quizes/show-with-sessions/${activeSessionId}`
+				);
+				setSessionResponse(responseQuizSessionData?.data.data);
+			}
 			setresponse(responseData?.data?.data);
 			dispatch(setQuiz(responseData?.data?.data));
 		};
 		dataFetch();
-	}, [params?.id, quizSession?.id]);
+	}, [params?.id, activeSessionId]);
 
 	const handleQuizChange = (checked: boolean) => {
 		setIsQuizMode(checked);
@@ -144,13 +149,17 @@ function QuizReport() {
 	};
 
 	const updateHostLiveSession = async () => {
+		if (!activeSessionId) {
+			throw new Error("No live quiz session was found.");
+		}
+
 		try {
 			const payload = {
 				title: titleInput,
 				quiz_mode: scope === "slide" ? "game" : "quiz",
 			};
 			const response = await axiosInstance.post(
-				`/quizes/update-host-live/${quizSession?.id}`,
+				`/quizes/update-host-live/${activeSessionId}`,
 				payload
 			);
 			return response.data;
@@ -166,8 +175,14 @@ function QuizReport() {
 	);
 
 	const handleChangeQuestion = async () => {
-		if (!quizSession?.id) {
+		if (!activeSessionId) {
 			toast.error("No live quiz session was found.");
+			return;
+		}
+		const liveJoinLink =
+			sessionResponse?.session?.join_link ?? quizSession?.join_link;
+		if (!liveJoinLink) {
+			toast.error("No live quiz join link was found.");
 			return;
 		}
 
@@ -192,7 +207,7 @@ function QuizReport() {
 		};
 
 		const liveState = await changeQuizQuestion(
-			quizSession.id,
+			activeSessionId,
 			questionId,
 			timerState
 		);
@@ -208,7 +223,7 @@ function QuizReport() {
 		);
 
 		router.push(
-			`/create-live/quize?jid=${sessionResponse?.session?.join_link}&qid=${quizId}&sid=${quizSession.id}&pck=${liveState.public_channel_key}`
+			`/create-live/quize?jid=${liveJoinLink}&qid=${quizId}&sid=${activeSessionId}&pck=${liveState.public_channel_key}`
 		);
 	};
 
