@@ -7,25 +7,13 @@ import Summary from "@/features/quest/components/QuestReports/Summary";
 import { useParams, useRouter } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { useDispatch, useSelector } from "react-redux";
-import { AxiosError } from "axios";
 import { setQuest } from "@/features/quest/store/questInformationSlice";
 import { RootState } from "@/stores/store";
 
 import { clearCache } from "@/features/live/store/leaderboardSlice";
 import { clearAppStorage } from "@/utils/storageCleaner";
-import {
-	connectSocket,
-	emitChangeQuestionQuest,
-	emitCreateQuest,
-	emitStartQuest,
-	getSocket,
-	setCurrentQuest,
-	waitForParticipantJoinedQuest,
-	waitForQuestJoinedOnce,
-	waitForQuestStartedOnce,
-	waitForQuestionChangedQuestAll,
-	waitForQuestionChangedQuestSingle,
-} from "@/socket/quest-socket";
+import { changeQuestTask } from "@/features/live/services/liveSessionApi";
+import { useHostChannel } from "@/features/live/hooks/useHostChannel";
 
 import {
 	setQuestData,
@@ -35,6 +23,7 @@ import {
 import { CirclePlay, Users } from "lucide-react";
 import moment from "@/lib/dayjs";
 import { toast } from "react-toastify";
+import type { TimerState } from "@/features/live/types";
 
 interface ActiveUser {
 	userName: string;
@@ -45,28 +34,17 @@ function QuizReport() {
 	const params = useParams();
 	const router = useRouter();
 	const dispatch = useDispatch();
-	const user = useSelector((state: RootState) => state.auth.user) as any;
 	const questSession = useSelector(
 		(state: RootState) => state.questSession.questSession,
 	);
 
 	const [response, setresponse] = useState<any | null>(null);
-	const [participantsData, setParticipantsData] = useState([]);
-	console.log(participantsData);
-
 	const [activeUsersData, setActiveUsersData] = useState<ActiveUser[]>([]);
 	const [participantsActive, setparticipantsActive] = useState(0);
-	const [participantsActiveData, setparticipantsActiveData] = useState<any>(
-		{},
-	);
-	const [quizCreated, setQuizCreated] = useState(false);
 	const [titleInput, setTitleInput] = useState("");
 
 	const [connected, setConnected] = useState(false);
 	const questId = `${params?.id}`;
-	const userId = `${user?.id}`;
-	const questTitle = "quiz Title";
-	const userName = `${user?.full_name}`;
 
 	useEffect(() => {
 		if (typeof window !== "undefined") {
@@ -77,83 +55,33 @@ function QuizReport() {
 	}, [params?.id]);
 
 	useEffect(() => {
-		const questJoined = async () => {
-			waitForParticipantJoinedQuest((payload) => {
-				setparticipantsActiveData(payload);
-				setActiveUsersData(payload?.activeUsers);
-				//console.log("Participant Joined:", payload);
-				//console.log("Participant Joined:", participantsActive);
-			});
-		};
-		questJoined();
-	}, []);
-	console.log(
-		participantsActiveData?.participantCount,
-		quizCreated,
-		"Participant Joined:",
-	);
-
-	useEffect(() => {
-		// if (existing?.connected) {
-		reloadSocketConnection();
-		const questJoined = async () => {
-			const joined = await waitForQuestJoinedOnce();
-			setparticipantsActive(joined?.activeCount);
-		};
-		questJoined();
 		setConnected(true);
-		setQuizCreated(true);
-	}, [response?.quest?.title, params?.id]);
+	}, []);
 
-	const reloadSocketConnection = () => {
-		connectSocket()
-			.then(async () => {
-				await emitCreateQuest({
-					questId,
-					questTitle,
-					userId,
-					userName,
-				});
-			})
-			.catch((err: any) => {
-				console.error("Socket Connection failed:", err);
+	useHostChannel("quest", questSession?.id, {
+		onParticipantJoined: (payload) => {
+			setparticipantsActive(payload?.participant_count ?? 0);
+			if (!payload?.participant_id) return;
+
+			setActiveUsersData((previous) => {
+				const userId = `${payload.participant_id}`;
+				if (previous.some((item) => item.userId === userId)) {
+					return previous;
+				}
+
+				return [
+					...previous,
+					{
+						userId,
+						userName: `Participant ${payload.participant_id}`,
+					},
+				];
 			});
-	};
-
-	// const reConnectFunction = () => {
-	// 	connectSocket()
-	// 		.then(async (s) => {
-	// 			//console.log("Socket Connected:", s.id);
-	// 			setConnected(true);
-
-	// 			// await emitCreateQuest({
-	// 			// 	questId,
-	// 			// 	userId,
-	// 			// 	questTitle,
-	// 			// 	userName,
-	// 			// });
-	// 			setQuizCreated(true);
-	// 			s.off("disconnect").on("disconnect", () => {
-	// 				if (mountedRef.current) {
-	// 					//console.log("Disconnected");
-	// 					setConnected(false);
-	// 				}
-	// 			});
-	// 		})
-	// 		.catch((err) => {
-	// 			console.error("Socket Connection failed:", err);
-	// 			// alert("Socket connection failed");
-	// 		});
-	// };
-
-	// const existing = getSocket();
-
-	// setInterval(() => {
-	// 	if (existing?.connected) {
-	// 	} else {
-	// 		reConnectFunction ()
-	// 	}
-	// }, 3000);
+		},
+		onParticipantCountUpdated: (payload) => {
+			setparticipantsActive(payload?.participant_count ?? 0);
+		},
+	});
 
 	useEffect(() => {
 		const dataFetch = async () => {
@@ -166,102 +94,61 @@ function QuizReport() {
 		dataFetch();
 	}, [params?.id]);
 
-	useEffect(() => {
-		const datafetch = async () => {
-			try {
-				const response = await axiosInstance.get(`/quiz-participants`);
-				setParticipantsData(
-					response?.data?.data?.quiz_participants?.data,
-				);
-			} catch (error) {
-				const axiosError = error as AxiosError<{ message?: string }>;
-				if (axiosError.response) {
-					console.error(
-						"Error verifying token:",
-						axiosError.response.data,
-					);
-				} else {
-					console.error("Unexpected error:", axiosError.message);
-				}
-			}
-		};
-		datafetch();
-	}, []);
-
-	// reConnectFunction
 	const quizeStartFunction = async () => {
 		try {
-			const existing = getSocket();
-			if (existing?.connected) {
-				setCurrentQuest({
-					questId,
-					userId,
-					questTitle,
-					userName,
-					isCreator: true,
-				});
-
-				const startedPromise = waitForQuestStartedOnce();
-				await emitStartQuest({ questId, userId, userName, questTitle });
-
-				const joined = await startedPromise;
-
-				updateHostLiveSession();
-
-				if (joined) {
-					handleChangeQuestion();
-				} else {
-					toast.error("Quest start failed");
-				}
-			}
+			await updateHostLiveSession();
+			await handleChangeQuestion();
 		} catch (e) {
-			console.error("Failed to create quiz:", e);
+			console.error("Failed to start quest:", e);
+			toast.error("Quest start failed");
 		}
 	};
 
 	const handleChangeQuestion = async () => {
+		if (!questSession?.id) {
+			toast.error("No live quest session was found.");
+			return;
+		}
+
 		const question = response?.tasks.find(
 			(item: { serial_number: number }) =>
 				Number(item.serial_number) === 1,
 		);
 		const questionId = question?.id || "20";
-		const questionTitle = question?.question_text || "New Text";
 
 		const questiQsenStartTime = moment().format("MMMM Do YYYY, h:mm:ss");
-		const questiQsenTime = `${question?.task_data?.time_limit}`;
-		const questiQsenLateStartTime = false;
+		const timeLimit = Number(
+			question?.task_data?.time_limit ??
+				question?.time_limit_seconds ??
+				question?.time_limit ??
+				0,
+		);
+		const timerState: TimerState = {
+			status: "running",
+			start_time: questiQsenStartTime,
+			duration_seconds: Number.isFinite(timeLimit) ? timeLimit : 0,
+			remaining_seconds: Number.isFinite(timeLimit) ? timeLimit : 0,
+		};
 
-		await emitChangeQuestionQuest({
-			questId,
+		const liveState = await changeQuestTask(
+			questSession.id,
 			questionId,
-			questTitle,
-			questionTitle,
-			questiQsenStartTime,
-			questiQsenTime,
-			questiQsenLateStartTime,
-		});
+			timerState,
+		);
 
-		const changeQsen = await waitForQuestionChangedQuestSingle();
-		console.log(changeQsen, "changeQsenchangeQsenchangeQsen");
+		dispatch(
+			setQuestData({
+				questId,
+				questionId: `${liveState.current_task_id ?? questionId}`,
+				questiQsenStartTime,
+				questiQsenTime: `${timeLimit || ""}`,
+				questiQsenLateStartTime: false,
+			}),
+		);
 
-		if (changeQsen) {
-			router.push(
-				`/live/quests?jlk=${response?.join_link}&qid=${questId}`,
-			);
-		}
-
-		waitForQuestionChangedQuestAll((payload) => {
-			//console.log("Question Changed:", payload);
-			dispatch(
-				setQuestData({
-					questId: `${payload?.questId}`,
-					questionId: `${payload?.questionId}`,
-					questiQsenStartTime: `${payload?.questiQsenStartTime}`,
-					questiQsenTime: `${payload?.questiQsenTime}`,
-					questiQsenLateStartTime: false,
-				}),
-			);
-		});
+		router.push(
+			`/live/quests?jlk=${response?.join_link}&qid=${questId}&sid=${questSession.id}&pck=${liveState.public_channel_key}`,
+		);
 	};
 
 	useEffect(() => {
@@ -269,11 +156,6 @@ function QuizReport() {
 			setTitleInput(questSession.title);
 		}
 	}, [questSession?.title]);
-
-	console.log(
-		questSession,
-		"questSessionquestSessionquestSessionquestSession",
-	);
 
 	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setTitleInput(e.target.value);
@@ -314,7 +196,6 @@ function QuizReport() {
 				`/quests/update-host-live/${questSession?.id}`,
 				payload,
 			);
-			//console.log("Update successful:", response.data);
 			return response.data;
 		} catch (error) {
 			console.error("Update failed:", error);
@@ -343,8 +224,7 @@ function QuizReport() {
 							</span>
 						</div>
 						<span className="text-sm text-gray-600">
-							{participantsActiveData?.participantCount || 0}{" "}
-							joined
+							{participantsActive} joined
 						</span>
 					</div>
 
@@ -381,7 +261,7 @@ function QuizReport() {
 							Active Participants
 						</h4>
 						<span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-							{activeUsersData?.length || 0} Online
+							{participantsActive} Online
 						</span>
 					</div>
 
@@ -426,53 +306,9 @@ function QuizReport() {
 					</div>
 				</div>
 
-				{/*
-				<div className="md:col-span-5 p-4 bg-[#fff] rounded-[8px] border h-auto ">
-					<h4 className="text-[#333333] border-[#2222] border-b-2 pb-[20px] text-[0.875rem]">
-						Active participants{" "}
-						<span className="border border-[#fa9b47] hidden p-2 rounded-[10px] font-bold text-[#fa9b47] ml-[5px]">
-							{" "}
-							Ends in {daysLeft} days{" "}
-						</span>
-					</h4>
-
-					<div className="scrollbar-hidden h-[110px] flex-1 overflow-y-auto scrollbar-hidden">
-						{activeUsersData?.map((item: any, i) => (
-							<div key={i} className="">
-								<div className="flex justify-between pt-3">
-									<span className="">
-										User Name :
-										<span className="font-bold">
-											{item?.userName}
-										</span>
-									</span>
-									<span className="">
-										User Id :
-										<span className="font-bold">
-											{item?.userId}
-										</span>
-									</span>
-								</div>
-							</div>
-						))}
-					</div>
-
-					{/* <h4 className="text-[#333333] border-[#2222] border-b-2 pt-[10px] pb-[10px] text-[0.875rem]">
-						Start date: {start.format("YYYY-MM-DD")}
-					</h4>
-					<h4 className="text-[#333333] border-[#2222] border-b-2 pt-[10px] pb-[10px] text-[0.875rem]">
-						End date: {end.format("YYYY-MM-DD")}
-					</h4>
-					<h4 className="text-[#333333] pt-[6px] pb-[10px] text-[0.875rem]">
-						Hosted by {response?.user?.full_name}
-					</h4> 
-				</div>
-					*/}
 				<div className="md:col-span-12 p-4 bg-[#fff] rounded-[8px] border shadow-3">
 					<Summary
-						participantsNumber={
-							participantsActiveData?.participantCount
-						}
+						participantsNumber={participantsActive}
 						urlnamelive="quest-live/"
 					/>
 				</div>

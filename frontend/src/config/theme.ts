@@ -34,6 +34,16 @@ export const theme = {
 		danger: "#F23030",
 		warning: "#F59E0B",
 		info: "#3C50E0",
+		neutral: {
+			white: "#FFFFFF",
+			chartGrid: "#EDF1F5",
+			chartAxis: "#304758",
+			chartLegend: "#334155",
+			chartMuted: "#64748B",
+			chartStrong: "#111827",
+			chartBody: "#333333",
+			chartTitle: "#444444",
+		},
 	},
 	chart: {
 		palette: [

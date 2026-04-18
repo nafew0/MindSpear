@@ -10,10 +10,8 @@ import React, {
 } from "react";
 import clsx from "clsx";
 import {
-	connectSocket,
 	emitSubmitTask,
-	waitForAnswerProcessedQuestOnce,
-} from "@/socket/quest-socket";
+} from "@/features/live/services/realtimeBridge";
 import { useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { upsertAnswer } from "@/features/live/store/leaderboardAnswersSlice";
@@ -129,7 +127,7 @@ const QuestChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 		setSelectedIndex(options.findIndex((o) => o === (value as string)));
 		setSelectedIndices([]);
 		setSelectedOptions([]);
-	}, [task?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [task?.id]);
 
 	useEffect(() => {
 		if (!isMulti) {
@@ -244,18 +242,8 @@ const QuestChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 	}, [dataNew?.id]);
 
 	const dataSubmit = async () => {
+		await saveAnswer();
 		reqSoketData();
-		saveAnswer();
-		const submitStatusCheck = await waitForAnswerProcessedQuestOnce();
-		if (!submitStatusCheck) {
-			connectSocket().then(() => {
-				reqSoketData();
-				saveAnswer();
-				if (typeof window !== "undefined") {
-					localStorage.setItem("currentId", `${task?.id}`);
-				}
-			});
-		}
 
 		if (typeof window !== "undefined") {
 			localStorage.setItem("currentId", `${task?.id}`);

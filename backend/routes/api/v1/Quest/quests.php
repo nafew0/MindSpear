@@ -27,9 +27,9 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 });
 
-Route::middleware('auth:sanctum')->prefix('quest-sessions')->group(function () {
+Route::prefix('quest-sessions')->group(function () {
     Route::get('/{sessionId}/state', [LiveSessionController::class, 'questState'])->name('quest.sessions.state');
-    Route::post('/{sessionId}/change-task', [LiveSessionController::class, 'changeQuestTask'])->name('quest.sessions.change.task');
+    Route::middleware('auth:sanctum')->post('/{sessionId}/change-task', [LiveSessionController::class, 'changeQuestTask'])->name('quest.sessions.change.task');
 });
 
 Route::middleware('auth:sanctum')->prefix('quests-public')->group(function () {

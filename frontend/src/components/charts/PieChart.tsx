@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { ApexOptions } from "apexcharts";
-import { baseApexOptions, getChartColors } from "./chartTheme";
+import { baseApexOptions, chartNeutrals, getChartColors } from "./chartTheme";
 import { normalizeCategoricalData } from "./chartData";
 import { ChartContainer } from "./ChartContainer";
 import type { LegacyCategoricalProps, NormalizedChartProps } from "./types";
@@ -39,6 +39,8 @@ export function PieChart({
 		() => getChartColors(colors, chartData.length),
 		[colors, chartData.length]
 	);
+	const values = chartData.map((item) => item.value);
+	const hasRenderableData = values.some((value) => Number(value) > 0);
 
 	const options: ApexOptions = useMemo(
 		() => ({
@@ -55,7 +57,7 @@ export function PieChart({
 				show: showLegend,
 				position: "bottom",
 				labels: {
-					colors: "#334155",
+					colors: chartNeutrals.chartLegend,
 				},
 			},
 			dataLabels: {
@@ -64,7 +66,7 @@ export function PieChart({
 				style: {
 					fontSize: "13px",
 					fontWeight: 700,
-					colors: ["#fff"],
+					colors: [chartNeutrals.white],
 				},
 			},
 			plotOptions: {
@@ -74,25 +76,30 @@ export function PieChart({
 					},
 				},
 			},
-			title: title
-				? {
-						text: title,
-						align: "center",
-					}
-				: undefined,
+			title: {
+				...baseApexOptions.title,
+				text: title || undefined,
+				align: "center",
+			},
 		}),
 		[chartColors, chartData, height, showLegend, title, type, width]
 	);
 
 	return (
 		<ChartContainer className={className} isLoading={isLoading} minHeight={height}>
-			<ReactApexChart
-				options={options}
-				series={chartData.map((item) => item.value)}
-				type={type}
-				width={width}
-				height={height}
-			/>
+			{hasRenderableData ? (
+				<ReactApexChart
+					options={options}
+					series={values}
+					type={type}
+					width={width}
+					height={height}
+				/>
+			) : (
+				<div className="flex min-h-[260px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-sm font-semibold text-slate-500">
+					Waiting for responses...
+				</div>
+			)}
 		</ChartContainer>
 	);
 }

@@ -32,9 +32,9 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 });
 
-Route::middleware('auth:sanctum')->prefix('quiz-sessions')->group(function () {
+Route::prefix('quiz-sessions')->group(function () {
     Route::get('/{sessionId}/state', [LiveSessionController::class, 'quizState'])->name('quiz.sessions.state');
-    Route::post('/{sessionId}/change-question', [LiveSessionController::class, 'changeQuizQuestion'])->name('quiz.sessions.change.question');
+    Route::middleware('auth:sanctum')->post('/{sessionId}/change-question', [LiveSessionController::class, 'changeQuizQuestion'])->name('quiz.sessions.change.question');
 });
 
 Route::middleware('auth:sanctum')->prefix('quizes-public')->group(function () {

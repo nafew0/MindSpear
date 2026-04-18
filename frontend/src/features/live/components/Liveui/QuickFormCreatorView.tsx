@@ -9,7 +9,7 @@ import {
 	getSocket,
 	connectSocket,
 	waitAnswerSubmittedToQuestCreatorQuickForm,
-} from "@/socket/quest-socket";
+} from "@/features/live/services/realtimeBridge";
 import { toast } from "react-toastify";
 
 type Option = { id: string; text: string | null };

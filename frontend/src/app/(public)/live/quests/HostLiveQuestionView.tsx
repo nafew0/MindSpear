@@ -16,7 +16,7 @@ import { PieChart as GlobalPieChart } from "@/components/charts";
 import { WordCloud as D3WordCloud, type Word } from "@/components/charts";
 import { HorizontalBarChart as GlobalHorizantalBarChart } from "@/components/charts";
 import Image from "next/image";
-import { getSocket } from "@/socket/quest-socket";
+import { getSocket } from "@/features/live/services/realtimeBridge";
 import DOMPurify from "dompurify";
 import QuickFormCreatorView from "@/features/live/components/Liveui/QuickFormCreatorView";
 // import { ScalesChart } from "@/components/charts";

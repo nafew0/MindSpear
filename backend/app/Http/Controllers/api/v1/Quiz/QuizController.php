@@ -483,9 +483,11 @@ class QuizController extends ApiBaseController
                 return $response;
             }
 
-            // Update the end_datetime of the session
+            $endedAt = now();
+
+            // The server owns the end time so frontend clock/validation drift cannot block ending.
             $quizSession->update([
-                'end_datetime' => $request->input('end_datetime'),
+                'end_datetime' => $endedAt,
                 'running_status' => false,
                 'join_link' => null,
                 'join_code' => null,

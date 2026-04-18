@@ -21,11 +21,11 @@ import {
 	waitForQuestCompletedAll,
 	// emitLeaveQuiz,
 	waitForQuestEndedAll,
-	waitForQuestJoinedOnce22,
+	waitForQuestJoinedOnceWithTimeout,
 	getCachedJoin,
 	cacheJoin,
 	// setCurrentQuest,
-} from "@/socket/quest-socket";
+} from "@/features/live/services/realtimeBridge";
 import QuestCompletedPages from "@/features/quest/components/QuestCompletedPages";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
@@ -33,6 +33,7 @@ import { useSelector } from "react-redux";
 import { useDispatch } from "react-redux";
 import { setQuestData } from "@/features/quest/store/questQuestionTimeSlice";
 import moment from "@/lib/dayjs";
+import type { LiveSessionStatus } from "@/features/live/types";
 // import { toast } from "react-toastify";
 
 export type TaskType =
@@ -107,13 +108,15 @@ const componentForTaskType = (
 
 export interface NavigatorProps {
 	tasks: TaskItem[];
+	sessionStatus?: LiveSessionStatus;
 }
 
-const TaskNavigator: React.FC<NavigatorProps> = ({ tasks }) => {
+const TaskNavigator: React.FC<NavigatorProps> = ({ tasks, sessionStatus }) => {
 	const router = useRouter();
 	const dispatch = useDispatch();
 	const [questions, setQuestions] = useState<string>("");
 	const { showLeaderboard } = useSelector((state: any) => state.leaderboard);
+	const liveQuestionState = useSelector((state: any) => state.questTime);
 
 	console.log(tasks, "taskstaskstaskstaskstaskstaskstasks");
 
@@ -160,6 +163,16 @@ const TaskNavigator: React.FC<NavigatorProps> = ({ tasks }) => {
 			localStorage.removeItem("quiz_questionsId");
 		}
 	};
+
+	useEffect(() => {
+		const nextQuestionId = Number(liveQuestionState?.questionId);
+		if (!Number.isFinite(nextQuestionId) || nextQuestionId <= 0) return;
+
+		setCurrentQuestion("");
+		setQuestions("");
+		setQuestionsId(nextQuestionId);
+		saveQuestionDataToStorage("", "", nextQuestionId);
+	}, [liveQuestionState?.questionId]);
 
 	const ordered = useMemo(
 		() =>
@@ -211,10 +224,6 @@ const TaskNavigator: React.FC<NavigatorProps> = ({ tasks }) => {
 			window.removeEventListener("beforeunload", handleBeforeUnload);
 		};
 	}, []);
-
-	// 	const clearAllLocalStorage = () => {
-	//     localStorage.clear();
-	// };
 
 	console.log(
 		showLeaderboard,
@@ -295,7 +304,7 @@ const TaskNavigator: React.FC<NavigatorProps> = ({ tasks }) => {
 				}
 
 				try {
-					const joined = await waitForQuestJoinedOnce22(
+					const joined = await waitForQuestJoinedOnceWithTimeout(
 						questId,
 						1000
 					);
@@ -426,7 +435,7 @@ const TaskNavigator: React.FC<NavigatorProps> = ({ tasks }) => {
 				<h3> {userName} </h3>{" "}
 			</div>
 
-			{liderBoardShow ? (
+			{liderBoardShow || sessionStatus === "ended" ? (
 				<QuestCompletedPages pagesStatus={"user"} />
 			) : (
 				<>

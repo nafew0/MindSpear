@@ -55,6 +55,37 @@ class ParticipantTokenService
         return hash_equals($participant->participant_token_hash, $this->hash($token));
     }
 
+    public function participantForSession(
+        Request $request,
+        string $module,
+        int $sessionId
+    ): QuestParticipant|QuizParticipant|null {
+        $token = $request->header(self::HEADER);
+
+        if (! is_string($token) || $token === '') {
+            return null;
+        }
+
+        $participantClass = $module === LiveSessionService::MODULE_QUEST
+            ? QuestParticipant::class
+            : QuizParticipant::class;
+
+        $sessionColumn = $module === LiveSessionService::MODULE_QUEST
+            ? 'quest_session_id'
+            : 'quiz_session_id';
+
+        $participant = $participantClass::query()
+            ->where($sessionColumn, $sessionId)
+            ->where('participant_token_hash', $this->hash($token))
+            ->first();
+
+        if (! $participant || ! $this->validateRequest($request, $participant)) {
+            return null;
+        }
+
+        return $participant;
+    }
+
     public function revokeForSession(string $module, int $sessionId): int
     {
         $participantClass = $module === LiveSessionService::MODULE_QUEST

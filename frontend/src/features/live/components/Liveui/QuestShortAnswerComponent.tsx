@@ -6,7 +6,7 @@ import {
 	emitSubmitTask,
 	// getSocket,
 	waitForAnswerProcessedQuestOnce,
-} from "@/socket/quest-socket";
+} from "@/features/live/services/realtimeBridge";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { upsertAnswer } from "@/features/live/store/leaderboardAnswersSlice";

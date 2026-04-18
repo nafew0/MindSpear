@@ -15,7 +15,7 @@ import {
 	emitsubmitTaskForQuickForm,
 	// getSocket,
 	waitForAnswerProcessedQuestOnce,
-} from "@/socket/quest-socket";
+} from "@/features/live/services/realtimeBridge";
 import { AxiosError } from "axios";
 
 import SharedQuestTimer from "@/components/SharedQuestTimer";

@@ -3,22 +3,17 @@
 
 import QuizDateClose from "@/components/ErrorComponent/QuizDateClose";
 import InputGroup from "@/components/FormElements/InputGroup";
-// import { setQuestData } from "@/services/redux/features/questQsenTimeSlice";
-import {
-	emitJoinQuest,
-	connectSocket,
-	waitForQuestJoinedOnce22,
-	clearCachedJoin,
-	setCurrentQuest,
-} from "@/socket/quest-socket";
 import axiosInstance from "@/utils/axiosInstance";
-import { clearAppStorage } from "@/utils/storageCleaner";
 import { AxiosError } from "axios";
 import moment from "@/lib/dayjs";
 import { useSearchParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { HiUserGroup } from "react-icons/hi";
 import { toast } from "react-toastify";
+import {
+	clearLegacyLiveStorage,
+	storeParticipantTokenBundle,
+} from "@/features/live/services/liveStorage";
 // import { useDispatch } from "react-redux";
 // import { useSocketStatusComparison } from "@/utils/sockerReconnected";
 
@@ -45,23 +40,7 @@ function QuestAttemptForm() {
 	console.log(quizData, "quizDataquizDataquizData");
 
 	useEffect(() => {
-		// Clear Local stores
-		if (typeof window === "undefined") return;
-		const questId = `${qid}`;
-		clearCachedJoin(questId);
-		clearAppStorage();
-		localStorage.removeItem("quest.session");
-		localStorage.removeItem("userTimeSet");
-		const handleClearQuizData = async () => {
-			for (let i = 0; i < localStorage.length; i++) {
-				const key = localStorage.key(i);
-				if (key && key.startsWith("quiz")) {
-					localStorage.removeItem(key);
-					i = -1;
-				}
-			}
-		};
-		handleClearQuizData();
+		clearLegacyLiveStorage();
 	}, []);
 
 	useEffect(() => {
@@ -145,36 +124,6 @@ function QuestAttemptForm() {
 	// }, 3000);
 
 	const userId = Math.floor(Math.random() * 10000).toString();
-	const soketRequestFunction = () => {
-		const questId = `${qid}`;
-		const userName = `${currentUserName}`;
-		const questTitle = `${quizData?.quest?.title}`;
-		setCurrentQuest({
-			questId,
-			userId,
-			questTitle,
-			userName,
-			isCreator: false,
-		});
-		connectSocket()
-			.then(async (s) => {
-				//console.log("Socket Connected:", s.id);
-
-				try {
-					await emitJoinQuest({ questId, userId, userName });
-					const joined = await waitForQuestJoinedOnce22(
-						questId,
-						15000
-					);
-					return joined;
-				} catch (e) {
-					console.error("Failed to create quiz:", e);
-				}
-			})
-			.catch((err) => {
-				console.error("Socket Connection failed:", err);
-			});
-	};
 
 	const dataSubmit = async () => {
 		try {
@@ -191,38 +140,33 @@ function QuestAttemptForm() {
 				`/quest-attempts-url/join-by-link/${joinid}`,
 				obj
 			);
-			console.log(response, "response?.data.dataresponse?.data.data");
-			soketRequestFunction();
+			const responseData = response?.data?.data as any;
+			const attemptId = responseData?.attempt?.id;
+			const sessionId = responseData?.attempt?.quest_session_id;
+			const publicChannelKey = responseData?.public_channel_key;
+			const participantToken = responseData?.participant_token;
 
-			const currentTime = moment().format("MMMM Do YYYY, h:mm:ss");
-			const joined = await waitForQuestJoinedOnce22();
-			if (joined) {
-				console.log(joined, "11111");
-				if (typeof window === "undefined") return;
-				const userJoinData: any = {
-					questId: joined?.questId,
-					questionId: `${joined?.currentQuestion?.questionId}`,
-					questiQsenStartTime: `${joined?.currentQuestion?.questiQsenStartTime}`,
-					questiQsenTime: `${joined?.currentQuestion?.questiQsenTime}`,
-					questiQsenLateStartTime: `${currentTime}`,
-				};
-				localStorage.setItem(
-					"userTimeSet",
-					JSON.stringify(userJoinData)
-				);
-				// dispatch(
-				// 	setQuestData({
-				// 		questId: joined?.questId,
-				// 		questionId: `${joined?.currentQuestion?.questionId}`,
-				// 		questiQsenStartTime: `${joined?.currentQuestion?.questiQsenStartTime}`,
-				// 		questiQsenTime: `${joined?.currentQuestion?.questiQsenTime}`,
-				// 		questiQsenLateStartTime: `${currentTime}`,
-				// 	})
-				// );
-				router.push(
-					`/attempt/quest-live/play/${response?.data?.data.quest?.join_code}?jid=${response?.data?.data.quest.join_link}&qid=${response?.data?.data.quest.id}&aid=${response?.data?.data?.attempt.id}&ujid=${userId}&title=${quizData?.quest?.title}&uname=${currentUserName}`
-				);
+			if (
+				!attemptId ||
+				!sessionId ||
+				!publicChannelKey ||
+				!participantToken
+			) {
+				toast.error("Unable to join this live quest. Missing session metadata.");
+				return;
 			}
+
+			storeParticipantTokenBundle({
+				module: "quest",
+				sessionId: Number(sessionId),
+				attemptId: Number(attemptId),
+				participantToken,
+				publicChannelKey,
+			});
+
+			router.push(
+				`/attempt/quest-live/play/${responseData?.quest?.join_code}?jid=${responseData?.quest?.join_link}&qid=${responseData?.quest?.id}&aid=${attemptId}&sid=${sessionId}&pck=${publicChannelKey}&ujid=${userId}&title=${quizData?.quest?.title}&uname=${currentUserName}`
+			);
 		} catch (error) {
 			const axiosError = error as AxiosError<{ message?: string }>;
 

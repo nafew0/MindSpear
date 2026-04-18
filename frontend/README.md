@@ -68,9 +68,8 @@ bdren_eduquest_frontend/
 │   ├── services/            # Service layer (API calls, business logic)
 │   │   ├── redux/           # Redux store configuration
 │   │   └── surveyService.ts # Survey service
-│   ├── socket/              # Socket.IO related files
-│   │   ├── quest-socket.ts  # Quest socket implementation
-│   │   └── socket.ts        # General socket implementation
+│   ├── features/live/       # Live Reverb hooks, services, and UI
+│   ├── lib/echo.ts          # Laravel Echo/Reverb client
 │   ├── types/               # TypeScript type definitions
 │   ├── utils/               # Utility functions
 │   └── views/               # Page-level components organized by feature
@@ -95,7 +94,7 @@ bdren_eduquest_frontend/
 
 ## Key Features
 
--   **Real-time Interaction**: Uses Socket.IO for live quest participation
+-   **Real-time Interaction**: Uses Laravel Echo/Reverb for live quiz and quest participation
 -   **Authentication**: Protected routes and authentication flows
 -   **Quest Management**: Create, join, start, and complete educational quests
 -   **Question Types**: Support for various question formats (multiple choice, ranking, short answers, etc.)
@@ -110,7 +109,7 @@ bdren_eduquest_frontend/
 -   React 18
 -   TypeScript
 -   Tailwind CSS
--   Socket.IO Client
+-   Laravel Echo + Reverb
 -   Redux Toolkit
 -   ESLint
 -   PostCSS
@@ -119,8 +118,11 @@ bdren_eduquest_frontend/
 
 The application uses the following environment variables (defined in `.env.example`):
 
--   `NEXT_PUBLIC_SOCKET_URL`: Socket server URL (default: "https://quest.bdren.net.bd")
--   `NEXT_PUBLIC_SOCKET_PATH`: Socket path (default: "/socket.io")
+-   `NEXT_PUBLIC_API_BASE_URL`: Backend API base URL, for example `http://localhost:8000/api/v1`
+-   `NEXT_PUBLIC_REVERB_APP_KEY`: Reverb app key from the Laravel backend
+-   `NEXT_PUBLIC_REVERB_HOST`: Reverb websocket host, for example `localhost`
+-   `NEXT_PUBLIC_REVERB_PORT`: Reverb websocket port, usually `8080` locally
+-   `NEXT_PUBLIC_REVERB_SCHEME`: `http` for local development or `https` in production
 
 ## Development Scripts
 

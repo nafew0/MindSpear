@@ -1,6 +1,6 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { connectSocket, getSocket, submitAnswer } from "@/socket/socket";
+import { connectSocket, getSocket, submitAnswer } from "@/features/live/services/realtimeBridge";
 import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { upsertAnswer } from "@/features/live/store/leaderboardAnswersSlice";

@@ -1,20 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import QuestPlayComponent from "@/features/live/components/Liveui/QuestPlayComponent";
 import { normalizeTasks } from "@/utils/quickFormTransform";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
-	emitLeaveQuest,
-	setCurrentQuest,
-	waitForQuestJoinedOnce22,
-} from "@/socket/quest-socket";
+	getParticipantToken,
+	getStoredPublicChannelKey,
+} from "@/features/live/services/liveStorage";
+import { useSessionChannel } from "@/features/live/hooks/useSessionChannel";
+import { useSessionSync } from "@/features/live/hooks/useSessionSync";
 import moment from "@/lib/dayjs";
 import { useDispatch } from "react-redux";
 import { setQuestData } from "@/features/quest/store/questQuestionTimeSlice";
+import type { SessionSnapshot, TimerState } from "@/features/live/types";
 
 function QuizAttempt() {
 	const searchParams = useSearchParams();
@@ -24,36 +25,65 @@ function QuizAttempt() {
 	const quizTitle = searchParams.get("title");
 	const userName = searchParams.get("uname");
 	const joinid = searchParams.get("jid");
+	const sessionId = searchParams.get("sid");
+	const publicChannelKey =
+		searchParams.get("pck") ?? getStoredPublicChannelKey("quest", sessionId);
+	const participantToken = getParticipantToken("quest", sessionId);
 
 	const [tasks, setTasks] = useState<any[]>([]);
 	const popListenerAdded = useRef(false);
-	const router = useRouter();
-	const pathname = usePathname();
+
+	const dispatchLiveState = useCallback(
+		(taskId: number | null | undefined, timerState: TimerState) => {
+			if (!taskId) return;
+
+			dispatch(
+				setQuestData({
+					questId: quizId,
+					questionId: `${taskId}`,
+					questiQsenStartTime:
+						typeof timerState?.start_time === "string"
+							? timerState.start_time
+							: moment().format("MMMM Do YYYY, h:mm:ss"),
+					questiQsenTime: `${
+						timerState?.duration_seconds ??
+						timerState?.remaining_seconds ??
+						""
+					}`,
+					questiQsenLateStartTime: false,
+				})
+			);
+		},
+		[dispatch, quizId]
+	);
+
+	const handleSnapshot = useCallback(
+		(snapshot: SessionSnapshot) => {
+			dispatchLiveState(snapshot.current_task_id, snapshot.timer_state);
+		},
+		[dispatchLiveState]
+	);
+
+	const { snapshot } = useSessionSync({
+		module: "quest",
+		sessionId,
+		participantToken,
+		onSync: handleSnapshot,
+	});
+
+	const channelState = useSessionChannel(
+		"quest",
+		publicChannelKey ?? snapshot?.public_channel_key,
+		snapshot
+	);
 
 	useEffect(() => {
-		const joinUserGetFunction = async () => {
-			try {
-				const joined = await waitForQuestJoinedOnce22();
-				console.log(joined, "JoinGet");
-
-				const newQuestionsId = joined?.currentQuestion?.questionId;
-				const currentTime = moment().format("MMMM Do YYYY, h:mm:ss");
-
-				dispatch(
-					setQuestData({
-						questId: joined?.questId,
-						questionId: `${newQuestionsId}`,
-						questiQsenStartTime: `${joined?.currentQuestion?.questiQsenStartTime}`,
-						questiQsenTime: `${joined?.currentQuestion?.questiQsenTime}`,
-						questiQsenLateStartTime: `${currentTime}`,
-					})
-				);
-			} catch (e) {
-				console.warn("qqqqqqqq", e);
-			}
-		};
-		joinUserGetFunction();
-	}, []);
+		dispatchLiveState(channelState.currentTaskId, channelState.timerState);
+	}, [
+		channelState.currentTaskId,
+		channelState.timerState,
+		dispatchLiveState,
+	]);
 
 	useEffect(() => {
 		if (typeof window !== "undefined" && !navigator.onLine) {
@@ -78,19 +108,7 @@ function QuizAttempt() {
 		if (joinid) dataFetch();
 	}, [joinid]);
 
-	const handleLeaveQuiz = async () => {
-		try {
-			await emitLeaveQuest({
-				questId: `${quizId}`,
-				userId: `${userId}`,
-				questTitle: `${quizTitle}`,
-				userName: `${userName}`,
-			});
-			//console.log("Leave quiz request sent");
-		} catch (error) {
-			console.error("Error leaving quiz:", error);
-		}
-	};
+	const handleLeaveQuiz = async () => {};
 
 	useEffect(() => {
 		if (popListenerAdded.current) return;
@@ -136,7 +154,10 @@ function QuizAttempt() {
 
 	return (
 		<div>
-			<QuestPlayComponent tasks={tasks} />
+			<QuestPlayComponent
+				tasks={tasks}
+				sessionStatus={channelState.sessionStatus}
+			/>
 		</div>
 	);
 }

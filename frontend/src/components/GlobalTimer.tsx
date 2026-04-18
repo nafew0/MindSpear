@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { connectSocket, waitForQuestCompletedAll } from "@/socket/quest-socket";
+import { connectSocket, waitForQuestCompletedAll } from "@/features/live/services/realtimeBridge";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
 import { toast } from "react-toastify";

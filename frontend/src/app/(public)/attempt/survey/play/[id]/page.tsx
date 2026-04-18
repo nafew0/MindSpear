@@ -6,19 +6,10 @@ import QuestPlayComponent from "@/features/live/components/Liveui/QuestPlayCompo
 import { normalizeTasks } from "@/utils/quickFormTransform";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import {
-	emitLeaveQuest,
-	setCurrentQuest,
-	waitForQuestJoinedOnce22,
-} from "@/socket/quest-socket";
-import moment from "@/lib/dayjs";
-import { useDispatch } from "react-redux";
-import { setQuestData } from "@/features/quest/store/questQuestionTimeSlice";
+import { useSearchParams } from "next/navigation";
 
 function QuizAttempt() {
 	const searchParams = useSearchParams();
-	const dispatch = useDispatch();
 	const quizId = searchParams.get("qid");
 	const userId = searchParams.get("ujid");
 	const quizTitle = searchParams.get("title");
@@ -27,33 +18,6 @@ function QuizAttempt() {
 
 	const [tasks, setTasks] = useState<any[]>([]);
 	const popListenerAdded = useRef(false);
-	const router = useRouter();
-	const pathname = usePathname();
-
-	useEffect(() => {
-		const joinUserGetFunction = async () => {
-			try {
-				const joined = await waitForQuestJoinedOnce22();
-				console.log(joined, "JoinGet");
-
-				const newQuestionsId = joined?.currentQuestion?.questionId;
-				const currentTime = moment().format("MMMM Do YYYY, h:mm:ss");
-
-				dispatch(
-					setQuestData({
-						questId: joined?.questId,
-						questionId: `${newQuestionsId}`,
-						questiQsenStartTime: `${joined?.currentQuestion?.questiQsenStartTime}`,
-						questiQsenTime: `${joined?.currentQuestion?.questiQsenTime}`,
-						questiQsenLateStartTime: `${currentTime}`,
-					})
-				);
-			} catch (e) {
-				console.warn("qqqqqqqq", e);
-			}
-		};
-		joinUserGetFunction();
-	}, []);
 
 	useEffect(() => {
 		if (typeof window !== "undefined" && !navigator.onLine) {
@@ -78,19 +42,7 @@ function QuizAttempt() {
 		if (joinid) dataFetch();
 	}, [joinid]);
 
-	const handleLeaveQuiz = async () => {
-		try {
-			await emitLeaveQuest({
-				questId: `${quizId}`,
-				userId: `${userId}`,
-				questTitle: `${quizTitle}`,
-				userName: `${userName}`,
-			});
-			//console.log("Leave quiz request sent");
-		} catch (error) {
-			console.error("Error leaving quiz:", error);
-		}
-	};
+	const handleLeaveQuiz = async () => {};
 
 	useEffect(() => {
 		if (popListenerAdded.current) return;

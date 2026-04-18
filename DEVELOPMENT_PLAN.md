@@ -3,6 +3,8 @@
 > This plan covers: Reverb migration, code cleanup, folder restructuring, UI overhaul, chart consolidation, theming, and architecture hardening. Each phase is ordered by dependency - later phases build on earlier ones.
 >
 > **Key architectural decision:** Participants join anonymously (no login required), like AhaSlides/Mentimeter. This means we cannot use authenticated presence channels for the participant side. Instead, we use **public channels for broadcast** and **participant tokens for REST submissions**.
+>
+> **Database decision:** Local development may use SQLite for speed, but production will use PostgreSQL. Any new migration, query, JSON filter, aggregate, or raw SQL added during this plan must be checked against PostgreSQL before deployment. SQLite is acceptable for quick local work, but PostgreSQL must be the compatibility target.
 
 ---
 
@@ -12,16 +14,20 @@
 
 **Duration:** 2-3 days
 
-### 0.1 Initialize Git
+**Commit strategy:** Phase 0 must be split into small, reversible commits. Do not combine git initialization, dead-code deletion, spelling renames, in-code renames, and commented-code cleanup into one large cleanup commit.
 
-- [ ] `git init` in project root
-- [ ] Create `.gitignore` for Laravel, Next.js, Node
-- [ ] Add rule: `*.Zone.Identifier` (Windows→WSL artifacts everywhere)
-- [ ] Add rules: `.env`, `node_modules/`, `vendor/`, `.next/`, `storage/logs/`
-- [ ] Delete all `*.Zone.Identifier` files from the repo
-- [ ] Initial commit with current state (so you have a rollback point)
+### 0.1 Phase 0A: Initialize Git and Commit Clean Baseline
 
-### 0.2 Delete Dead Code and Duplicate Files
+- [x] `git init` in project root
+- [x] Create `.gitignore` for Laravel, Next.js, Node
+- [x] Add rule: `*.Zone.Identifier` (Windows->WSL artifacts everywhere)
+- [x] Add rules: `.env`, `node_modules/`, `vendor/`, `.next/`, `storage/logs/`
+- [x] Delete all `*.Zone.Identifier` files from the repo
+- [x] Initial commit with current state (so you have a rollback point)
+
+**Commit:** Baseline only. No refactors, deletions, spelling changes, or code cleanup in this commit.
+
+### 0.2 Phase 0B: Delete Dead Code and Duplicate Files
 
 **Review and delete:**
 
@@ -39,7 +45,9 @@
 
 **For each file:** Confirm it's not imported anywhere with `grep -r "filename" src/` before deleting.
 
-### 0.3 Fix All Spelling Mistakes in File/Folder Names
+**Commit:** Dead-file deletion only.
+
+### 0.3 Phase 0C: Fix Spelling Mistakes in File/Folder Names
 
 This must happen early because later phases reference these paths.
 
@@ -65,7 +73,9 @@ This must happen early because later phases reference these paths.
 3. Update every import
 4. Build to verify no breakage
 
-### 0.4 Fix In-Code Spelling Mistakes
+**Commit:** Rename files/folders in small batches. Do not mix filename renames with broad in-code variable renames.
+
+### 0.4 Phase 0D: Fix In-Code Spelling Mistakes
 
 Search and replace across the codebase:
 
@@ -81,7 +91,9 @@ Search and replace across the codebase:
 | `questiQsen` | `questQuestion` | Variable names in socket server and frontend |
 | `quizQsen` | `quizQuestion` | Variable names in socket server and frontend |
 
-### 0.5 Remove Commented-Out Code
+**Commit:** In-code spelling fixes in small batches by feature area.
+
+### 0.5 Phase 0E: Remove Commented-Out Code
 
 Review and remove large blocks of commented-out code in:
 
@@ -94,7 +106,15 @@ Review and remove large blocks of commented-out code in:
 
 ### 0.6 Commit
 
-Commit all Phase 0 changes as a single "cleanup" commit. This is your clean baseline.
+Do **not** commit all Phase 0 changes as a single cleanup commit. Use this sequence instead:
+
+1. Phase 0A baseline commit
+2. Phase 0B dead-code deletion commit
+3. Phase 0C spelling/file rename commits in small batches
+4. Phase 0D in-code spelling rename commits in small batches
+5. Phase 0E commented-code cleanup commit
+
+This keeps rollback easy if a rename or deletion breaks imports.
 
 ---
 
@@ -103,6 +123,8 @@ Commit all Phase 0 changes as a single "cleanup" commit. This is your clean base
 **Goal:** Reorganize the frontend folder structure, establish a theming system, and consolidate charting libraries. This phase touches no business logic - just structure and configuration.
 
 **Duration:** 3-4 days
+
+**Priority adjustment:** Do not let Phase 1 delay the realtime fix. After minimal Phase 0 cleanup, move to Phase 2 Reverb/backend work and prove the live-session architecture first. Large folder restructuring, theming, and chart cleanup can happen after the backend realtime path and one frontend vertical slice are stable.
 
 ### 1.1 New Folder Structure
 
@@ -433,6 +455,25 @@ The current `tailwind.config.ts` has 90+ custom spacing values (most are unused 
 
 **Duration:** 2-3 days
 
+### 2.0 PostgreSQL and Redis Readiness Gate
+
+SQLite is fine for fast local development, but PostgreSQL is the production target. Before merging or deploying Reverb/live-session work, run the backend against PostgreSQL at least once with `php artisan migrate:fresh --seed` and the core quiz/quest flows.
+
+**PostgreSQL checks before deployment:**
+
+- [ ] Audit raw SQL such as `EXTRACT(...)`, `TIMESTAMPDIFF(...)`, `orderByRaw(...)`, and JSON filters for PostgreSQL compatibility
+- [ ] Verify migrations that use `json`, `enum`, `boolean`, `after()`, or `change()` work on PostgreSQL
+- [ ] Verify aggregate queries obey PostgreSQL's stricter grouping/type rules
+- [ ] Verify participant joins and answer bursts against PostgreSQL, not only SQLite
+- [ ] Keep SQLite for quick local work only; do not treat SQLite as the final compatibility test
+
+**Redis is part of the Reverb phase, not a later scaling add-on:**
+
+- [ ] Use Redis for queues, cache, rate limits, counters, and coalesced aggregate broadcasts
+- [ ] Avoid database queue/cache drivers for 500-user live sessions
+- [ ] Keep Redis optional only for quick single-developer smoke tests
+- [ ] Use Redis-backed debouncing for chart/aggregate updates during answer bursts
+
 ### 2.1 Install and Configure Reverb
 
 ```bash
@@ -455,7 +496,12 @@ REVERB_APP_SECRET=your-secret-here
 REVERB_HOST=localhost
 REVERB_PORT=8080
 REVERB_SCHEME=http
+CACHE_STORE=redis
+QUEUE_CONNECTION=redis
+REDIS_CLIENT=phpredis
 ```
+
+Database queue/cache drivers are acceptable for quick local smoke tests only. For realistic live-session testing, use Redis from the start of Phase 2.
 
 **Enable broadcasting in `config/app.php`** (uncomment `BroadcastServiceProvider` if needed).
 
@@ -467,8 +513,8 @@ Since participants join without logging in (like AhaSlides/Mentimeter), we **can
 
 | Channel | Type | Who Listens | Auth Required? |
 |---------|------|-------------|----------------|
-| `session.quiz.{sessionId}` | **Public** | All participants + host | No |
-| `session.quest.{sessionId}` | **Public** | All participants + host | No |
+| `session.quiz.{publicChannelKey}` | **Public** | All participants + host | No |
+| `session.quest.{publicChannelKey}` | **Public** | All participants + host | No |
 | `host.quiz.{sessionId}` | **Private** | Host only | Yes (Sanctum) |
 | `host.quest.{sessionId}` | **Private** | Host only | Yes (Sanctum) |
 
@@ -476,6 +522,8 @@ Since participants join without logging in (like AhaSlides/Mentimeter), we **can
 - AhaSlides/Mentimeter pattern: anyone with the join code can participate
 - No login = no Laravel auth = no private/presence channel authorization
 - Broadcasts (task changed, session ended, timer sync) are not sensitive data
+- Public channel names must use a random `public_channel_key` or `live_room_key`, not raw numeric session IDs
+- `session.quest.42` is guessable; `session.quest.live_N4v9sK...` is acceptable for anonymous public listening
 - Answer submission is secured separately via participant tokens (see 2.3)
 
 **Why private channels for host:**
@@ -503,26 +551,30 @@ Broadcast::channel('host.quest.{sessionId}', function ($user, $sessionId) {
 
 ### 2.3 Secure Anonymous Answer Submissions
 
-Participants can't use Sanctum tokens (they're not logged in). Instead, use a **participant token** flow:
+Participants can't use Sanctum tokens (they're not logged in). Instead, use a **participant token** flow. Return the raw token once on join, store only a hash in the database, and keep the raw token in `sessionStorage`.
 
 **How it works:**
 1. Participant opens join page, enters join code + display name
 2. Frontend calls `POST /api/v1/quiz-attempts/join` (or quest equivalent)
 3. Backend creates a `QuizParticipant` (or `QuestParticipant`) record with `is_anonymous = true`
-4. Backend returns a **participant token** (a signed, short-lived JWT or a simple random token stored on the participant record)
+4. Backend creates a random raw token, stores `hash('sha256', $rawToken)`, and returns the raw token once
 5. Frontend stores this token and sends it with every answer submission
-6. Backend validates: "does this token belong to an active participant in this session?"
+6. Backend validates: "does the hash of this token belong to an active, unexpired, non-revoked participant in this session?"
 
 **New columns needed:**
 
 ```php
-// Migration: add participant_token to quiz_participants and quest_participants
+// Migration: add hashed participant token fields to quiz_participants and quest_participants
 Schema::table('quiz_participants', function (Blueprint $table) {
-    $table->string('participant_token', 64)->nullable()->unique();
+    $table->string('participant_token_hash', 64)->nullable()->unique();
+    $table->timestamp('participant_token_expires_at')->nullable();
+    $table->timestamp('participant_token_revoked_at')->nullable();
 });
 
 Schema::table('quest_participants', function (Blueprint $table) {
-    $table->string('participant_token', 64)->nullable()->unique();
+    $table->string('participant_token_hash', 64)->nullable()->unique();
+    $table->timestamp('participant_token_expires_at')->nullable();
+    $table->timestamp('participant_token_revoked_at')->nullable();
 });
 ```
 
@@ -530,19 +582,23 @@ Schema::table('quest_participants', function (Blueprint $table) {
 
 ```php
 // In QuizAttemptController::join() or startAttempt()
+$rawToken = Str::random(64);
+
 $participant = QuizParticipant::create([
     'quiz_id' => $quiz->id,
     'quiz_session_id' => $session->id,
     'is_anonymous' => true,
     'anonymous_details' => ['name' => $request->display_name],
-    'participant_token' => Str::random(64),
+    'participant_token_hash' => hash('sha256', $rawToken),
+    'participant_token_expires_at' => now()->addHours(6),
     'status' => 'In Progress',
 ]);
 
 return $this->okResponse([
     'participant_id' => $participant->id,
-    'participant_token' => $participant->participant_token,
+    'participant_token' => $rawToken, // Return once; never persist raw token
     'session' => $session,
+    'public_channel_key' => $session->public_channel_key,
 ]);
 ```
 
@@ -550,8 +606,18 @@ return $this->okResponse([
 
 ```php
 // In QuizAttemptController::recordAnswer()
-$participant = QuizParticipant::where('participant_token', $request->header('X-Participant-Token'))
+$token = $request->header('X-Participant-Token');
+abort_if(blank($token), 401, 'Missing participant token.');
+
+$tokenHash = hash('sha256', $token);
+
+$participant = QuizParticipant::where('participant_token_hash', $tokenHash)
     ->where('status', 'In Progress')
+    ->whereNull('participant_token_revoked_at')
+    ->where(function ($query) {
+        $query->whereNull('participant_token_expires_at')
+            ->orWhere('participant_token_expires_at', '>', now());
+    })
     ->firstOrFail();
 
 // Now record the answer for this participant
@@ -559,11 +625,11 @@ $participant = QuizParticipant::where('participant_token', $request->header('X-P
 
 **This means the frontend stores two types of auth:**
 - Logged-in users: `auth_token` (Sanctum) in localStorage
-- Anonymous participants: `participant_token` in sessionStorage (cleared on tab close)
+- Anonymous participants: raw `participant_token` in sessionStorage (cleared on tab close)
 
 Both Quiz and Quest attempt controllers need to support this dual auth pattern.
 
-### 2.3 Create Broadcast Event Classes
+### 2.4 Create Broadcast Event Classes
 
 Create `app/Events/` directory with these events:
 
@@ -606,6 +672,7 @@ class QuestTaskChanged implements ShouldBroadcast
 
     public function __construct(
         public int $sessionId,
+        public string $publicChannelKey,
         public int $questId,
         public int $taskId,
         public ?array $timerData = null,
@@ -613,8 +680,8 @@ class QuestTaskChanged implements ShouldBroadcast
 
     public function broadcastOn(): Channel
     {
-        // Public channel - anyone with the session ID can listen
-        return new Channel("session.quest.{$this->sessionId}");
+        // Public channel - anyone with the unguessable room key can listen
+        return new Channel("session.quest.{$this->publicChannelKey}");
     }
 
     public function broadcastAs(): string
@@ -672,7 +739,7 @@ class QuestTaskAnswerSubmitted implements ShouldBroadcast
 | `ParticipantJoined` (with details) | **Private (host)** | Only host sees participant names |
 ```
 
-### 2.4 Add New Backend Endpoints
+### 2.5 Add New Backend Endpoints
 
 The current architecture requires the host's browser to emit socket events for state changes. Move these to REST endpoints:
 
@@ -685,7 +752,7 @@ The current architecture requires the host's browser to emit socket events for s
 | `GET` | `/api/v1/quiz-sessions/{id}/state` | Get current session state (for reconnection) |
 | `GET` | `/api/v1/quest-sessions/{id}/state` | Get current session state (for reconnection) |
 
-**Add `current_question_id` / `current_task_id` columns to session tables:**
+**Add `public_channel_key` / `live_room_key` plus current-state columns to session tables:**
 
 ```bash
 php artisan make:migration add_current_state_to_sessions
@@ -694,50 +761,78 @@ php artisan make:migration add_current_state_to_sessions
 ```php
 // In migration
 Schema::table('quiz_sessions', function (Blueprint $table) {
+    $table->string('public_channel_key', 64)->nullable()->unique();
     $table->unsignedBigInteger('current_question_id')->nullable();
     $table->json('timer_state')->nullable();
 });
 
 Schema::table('quest_sessions', function (Blueprint $table) {
+    $table->string('public_channel_key', 64)->nullable()->unique();
     $table->unsignedBigInteger('current_task_id')->nullable();
     $table->json('timer_state')->nullable();
 });
 ```
 
-This means current question/task is now in the **database**, not just in socket server memory. Reconnecting clients can query the API to get current state.
+Generate the `public_channel_key` when the live session is created or started. It must be random, unguessable, and returned by join/state endpoints so frontend clients can subscribe to `session.quiz.{publicChannelKey}` or `session.quest.{publicChannelKey}`.
 
-### 2.5 Wire Broadcasts to Existing Controllers
+This means current question/task is now in the **database**, not just in socket server memory. Reconnecting clients can query the API to get current state and the correct public channel key.
+
+### 2.6 Wire Broadcasts to Existing Controllers
 
 Add `broadcast()` calls to existing controller methods. **Do not refactor the controllers** - just add the broadcast as a side effect.
+
+**Important:** Broadcast only after database transactions commit. If clients receive an event before the API state is readable, reconnect/resync bugs become very hard to diagnose. Use `DB::afterCommit(...)`, `ShouldDispatchAfterCommit`, or queued events configured for after-commit dispatch.
 
 **Example additions:**
 
 ```php
 // QuestController::statusLive() - when host starts the quest
 // After existing logic:
-broadcast(new QuestSessionStarted($session->id, $quest->id));
+DB::afterCommit(fn () => broadcast(
+    new QuestSessionStarted($session->id, $session->public_channel_key, $quest->id)
+));
 
 // QuestAttemptController::startAttempt() - when participant joins
 // After creating participant record:
-broadcast(new QuestParticipantJoined($session->id, $participant->id, $userName));
-broadcast(new QuestParticipantCountUpdated($session->id, $participantCount));
+DB::afterCommit(fn () => broadcast(
+    new QuestParticipantJoined($session->id, $participant->id, $userName)
+));
+DB::afterCommit(fn () => broadcast(
+    new QuestParticipantCountUpdated($session->id, $session->public_channel_key, $participantCount)
+));
 
 // QuestAttemptController::recordAnswer() - when participant submits
 // After recording the answer:
-broadcast(new QuestTaskAnswerSubmitted($session->id, $taskId, $userId, $answerData))
-    ->toOthers(); // host-only channel
+DB::afterCommit(fn () => broadcast(
+    new QuestTaskAnswerSubmitted($session->id, $taskId, $userId, $answerData)
+)->toOthers()); // host-only channel
 
 // QuestController::endLive() - when host ends
 // After existing logic:
-broadcast(new QuestSessionEnded($session->id, $quest->id));
+DB::afterCommit(fn () => broadcast(
+    new QuestSessionEnded($session->id, $session->public_channel_key, $quest->id)
+));
 ```
 
-### 2.6 Test Backend Events
+### 2.7 Test Backend Events
 
 - [ ] Start Reverb: `php artisan reverb:start --debug`
-- [ ] Use Tinker to fire test events: `broadcast(new QuestSessionStarted(1, 1))`
+- [ ] Use Tinker to fire test events: `broadcast(new QuestSessionStarted(1, 'live_demo_key', 1))`
 - [ ] Verify events appear in Reverb debug output
-- [ ] Test channel authorization with a Postman/curl request to `/broadcasting/auth`
+- [ ] Test host private-channel authorization with a Postman/curl request to `/broadcasting/auth`
+
+### 2.8 Throttle Aggregate Broadcasts
+
+Persist every answer immediately, but do **not** broadcast a public chart/aggregate update for every answer in a 500-user burst.
+
+**Recommended approach:**
+
+- [ ] Record every answer in PostgreSQL immediately
+- [ ] Update Redis counters/aggregates immediately
+- [ ] Coalesce public `AnswerAggregateUpdated` events on a 250-1000ms debounce window
+- [ ] Broadcast a snapshot payload, not every raw answer
+- [ ] Allow host-only `AnswerSubmitted` events to be immediate if the host UI needs them
+- [ ] Keep public aggregate broadcasts small enough for weak mobile networks
 
 ---
 
@@ -803,7 +898,7 @@ export function destroyEcho(): void {
 **These hooks replace ALL 70+ socket functions and 34 files of imports.**
 
 Two types of hooks because two types of channels:
-- **`useSessionChannel`** — Public channel. Used by BOTH host and participants. Receives task changes, participant counts, leaderboard, session end.
+- **`useSessionChannel`** — Public channel using `publicChannelKey`. Used by BOTH host and participants. Receives task changes, participant counts, leaderboard, session end.
 - **`useHostChannel`** — Private channel. Used by host ONLY. Receives individual answer submissions, participant join details.
 
 **`features/live/hooks/useSessionChannel.ts`:**
@@ -828,11 +923,11 @@ interface SessionChannelState {
  * No authentication required — uses Echo.channel() (public).
  *
  * @param type - 'quiz' or 'quest'
- * @param sessionId - the session ID to subscribe to
+ * @param publicChannelKey - unguessable room key returned by join/state endpoints
  */
 export function useSessionChannel(
   type: 'quiz' | 'quest',
-  sessionId: number | null
+  publicChannelKey: string | null
 ) {
   const [state, setState] = useState<SessionChannelState>({
     participantCount: 0,
@@ -845,12 +940,12 @@ export function useSessionChannel(
   });
 
   useEffect(() => {
-    if (!sessionId) return;
+    if (!publicChannelKey) return;
 
     const echo = getEcho();
 
     // Public channel — no auth needed, anonymous participants can listen
-    const channel = echo.channel(`session.${type}.${sessionId}`)
+    const channel = echo.channel(`session.${type}.${publicChannelKey}`)
       .listen('.session.started', () => {
         setState(prev => ({ ...prev, sessionStatus: 'started' }));
       })
@@ -878,9 +973,9 @@ export function useSessionChannel(
 
     // CLEANUP — the thing the old code never did
     return () => {
-      echo.leave(`session.${type}.${sessionId}`);
+      echo.leave(`session.${type}.${publicChannelKey}`);
     };
-  }, [type, sessionId]);
+  }, [type, publicChannelKey]);
 
   return state;
 }
@@ -969,9 +1064,9 @@ export function useParticipantApi(participantToken: string | null) {
 **Usage example — Participant view (anonymous, no login):**
 
 ```typescript
-function QuestParticipantPage({ sessionId, participantToken }) {
+function QuestParticipantPage({ sessionId, publicChannelKey, participantToken }) {
   // Public channel — no auth needed
-  const { currentTaskId, timerData, sessionStatus } = useSessionChannel('quest', sessionId);
+  const { currentTaskId, timerData, sessionStatus } = useSessionChannel('quest', publicChannelKey);
   // Participant API — uses participant token, not Sanctum
   const { submitAnswer } = useParticipantApi(participantToken);
 
@@ -987,9 +1082,9 @@ function QuestParticipantPage({ sessionId, participantToken }) {
 **Usage example — Host view (logged in):**
 
 ```typescript
-function QuestHostPage({ sessionId }) {
+function QuestHostPage({ sessionId, publicChannelKey }) {
   // Public channel — same events as participants
-  const { participantCount, currentTaskId, sessionStatus } = useSessionChannel('quest', sessionId);
+  const { participantCount, currentTaskId, sessionStatus } = useSessionChannel('quest', publicChannelKey);
   // Private channel — individual answers, participant details (host only)
   useHostChannel('quest', sessionId, {
     onAnswerReceived: (answer) => addToAnswerList(answer),
@@ -1136,6 +1231,7 @@ export function useSessionSync(
 ```json
 {
   "session_id": 42,
+  "public_channel_key": "live_N4v9sK...",
   "running_status": true,
   "current_task_id": 7,
   "timer_state": { "start_time": "...", "duration_seconds": 30 },
@@ -1144,7 +1240,7 @@ export function useSessionSync(
 }
 ```
 
-This endpoint accepts either Sanctum auth OR `X-Participant-Token` header (for anonymous users). It does NOT return answer data or participant names — those are host-only.
+This endpoint accepts either Sanctum auth OR `X-Participant-Token` header (for anonymous users). It returns the `public_channel_key` needed for the public Echo subscription, but it does NOT return answer data or participant names — those are host-only.
 
 **Key insight from Codex:** On reconnect, always resync from the backend API. Never replay cached localStorage data. The backend is the single source of truth.
 
@@ -1246,17 +1342,29 @@ Test each flow end-to-end:
 Use **Artillery** or **k6** to simulate concurrent users:
 
 ```yaml
-# artillery config example
+# pseudo Artillery/k6 flow example
 scenarios:
   - name: "500 participants join and answer"
     engine: ws
     flow:
       - connect: "ws://localhost:8080/app/your-key"
-      - send: { subscribe: "quest.session.1" }
+      - send: { event: "pusher:subscribe", data: { channel: "session.quest.live_demo_key" } }
       - think: 5
-      - send: { event: "answer", data: { task_id: 1, answer: "A" } }
+      - post:
+          url: "/api/v1/quest-attempts/{attemptId}/answer"
+          headers:
+            X-Participant-Token: "{{ participantToken }}"
+          json:
+            task_id: 1
+            answer: "A"
       - think: 10
-      - send: { event: "answer", data: { task_id: 2, answer: "B" } }
+      - post:
+          url: "/api/v1/quest-attempts/{attemptId}/answer"
+          headers:
+            X-Participant-Token: "{{ participantToken }}"
+          json:
+            task_id: 2
+            answer: "B"
 ```
 
 **Test targets:**
@@ -1271,9 +1379,11 @@ scenarios:
 Write integration tests for the new broadcast flows:
 
 - [ ] Test `broadcast()` is called when `statusLive()` is invoked
-- [ ] Test channel authorization allows session participants
-- [ ] Test channel authorization rejects unauthorized users
+- [ ] Test public session channels can be subscribed to with the random public channel key
+- [ ] Test host private channel authorization allows only the session owner
+- [ ] Test host private channel authorization rejects unauthorized users
 - [ ] Test host-only channel rejects non-hosts
+- [ ] Test participant token hash, expiry, and revocation validation
 - [ ] Test session state endpoint returns correct current question
 - [ ] Test answer recording + broadcast happens atomically
 
@@ -1317,12 +1427,12 @@ services:
   reverb:
     command: php artisan reverb:start
     # ...
-  mysql:
-    image: mysql:8.0
+  postgres:
+    image: postgres:16-alpine
     # ...
   redis:
     image: redis:7-alpine
-    # ... (optional, for queue/cache)
+    # ... required for queue/cache/counters during realistic live-session testing
 ```
 
 ---
@@ -1331,16 +1441,16 @@ services:
 
 | Phase | Duration | Can Parallelize? |
 |-------|----------|-----------------|
-| **Phase 0:** Foundation (git, dead code, spelling, cleanup) | 2-3 days | No - must be first |
-| **Phase 1:** Frontend restructuring & theming | 3-4 days | Yes, with Phase 2 |
-| **Phase 2:** Backend Reverb setup & events | 2-3 days | Yes, with Phase 1 |
-| **Phase 3:** Frontend Reverb integration & live rewrite | 5-7 days | No - depends on 1 & 2 |
+| **Phase 0:** Foundation (git baseline, minimal cleanup, small commits) | 1-3 days | No - baseline must be first |
+| **Phase 2:** Backend Reverb setup & events | 2-4 days | Yes - should start before large Phase 1 restructuring |
+| **Phase 3:** Frontend Reverb integration & live rewrite | 5-7 days | No - depends on Phase 2 and minimal live UI readiness |
+| **Phase 1:** Frontend restructuring & theming | 3-4 days | Yes - defer large restructuring until realtime architecture is proven |
 | **Phase 4:** UI polish & responsiveness | 3-4 days | Partially with Phase 3 |
 | **Phase 5:** Testing & load testing | 2-3 days | No - depends on 3 & 4 |
 | **Phase 6:** Cleanup & documentation | 1-2 days | No - must be last |
 | **Total** | **18-26 days** | |
 
-With two developers working in parallel on Phase 1 + 2, you can compress the timeline to **14-20 days**.
+With two developers, put one developer on Phase 2 backend Reverb/Redis/PostgreSQL work and the other on the smallest Phase 3 frontend vertical slice needed to prove one live quest/quiz flow. Defer broad Phase 1 restructuring until that vertical slice is stable.
 
 ---
 
@@ -1350,12 +1460,16 @@ With two developers working in parallel on Phase 1 + 2, you can compress the tim
 |----------|-----------|
 | Keep Laravel, don't switch to Django | Backend is solid; Reverb is native; no benefit to rewriting |
 | Self-hosted Reverb (not Ably/Pusher) | Free, handles 2000+ connections, sufficient for 500-user scale |
+| SQLite for local speed, PostgreSQL for production compatibility | SQLite is useful locally, but production queries, migrations, JSON behavior, concurrency, and aggregates must be verified on PostgreSQL. |
+| Public channels use random room keys, not numeric session IDs | Anonymous public channels are acceptable, but guessable channels like `session.quest.42` are avoidable risk. |
 | Public channels for participants, private for host | Anonymous users (no login) can't use authenticated channels. This is how AhaSlides/Mentimeter work. |
-| Participant tokens for answer auth | Anonymous users need a way to prove they're a valid participant. Short-lived token issued on join, stored in sessionStorage. |
+| Hashed participant tokens for answer auth | Anonymous users need a way to prove they're a valid participant. Return the raw token once, store only its hash, add expiry/revocation, and keep the raw token in sessionStorage. |
 | ApexCharts as primary chart library | Already used by 10/14 charts; feature-complete; good responsive support |
 | Keep Highcharts for word cloud only | ApexCharts has no word cloud; Highcharts excels at this |
 | Feature-first folder structure | Reduces cross-feature coupling; easier onboarding for new developers |
 | REST for answer submission, WebSocket for broadcast only | Server is single source of truth; no data loss on disconnect |
-| No Redis initially | Reverb works without Redis for single-server deployment; add later if scaling |
+| Redis from the Reverb phase | 500-user answer bursts need Redis-backed queues, cache, counters, rate limits, and aggregate coalescing from the beginning. |
+| Broadcast after DB commit | Clients should not receive events before the committed API state is readable. |
+| Throttle public aggregate broadcasts | Persist every answer, but broadcast chart/aggregate snapshots on a short debounce window instead of one event per answer. |
 | Keep `quizes` table typo | Renaming a table used across 60+ migrations, models, controllers, and routes is too risky for zero functional gain |
-| Folder restructure before Reverb migration | Cleaner code to work with during the socket rewrite; spelling fixes prevent confusion in new code |
+| Realtime stability before large folder restructuring | The main business risk is live-session stability; broad frontend restructuring should wait until the Reverb vertical slice is proven. |

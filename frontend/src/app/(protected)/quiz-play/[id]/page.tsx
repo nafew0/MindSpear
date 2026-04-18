@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { Quiz } from "@/types/types";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 
 import Summary from "@/features/quiz/components/QuizReports/Summary";
 import moment from "@/lib/dayjs";
@@ -14,21 +14,8 @@ import {
 	// clearQuestData,
 } from "@/features/quest/store/questQuestionTimeSlice";
 import { Switch } from "antd";
-import {
-	connectSocket,
-	getSocket,
-	waitForQuizCreatedOnce,
-	waitForParticipantJoined,
-	emitQuizStart,
-	emitChangeQuestion,
-	waitForParticipantLeft,
-	waitForParticipantLeftAll,
-	emitCreateQuiz,
-	setCurrentQuiz,
-	waitForQuizStartedOnce,
-	waitForQuestionChangedQuizSingle,
-	waitForQuestionChangedQuizAll,
-} from "@/socket/socket";
+import { changeQuizQuestion } from "@/features/live/services/liveSessionApi";
+import { useHostChannel } from "@/features/live/hooks/useHostChannel";
 import { RootState } from "@/stores/store";
 import { CirclePlay, Users } from "lucide-react";
 import {
@@ -36,6 +23,7 @@ import {
 	userQuizCompletedLastSlider,
 } from "@/features/live/store/leaderboardSlice";
 import { toast } from "react-toastify";
+import type { TimerState } from "@/features/live/types";
 
 interface QuizResponse {
 	quiz: Quiz;
@@ -73,11 +61,8 @@ function QuizReport() {
 	const [titleInput, setTitleInput] = useState("");
 
 	const [connected, setConnected] = useState(false);
-	const mountedRef = useRef(true);
 
 	const quizId = `${params?.id}`;
-	const userId = `${user?.id}`;
-	const userName = `${user?.full_name}`;
 	const quizTitle = `${response?.quiz.title}` || "quiz Title";
 
 	// 	useEffect(() => {
@@ -94,106 +79,20 @@ function QuizReport() {
 
 	useEffect(() => {
 		handleQuizCompletion("payload");
-		mountedRef.current = true;
-		connectSocket()
-			.then(async (s) => {
-				//console.log("Socket Connected:", s.id);
-				setConnected(true);
-
-				socketDataGet();
-				await emitCreateQuiz({
-					quizId,
-					userId,
-					quizTitle,
-					userName,
-				});
-				setQuizCreated(true);
-				s.off("disconnect").on("disconnect", () => {
-					if (mountedRef.current) {
-						//console.log("Disconnected");
-						setConnected(false);
-					}
-				});
-			})
-			.catch((err) => {
-				console.error("Socket Connection failed:", err);
-				// alert("Socket connection failed");
-			});
+		setConnected(true);
+		setQuizCreated(true);
 	}, [response?.quiz.title, params?.id]);
 
-	const socketDataGet = async () => {
-		const existing = getSocket();
-		console.log(existing?.connected);
-		if (!existing?.connected) {
-			router.back();
-		}
-
-		const created = await waitForQuizCreatedOnce();
-		//console.log("✅ Quiz Created:", created);
-
-		waitForParticipantJoined((payload) => {
-			//console.log("🎉 participantJoined:", payload);
-			//console.log("🎉 participantJoined:", payload?.activeUsers);
+	useHostChannel("quiz", quizSession?.id, {
+		onParticipantJoined: (payload) => {
 			setparticipantsActiveData(payload);
-			setActiveUsersData(payload?.activeUsers);
-			setparticipantsActiveNumber(payload?.participantCount);
-			const newUsers = payload?.participantUsers || [];
-			setParticipants((prev) => {
-				const existingIds = prev.map((p) => p.userId);
-				const merged = [...prev];
-				newUsers.forEach((u: any) => {
-					if (!existingIds.includes(u.userId)) merged.push(u);
-				});
-				return merged;
-			});
-		});
-
-		waitForParticipantLeft((payload: { userId: string }) => {
-			//console.log("✅ Left quiz confirmation:", payload);
-		});
-
-		waitForParticipantLeftAll((payload: { userId: string }) => {
-			//console.log("🚪 User left:", payload);
-		});
-	};
-
-	useEffect(() => {
-		const questJoined = async () => {
-			waitForParticipantJoined((payload) => {
-				setparticipantsActiveData(payload);
-				setActiveUsersData(payload?.activeUsers);
-				//console.log("Participant Joined:", payload);
-				// //console.log("Participant Joined:", participantsActive);
-			});
-		};
-		questJoined();
-	}, []);
-
-	useEffect(() => {
-		if (!connected) return;
-
-		const s = getSocket();
-		if (!s) return;
-
-		// Clean first to prevent duplicates
-		s.off("room:joined").on("room:joined", (payload) => {
-			//console.log("[room:joined]", payload);
-		});
-
-		s.off("quiz:created").on("quiz:created", (payload) => {
-			//console.log("[quiz:created]", payload);
-		});
-
-		s.off("room:broadcast").on("room:broadcast", (payload) => {
-			//console.log("[room:broadcast]", payload);
-		});
-
-		return () => {
-			s.off("room:joined");
-			s.off("quiz:created");
-			s.off("room:broadcast");
-		};
-	}, [connected]);
+			setparticipantsActiveNumber(payload?.participant_count ?? 0);
+		},
+		onParticipantCountUpdated: (payload) => {
+			setparticipantsActiveData(payload);
+			setparticipantsActiveNumber(payload?.participant_count ?? 0);
+		},
+	});
 
 	const start = moment.utc(response?.quiz?.open_datetime).startOf("day");
 	const end = moment.utc(response?.quiz?.close_datetime).startOf("day");
@@ -227,36 +126,11 @@ function QuizReport() {
 	// quizeStart
 	const quizeStartFunction = async () => {
 		try {
-			setCurrentQuiz({
-				quizId,
-				userId,
-				quizTitle,
-				userName,
-				isCreator: true,
-			});
-
-			const startedPromise = waitForQuizStartedOnce();
-			await emitQuizStart({
-				quizId,
-				userId,
-				userName,
-				quizTitle,
-			});
-
-			const joined: any = await startedPromise;
-			updateHostLiveSession();
-			console.log(joined, "joinedjoinedjoined");
-
-			if (joined) {
-				handleChangeQuestion();
-			} else {
-				toast.error("Quest start failed");
-			}
-
-			// await emitQuizStart({ quizId, quizTitle });
-			// handleChangeQuestion();
+			await updateHostLiveSession();
+			await handleChangeQuestion();
 		} catch (e) {
 			console.error("Failed to create quiz:", e);
+			toast.error("Quiz start failed");
 		}
 	};
 	useEffect(() => {
@@ -292,46 +166,50 @@ function QuizReport() {
 	);
 
 	const handleChangeQuestion = async () => {
+		if (!quizSession?.id) {
+			toast.error("No live quiz session was found.");
+			return;
+		}
+
 		const question = response?.quiz?.questions.find(
 			(item: { serial_number: number }) =>
 				Number(item.serial_number) === 1
 		);
 
 		const questionId = question?.id || "20";
-		const questionTitle = question?.question_text || "New Text";
-
 		const quizQsenStartTime = moment().format("MMMM Do YYYY, h:mm:ss");
-		const quizQsenTime = `${question?.task_data?.time_limit}`;
-		const quizQsenLateStartTime = false;
+		const timeLimit = Number(
+			question?.task_data?.time_limit ??
+				question?.time_limit_seconds ??
+				question?.time_limit ??
+				0
+		);
+		const timerState: TimerState = {
+			status: "running",
+			start_time: quizQsenStartTime,
+			duration_seconds: Number.isFinite(timeLimit) ? timeLimit : 0,
+			remaining_seconds: Number.isFinite(timeLimit) ? timeLimit : 0,
+		};
 
-		await emitChangeQuestion({
-			quizId,
+		const liveState = await changeQuizQuestion(
+			quizSession.id,
 			questionId,
-			quizTitle,
-			questionTitle,
-			quizQsenStartTime,
-			quizQsenTime,
-			quizQsenLateStartTime,
-		});
-		const changeQsen = await waitForQuestionChangedQuizSingle();
-		if (changeQsen) {
-			router.push(
-				`/create-live/quize?jid=${sessionResponse?.session?.join_link}&qid=${quizId}&sid=${quizSession?.id}`
-			);
-		}
+			timerState
+		);
 
-		waitForQuestionChangedQuizAll((payload) => {
-			//console.log("Question Changed:", payload);
-			dispatch(
-				setQuestData({
-					questId: `${payload?.quizId}`,
-					questionId: `${payload?.questionId}`,
-					questiQsenStartTime: `${payload?.quizQsenStartTime}`,
-					questiQsenTime: `${payload?.quizQsenTime}`,
-					questiQsenLateStartTime: false,
-				})
-			);
-		});
+		dispatch(
+			setQuestData({
+				questId: quizId,
+				questionId: `${liveState.current_question_id ?? questionId}`,
+				questiQsenStartTime: quizQsenStartTime,
+				questiQsenTime: `${timeLimit || ""}`,
+				questiQsenLateStartTime: false,
+			})
+		);
+
+		router.push(
+			`/create-live/quize?jid=${sessionResponse?.session?.join_link}&qid=${quizId}&sid=${quizSession.id}&pck=${liveState.public_channel_key}`
+		);
 	};
 
 	console.log(

@@ -6,7 +6,7 @@ import {
 	connectSocket,
 	submitAnswer,
 	waitForAnswerProcessedQuizOnce,
-} from "@/socket/socket";
+} from "@/features/live/services/realtimeBridge";
 
 import { useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";

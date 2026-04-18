@@ -22,16 +22,6 @@ import {
 	clearQuestSession,
 } from "@/features/quest/store/questSessionSlice";
 
-import {
-	connectSocket,
-	emitCreateQuest,
-	emitEndQuest,
-	emitStartQuest,
-	getSocket,
-	setCurrentQuest,
-	waitForQuestCreatedOnce,
-	waitForQuestStartedOnce,
-} from "@/socket/quest-socket";
 import { toast } from "react-toastify";
 
 const quizSchema = z
@@ -86,12 +76,7 @@ const HostLive: React.FC<HostLiveProps> = ({
 	const dispatch = useDispatch();
 	const [isModalOpen, setIsModalOpen] = React.useState<boolean>(false);
 
-	const user = useSelector((state: RootState) => state.auth.user) as any;
-
 	const questId = `${params?.id}`;
-	const userId = `${user?.id}`;
-	const questTitle = `${titleData}`;
-	const userName = `${user?.full_name}`;
 	const currentTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 	const handleClearCache = () => {
@@ -201,14 +186,13 @@ const HostLive: React.FC<HostLiveProps> = ({
 			);
 			// console.log(responseData?.data, "responseData?.data");
 			dispatch(setQuest(responseData?.data?.data.quest));
-			socketConnectAndQuizCreate();
 
 			const endDateTimeString =
 				responseData?.data?.data.quest.end_datetime;
 			const time = moment(endDateTimeString).format(
 				"YYYY-MM-DD HH:mm:ss"
 			);
-			hostLiveApiCall(time);
+			await hostLiveApiCall(time);
 		} catch (error) {
 			const axiosError = error as AxiosError<{ message?: string }>;
 
@@ -221,44 +205,6 @@ const HostLive: React.FC<HostLiveProps> = ({
 				console.error("Unexpected error:", axiosError.message);
 			}
 		}
-	};
-
-	const socketConnectAndQuizCreate = async () => {
-		setCurrentQuest({
-			questId,
-			userId,
-			questTitle,
-			userName,
-			isCreator: true,
-		});
-
-		connectSocket()
-			.then(async (s) => {
-				console.log(s);
-
-				await emitEndQuest({
-					questId: `${questId}`,
-					questTitle: "",
-				});
-
-				await emitCreateQuest({
-					questId,
-					questTitle,
-					userId,
-					userName,
-				});
-				const created = await waitForQuestCreatedOnce();
-				//console.log("Quest Created:", created);
-				if (created) {
-					router.push(`/quests-session/${params?.id}`);
-				} else {
-					toast.error("Quest creation failed");
-				}
-			})
-			.catch((err: any) => {
-				console.error("Socket Connection failed:", err);
-				// alert("Socket connection failed");
-			});
 	};
 
 	// Start the QUEST
@@ -291,13 +237,12 @@ const HostLive: React.FC<HostLiveProps> = ({
 				"responseData?.data"
 			);
 			dispatch(setQuest(responseData?.data?.data.quest));
-			socketConnectAndQuizCreate();
 			const endDateTimeString =
 				responseData?.data?.data.quest.end_datetime;
 			const time = moment(endDateTimeString).format(
 				"YYYY-MM-DD HH:mm:ss"
 			);
-			hostLiveApiCall(time);
+			await hostLiveApiCall(time);
 		} else {
 			dataFetch();
 		}
@@ -334,6 +279,7 @@ const HostLive: React.FC<HostLiveProps> = ({
 			// Store the quest session data in Redux
 			if (respnson?.data.data.questSession) {
 				dispatch(setQuestSession(respnson?.data.data.questSession));
+				router.push(`/quests-session/${params?.id}`);
 			}
 		} catch (error) {
 			console.error("API call failed:", error);

@@ -7,19 +7,13 @@ import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
 import moment from "@/lib/dayjs";
 import { useSearchParams, useRouter } from "next/navigation";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { HiUserGroup } from "react-icons/hi";
 
 import {
-	connectSocket,
-	emitJoinQuiz,
-	getSocket,
-	waitForQuizJoinedOnce,
-	// waitForQuizStartedAll,
-	// waitForQuizJoineOnce,
-	// waitForQuizStartedAllOnce,
-	setCurrentQuiz,
-} from "@/socket/socket";
+	clearLegacyLiveStorage,
+	storeParticipantTokenBundle,
+} from "@/features/live/services/liveStorage";
 import { toast } from "react-toastify";
 
 interface QuizOption {
@@ -110,10 +104,8 @@ function QuizAttemptForm() {
 	const qid = searchParams.get("qid");
 	console.log(sessionId);
 
-	const mountedRef = useRef(true);
 	const [currentUserName, setCurrentUserName] = useState("");
 	const [quizData, setQuizData] = useState<QuizResponse | null>(null);
-	const [connected, setConnected] = useState(false);
 
 	const [quizErrorMessage, setQuizErrorMessage] = useState<
 		string | undefined
@@ -122,17 +114,7 @@ function QuizAttemptForm() {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	useEffect(() => {
-		const handleClearQuizData = async () => {
-			for (let i = 0; i < localStorage.length; i++) {
-				const key = localStorage.key(i);
-				if (key && key.startsWith("quiz")) {
-					localStorage.removeItem(key);
-					i = -1;
-				}
-			}
-		};
-		handleClearQuizData();
-		localStorage.clear();
+		clearLegacyLiveStorage();
 	}, []);
 
 	useEffect(() => {
@@ -188,71 +170,7 @@ function QuizAttemptForm() {
 
 	const result = timeParts.join(", ") || "0 minute";
 
-	useEffect(() => {
-		mountedRef.current = true;
-
-		const existing = getSocket();
-		if (existing?.connected) {
-			setConnected(true);
-
-			existing.off("disconnect").on("disconnect", () => {
-				if (mountedRef.current) setConnected(false);
-			});
-		} else {
-			connectSocket()
-				.then((s) => {
-					if (!mountedRef.current) return;
-					//console.log("Socket Connected:", s.id);
-					setConnected(true);
-					s.off("disconnect").on("disconnect", () => {
-						if (mountedRef.current) {
-							//console.log("Disconnected");
-							setConnected(false);
-							// if you want to auto-recreate on reconnect, you can reset:
-							// createdOnceRef.current = false;
-						}
-					});
-				})
-				.catch((err) => {
-					console.error("Socket Connection failed:", err);
-					toast.error("Socket connection failed");
-				});
-		}
-
-		return () => {
-			mountedRef.current = false;
-		};
-	}, []);
-
 	const userId = Math.floor(Math.random() * 10000).toString();
-	const soketRequestFunction = () => {
-		const quizId = `${qid}`;
-		const userId = Math.floor(Math.random() * 10000).toString();
-		const userName = `${currentUserName}`;
-		const quizTitle = `${quizData?.quiz?.title}`;
-		setCurrentQuiz({
-			quizId,
-			userId,
-			quizTitle,
-			userName,
-			isCreator: false,
-		});
-		connectSocket()
-			.then(async (s) => {
-				//console.log("Socket Connected:", s.id);
-
-				try {
-					await emitJoinQuiz({ quizId, userId, userName });
-					const joined = await waitForQuizJoinedOnce(quizId, 15000);
-					return joined;
-				} catch (e) {
-					console.error("Failed to create quiz:", e);
-				}
-			})
-			.catch((err) => {
-				console.error("Socket Connection failed:", err);
-			});
-	};
 
 	const dataSubmit = async () => {
 		setIsSubmitting(true);
@@ -270,30 +188,33 @@ function QuizAttemptForm() {
 				`/quiz-attempts-url/join/${joinid}`,
 				obj
 			);
-			console.log(response, "responseresponseresponseresponseresponse");
+			const responseData = response?.data?.data as any;
+			const attemptId = responseData?.attempt?.id;
+			const sessionId = responseData?.session?.id;
+			const publicChannelKey = responseData?.public_channel_key;
+			const participantToken = responseData?.participant_token;
 
-			soketRequestFunction();
-			const currentTime = moment().format("MMMM Do YYYY, h:mm:ss");
-			const joined = await waitForQuizJoinedOnce();
-			if (joined) {
-				console.log(joined, "11111");
-				if (typeof window === "undefined") return;
-				const userJoinData: any = {
-					questId: joined?.quizId,
-					questionId: `${joined?.currentQuestion?.questionId}`,
-					questiQsenStartTime: `${joined?.currentQuestion?.quizQsenStartTime}`,
-					questiQsenTime: `${joined?.currentQuestion?.quizQsenTime}`,
-					questiQsenLateStartTime: `${currentTime}`,
-				};
-				localStorage.setItem(
-					"userTimeSet",
-					JSON.stringify(userJoinData)
-				);
-				setIsSubmitting(true);
-				router.push(
-					`/attempt/quize/play/${response?.data?.data.session?.join_code}?jid=${response?.data?.data.session.join_link}&qid=${response?.data?.data.quiz.id}&aid=${response?.data?.data?.attempt.id}&sid=${response?.data?.data?.session.id}&connected=${connected}&ujid=${userId}&title=${quizData?.quiz?.title}&uname=${currentUserName}`
-				);
+			if (
+				!attemptId ||
+				!sessionId ||
+				!publicChannelKey ||
+				!participantToken
+			) {
+				toast.error("Unable to join this live quiz. Missing session metadata.");
+				return;
 			}
+
+			storeParticipantTokenBundle({
+				module: "quiz",
+				sessionId: Number(sessionId),
+				attemptId: Number(attemptId),
+				participantToken,
+				publicChannelKey,
+			});
+
+			router.push(
+				`/attempt/quize/play/${responseData?.session?.join_code}?jid=${responseData?.session?.join_link}&qid=${responseData?.quiz?.id}&aid=${attemptId}&sid=${sessionId}&pck=${publicChannelKey}&ujid=${userId}&title=${quizData?.quiz?.title}&uname=${currentUserName}`
+			);
 
 			// console.log(response, "response?.data.dataresponse?.data.data");
 			// 	const quizId = `${qid}`
@@ -301,7 +222,7 @@ function QuizAttemptForm() {
 			// 	const userName = `${currentUserName}`;
 			// try {
 			// 	await emitJoinQuiz({ quizId, userId, userName });
-			// 	const joined = await waitForQuizJoineOnce();
+			// 	const joined = await waitForQuizJoinedOnce();
 			// 	// const startedStatus = await waitForQuizStartedAll();
 			// 	//console.log("✅ quizJoined:", joined);
 			// 	// //console.log("✅ quizJoined:", startedStatus);

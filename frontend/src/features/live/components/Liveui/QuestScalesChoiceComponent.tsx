@@ -9,7 +9,7 @@ import {
 	emitRankShortAndScaleSubmitTask,
 	// getSocket,
 	waitForAnswerProcessedQuestOnce,
-} from "@/socket/quest-socket";
+} from "@/features/live/services/realtimeBridge";
 import { useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { upsertAnswer } from "@/features/live/store/leaderboardAnswersSlice";

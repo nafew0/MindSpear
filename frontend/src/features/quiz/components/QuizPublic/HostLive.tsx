@@ -16,13 +16,6 @@ import { Switch } from "@/components/FormElements/switch";
 import moment from "@/lib/dayjs";
 import { MdLiveTv } from "react-icons/md";
 import {
-	connectSocket,
-	emitCreateQuiz,
-	setCurrentQuiz,
-	waitForQuizCreatedOnce,
-} from "@/socket/socket";
-import { RootState } from "@/stores/store";
-import {
 	setQuestSession,
 	clearQuestSession,
 } from "@/features/quest/store/questSessionSlice";
@@ -75,14 +68,9 @@ const HostLive: React.FC = () => {
 	const router = useRouter();
 	const dispatch = useDispatch();
 	const [isModalOpen, setIsModalOpen] = React.useState<boolean>(false);
-	const user = useSelector(
-		(state: RootState) => state.auth.user
-	) as UserInfoState | null;
 
 	const quizId = `${params?.id}`;
-	const userId = `${user?.id}`;
 	const quizTitle = "quiz Title";
-	const userName = `${user?.full_name}`;
 	const currentTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 	const {
 		control,
@@ -192,14 +180,13 @@ const HostLive: React.FC = () => {
 		if (shouldFetch(data_quiz)) {
 			dispatch(setQuiz(data_quiz));
 			dispatch(setScope("entire"));
-			socketConnectAndQuizCreate();
 			console.log(data_quiz, "data_questdata_questdata_questdata_quest");
 
 			const endDateTimeString = data_quiz.close_datetime;
 			const time = moment(endDateTimeString).format(
 				"YYYY-MM-DD HH:mm:ss"
 			);
-			hostLiveApiCall(time);
+			await hostLiveApiCall(time);
 		} else {
 			dataFetch();
 		}
@@ -229,6 +216,7 @@ const HostLive: React.FC = () => {
 			// Store the quest session data in Redux
 			if (respnson?.data.data.quizSession) {
 				dispatch(setQuestSession(respnson?.data.data.quizSession));
+				router.push(`/quiz-play/${params?.id}`);
 			}
 		} catch (error) {
 			console.error("API call failed:", error);
@@ -257,7 +245,9 @@ const HostLive: React.FC = () => {
 			);
 			// console.log(responseData?.data, "responseData?.data");
 			dispatch(setQuiz(responseData?.data?.data));
-			socketConnectAndQuizCreate();
+			const endDateTimeString = responseData?.data?.data?.quiz?.close_datetime;
+			const time = moment(endDateTimeString).format("YYYY-MM-DD HH:mm:ss");
+			await hostLiveApiCall(time);
 		} catch (error) {
 			const axiosError = error as AxiosError<{ message?: string }>;
 
@@ -270,39 +260,6 @@ const HostLive: React.FC = () => {
 				console.error("Unexpected error:", axiosError.message);
 			}
 		}
-	};
-
-	const socketConnectAndQuizCreate = async () => {
-		setCurrentQuiz({
-			quizId,
-			userId,
-			quizTitle: quizTitle,
-			userName,
-			isCreator: true,
-		});
-
-		connectSocket()
-			.then(async (s) => {
-				console.log(s);
-				await emitCreateQuiz({
-					quizId,
-					userId,
-					quizTitle,
-					userName,
-				});
-
-				const created = await waitForQuizCreatedOnce();
-				//console.log("Quest Created:", created);
-				if (created) {
-					router.push(`/quiz-play/${params?.id}`);
-				} else {
-					alert("Quest creation failed");
-				}
-			})
-			.catch((err: any) => {
-				console.error("Socket Connection failed:", err);
-				// alert("Socket connection failed");
-			});
 	};
 
 	const onSubmit = (data: QuizFormValues): void => {

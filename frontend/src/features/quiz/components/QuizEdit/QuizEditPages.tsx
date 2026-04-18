@@ -26,8 +26,8 @@ import { clearQuestData } from "@/features/quest/store/questQuestionTimeSlice";
 import QuizQuestionsResultView from "@/components/ResultComponent/QuizQuestionsResultView";
 import GlobalPagination from "@/components/GlobalPagination";
 import { toast } from "react-toastify";
-// import { connectSocket } from "@/socket/socket";
-// import { connectSocket, disconnectSocket, getSocket } from "@/socket/socket";
+// import { connectSocket } from "@/features/live/services/realtimeBridge";
+// import { connectSocket, disconnectSocket, getSocket } from "@/features/live/services/realtimeBridge";
 
 interface QuizCreatorPreviewProps {
 	quizInformation: ApiQuestion[];
@@ -381,9 +381,9 @@ const QuizEditPages: React.FC<QuizCreatorPreviewProps> = () => {
 						</Link>
 
 						<HostLater />
-						{/* <div className="mt-[15px]">
+						<div className="mt-[15px]">
 							<HostLive />
-						</div> */}
+						</div>
 					</div>
 				</div>
 			</div>

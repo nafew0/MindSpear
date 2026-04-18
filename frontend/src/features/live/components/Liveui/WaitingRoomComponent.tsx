@@ -1,5 +1,5 @@
 
-import { getSocket } from "@/socket/quest-socket";
+import { getSocket } from "@/features/live/services/realtimeBridge";
 import React from "react";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";

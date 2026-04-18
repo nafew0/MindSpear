@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { ApexOptions } from "apexcharts";
-import { baseApexOptions, getChartColors } from "./chartTheme";
+import { baseApexOptions, chartNeutrals, getChartColors } from "./chartTheme";
 import { ChartContainer } from "./ChartContainer";
 import type { ChartDatum, NormalizedChartProps } from "./types";
 
@@ -62,17 +62,16 @@ export function TreemapChart({
 			dataLabels: {
 				enabled: true,
 				style: {
-					colors: ["#111827"],
+					colors: [chartNeutrals.chartStrong],
 					fontSize: "13px",
 					fontWeight: 700,
 				},
 			},
-			title: title
-				? {
-						text: title,
-						align: "center",
-					}
-				: undefined,
+			title: {
+				...baseApexOptions.title,
+				text: title || undefined,
+				align: "center",
+			},
 		}),
 		[chartColors, height, title]
 	);

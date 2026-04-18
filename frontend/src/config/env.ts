@@ -1,7 +1,9 @@
 export const env = {
 	apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "",
-	socketUrl: process.env.NEXT_PUBLIC_SOCKET_URL?.trim() || "",
-	socketPath: process.env.NEXT_PUBLIC_SOCKET_PATH?.trim() || "",
+	reverbAppKey: process.env.NEXT_PUBLIC_REVERB_APP_KEY?.trim() || "",
+	reverbHost: process.env.NEXT_PUBLIC_REVERB_HOST?.trim() || "",
+	reverbPort: process.env.NEXT_PUBLIC_REVERB_PORT?.trim() || "",
+	reverbScheme: process.env.NEXT_PUBLIC_REVERB_SCHEME?.trim() || "http",
 	appUrl: process.env.NEXT_PUBLIC_APP_URL?.trim() || "",
 } as const;
 

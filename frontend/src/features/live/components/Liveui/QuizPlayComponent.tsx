@@ -21,14 +21,16 @@ import {
 	waitForQuestionChangedQuizAll,
 	waitForQuizEndedAll,
 	waitForQuizJoinedOnce,
-	// waitForQuizJoineOnce
-} from "@/socket/socket";
+	// waitForQuizJoinedOnce
+} from "@/features/live/services/realtimeBridge";
 // import axiosInstance from "@/utils/axiosInstance";
-import { cacheJoin, getCachedJoin } from "@/socket/quest-socket";
+import { cacheJoin, getCachedJoin } from "@/features/live/services/realtimeBridge";
 import moment from "@/lib/dayjs";
 import { useDispatch, useSelector } from "react-redux";
 import { setQuestData } from "@/features/quest/store/questQuestionTimeSlice";
 import axiosInstance from "@/utils/axiosInstance";
+import { completeParticipantAttempt } from "@/features/live/services/participantApi";
+import { getParticipantToken } from "@/features/live/services/liveStorage";
 
 export type TaskType =
 	| "wordcloud"
@@ -121,6 +123,7 @@ const TaskNavigator: React.FC<NavigatorProps> = ({ tasks }) => {
 	const quizId = searchParams.get("qid");
 
 	const { showLeaderboard } = useSelector((state: any) => state.leaderboard);
+	const liveQuestionState = useSelector((state: any) => state.questTime);
 	console.log(showLeaderboard, "ddddddddddddddddddddddddd");
 	const ordered = useMemo(
 		() =>
@@ -161,6 +164,16 @@ const TaskNavigator: React.FC<NavigatorProps> = ({ tasks }) => {
 			localStorage.setItem("quiz_questionsId", qId?.toString() || "");
 		}
 	};
+
+	useEffect(() => {
+		const nextQuestionId = Number(liveQuestionState?.questionId);
+		if (!Number.isFinite(nextQuestionId) || nextQuestionId <= 0) return;
+
+		setCurrentQuestion("");
+		setQuestions("");
+		setQuestionsId(nextQuestionId);
+		saveQuestionDataToStorage("", "", nextQuestionId);
+	}, [liveQuestionState?.questionId]);
 
 	const handleLeaveQuiz = async () => {
 		try {
@@ -336,10 +349,13 @@ const TaskNavigator: React.FC<NavigatorProps> = ({ tasks }) => {
 	console.log(quizId, "quizIdquizIdquizIdquizIdquizId");
 
 	const complitedQuiz = async () => {
-		const payload = { status: "Completed" };
-		const response = await axiosInstance.put(
-			`/quiz-attempts/${attempId}/status`,
-			payload
+		const participantToken = getParticipantToken("quiz", sessionId);
+		if (!participantToken || !attempId) return;
+
+		const response = await completeParticipantAttempt(
+			"quiz",
+			attempId,
+			participantToken
 		);
 		console.log(response, "complitedQuizcomplitedQuizcomplitedQuiz");
 	};

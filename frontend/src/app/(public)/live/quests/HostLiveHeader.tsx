@@ -6,9 +6,9 @@ import Image from "next/image";
 import Link from "next/link";
 // import { clearCache } from "@/services/redux/features/leaderboardSlice";
 // import { useDispatch, useSelector } from "react-redux";
-// import { emitEndQuest, setCurrentQuest } from "@/socket/quest-socket";
+// import { emitEndQuest, setCurrentQuest } from "@/features/live/services/realtimeBridge";
 // import { useSearchParams, useRouter, useParams } from "next/navigation";
-// import { emitEndQuiz } from "@/socket/socket";
+// import { emitEndQuiz } from "@/features/live/services/realtimeBridge";
 
 interface HeaderProps {
 	onClose?: () => void;

@@ -78,7 +78,7 @@ export function Modal({
 			onOk={onClose}
 			footer={footer}
 			width={width ?? sizeWidths[size]}
-			destroyOnClose={destroyOnClose}
+			destroyOnHidden={destroyOnClose}
 		>
 			{children}
 		</AntModal>

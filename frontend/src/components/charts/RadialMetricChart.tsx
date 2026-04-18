@@ -64,11 +64,11 @@ export function RadialMetricChart({
 					hollow: {
 						margin: 0,
 						size: "70%",
-						background: "#fff",
+						background: theme.colors.neutral.white,
 						position: "front",
 					},
 					track: {
-						background: "#fff",
+						background: theme.colors.neutral.white,
 						strokeWidth: "67%",
 						margin: 0,
 					},
@@ -76,12 +76,12 @@ export function RadialMetricChart({
 						show: true,
 						name: {
 							offsetY: -10,
-							color: "#64748b",
+							color: theme.colors.neutral.chartMuted,
 							fontSize: "16px",
 						},
 						value: {
 							formatter: (labelValue: number) => `${Math.trunc(labelValue)}`,
-							color: "#111827",
+							color: theme.colors.neutral.chartStrong,
 							fontSize: "34px",
 						},
 					},

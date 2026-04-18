@@ -8,7 +8,7 @@ MindSpear is an interactive educational platform combining **Quizzes** (Kahoot-s
 |-----------|----------------------|-------|
 | Frontend  | Next.js 15 (React 19) | 2000  |
 | Backend   | Laravel 12 (PHP 8.4)  | 8000  |
-| Socket.IO | (not yet set up)       | 4001  |
+| Reverb    | Laravel Reverb         | 8080  |
 
 ---
 
@@ -247,8 +247,10 @@ curl -s http://localhost:2000 | head -20
 | Variable                      | Required? | What to put                                                    |
 |-------------------------------|-----------|----------------------------------------------------------------|
 | `NEXT_PUBLIC_API_BASE_URL`    | **Yes**   | `http://localhost:8000/api/v1` - points frontend to your backend API |
-| `NEXT_PUBLIC_SOCKET_URL`      | Optional  | `http://localhost:4001` - only needed when Socket.IO server is running |
-| `NEXT_PUBLIC_SOCKET_PATH`     | Optional  | `/socket.io` - default Socket.IO path                          |
+| `NEXT_PUBLIC_REVERB_APP_KEY`  | **Yes**   | The Reverb app key from your backend `.env`                    |
+| `NEXT_PUBLIC_REVERB_HOST`     | **Yes**   | `localhost` for local Reverb, or your websocket host in production |
+| `NEXT_PUBLIC_REVERB_PORT`     | **Yes**   | `8080` locally unless you changed `REVERB_PORT`                |
+| `NEXT_PUBLIC_REVERB_SCHEME`   | **Yes**   | `http` locally, `https` in production                          |
 | `APP_URL`                     | Yes       | `http://localhost:2000` for local dev                          |
 | `OPENAI_API_KEY`              | Optional  | Only if AI features are used. Get from OpenAI dashboard.       |
 
@@ -371,7 +373,7 @@ composer install
 php artisan key:generate
 touch database/database.sqlite
 php artisan migrate
-php artisan serve &
+php artisan serve
 
 # 3. Frontend setup
 cd /home/bdren/Projects/MindSpear/frontend

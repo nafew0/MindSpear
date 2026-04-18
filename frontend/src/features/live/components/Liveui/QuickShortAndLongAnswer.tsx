@@ -5,7 +5,7 @@ import {
 	getSocket,
 	connectSocket,
 	waitAnswerSubmittedToQuestCreatorQuickForm,
-} from "@/socket/quest-socket";
+} from "@/features/live/services/realtimeBridge";
 import { motion, AnimatePresence } from "framer-motion";
 
 function QuickShortAndLongAnswer({ answerData }: any) {

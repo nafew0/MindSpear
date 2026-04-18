@@ -5,6 +5,7 @@ import { theme } from "@/config/theme";
 import type { ChartColorInput } from "./types";
 
 export const chartPalette = theme.chart.palette;
+export const chartNeutrals = theme.colors.neutral;
 
 export const getChartColors = (
 	colors?: ChartColorInput,
@@ -60,10 +61,18 @@ export const baseApexOptions: ApexOptions = {
 		toolbar: { show: false },
 		animations: { enabled: true, speed: 450 },
 		fontFamily: "inherit",
+		offsetX: 0,
+		offsetY: 0,
 	},
 	grid: {
-		borderColor: "#edf1f5",
+		borderColor: chartNeutrals.chartGrid,
 		strokeDashArray: 4,
+		padding: {
+			top: 8,
+			right: 8,
+			bottom: 8,
+			left: 8,
+		},
 	},
 	states: {
 		hover: {
@@ -75,6 +84,34 @@ export const baseApexOptions: ApexOptions = {
 	},
 	tooltip: {
 		theme: "light",
+	},
+	title: {
+		text: undefined,
+		align: "center",
+		margin: 0,
+		offsetX: 0,
+		offsetY: 0,
+		floating: false,
+		style: {
+			fontSize: "14px",
+			fontWeight: 700,
+			fontFamily: "inherit",
+			color: chartNeutrals.chartTitle,
+		},
+	},
+	subtitle: {
+		text: undefined,
+		align: "center",
+		margin: 0,
+		offsetX: 0,
+		offsetY: 0,
+		floating: false,
+		style: {
+			fontSize: "12px",
+			fontWeight: 500,
+			fontFamily: "inherit",
+			color: chartNeutrals.chartMuted,
+		},
 	},
 	responsive: chartResponsive,
 };

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import QuizPlayComponent from "@/features/live/components/Liveui/QuizPlayComponent";
 import axiosInstance from "@/utils/axiosInstance";
@@ -8,9 +8,15 @@ import { AxiosError } from "axios";
 import { normalizeTasks } from "@/utils/quickFormTransform";
 import moment from "@/lib/dayjs";
 
-import { waitForQuizJoinedOnce } from "@/socket/socket";
 import { useDispatch } from "react-redux";
 import { setQuestData } from "@/features/quest/store/questQuestionTimeSlice";
+import {
+	getParticipantToken,
+	getStoredPublicChannelKey,
+} from "@/features/live/services/liveStorage";
+import { useSessionChannel } from "@/features/live/hooks/useSessionChannel";
+import { useSessionSync } from "@/features/live/hooks/useSessionSync";
+import type { SessionSnapshot, TimerState } from "@/features/live/types";
 
 function QuizAttempt() {
 	const dispatch = useDispatch();
@@ -19,32 +25,66 @@ function QuizAttempt() {
 	const joinid = searchParams.get("jid");
 	// const userId = searchParams.get("ujid");
 	const quizId = searchParams.get("qid");
+	const sessionId = searchParams.get("sid");
+	const publicChannelKey =
+		searchParams.get("pck") ?? getStoredPublicChannelKey("quiz", sessionId);
+	const participantToken = getParticipantToken("quiz", sessionId);
 	const [tasks, setTasks] = useState<any[]>([]);
 
+	const dispatchLiveState = useCallback(
+		(questionId: number | null | undefined, timerState: TimerState) => {
+			if (!questionId) return;
+
+			dispatch(
+				setQuestData({
+					questId: quizId,
+					questionId: `${questionId}`,
+					questiQsenStartTime:
+						typeof timerState?.start_time === "string"
+							? timerState.start_time
+							: moment().format("MMMM Do YYYY, h:mm:ss"),
+					questiQsenTime: `${
+						timerState?.duration_seconds ??
+						timerState?.remaining_seconds ??
+						""
+					}`,
+					questiQsenLateStartTime: false,
+				})
+			);
+		},
+		[dispatch, quizId]
+	);
+
+	const handleSnapshot = useCallback(
+		(snapshot: SessionSnapshot) => {
+			dispatchLiveState(snapshot.current_question_id, snapshot.timer_state);
+		},
+		[dispatchLiveState]
+	);
+
+	const { snapshot } = useSessionSync({
+		module: "quiz",
+		sessionId,
+		participantToken,
+		onSync: handleSnapshot,
+	});
+
+	const channelState = useSessionChannel(
+		"quiz",
+		publicChannelKey ?? snapshot?.public_channel_key,
+		snapshot
+	);
+
 	useEffect(() => {
-		const joinUserGetFunction = async () => {
-			try {
-				const joined = await waitForQuizJoinedOnce();
-				console.log(joined, "JoinGet");
-
-				const newQuestionsId = joined?.currentQuestion?.questionId;
-				const currentTime = moment().format("MMMM Do YYYY, h:mm:ss");
-
-				dispatch(
-					setQuestData({
-						questId: quizId,
-						questionId: `${newQuestionsId}`,
-						questiQsenStartTime: `${joined?.currentQuestion?.questiQsenStartTime}`,
-						questiQsenTime: `${joined?.currentQuestion?.questiQsenTime}`,
-						questiQsenLateStartTime: `${currentTime}`,
-					})
-				);
-			} catch (e) {
-				console.warn("qqqqqqqq", e);
-			}
-		};
-		joinUserGetFunction();
-	}, []);
+		dispatchLiveState(
+			channelState.currentQuestionId,
+			channelState.timerState
+		);
+	}, [
+		channelState.currentQuestionId,
+		channelState.timerState,
+		dispatchLiveState,
+	]);
 
 	useEffect(() => {
 		const dataFetch = async () => {

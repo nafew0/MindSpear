@@ -28,7 +28,7 @@
    - 5.2 [App Router & Layouts](#52-app-router--layouts)
    - 5.3 [Redux Store & State Management](#53-redux-store--state-management)
    - 5.4 [API Layer (Axios)](#54-api-layer-axios)
-   - 5.5 [Socket.IO Real-Time Communication](#55-socketio-real-time-communication)
+   - 5.5 [Laravel Reverb Real-Time Communication](#55-laravel-reverb-real-time-communication)
    - 5.6 [Type System](#56-type-system)
    - 5.7 [Custom Hooks](#57-custom-hooks)
    - 5.8 [Component Library & UI Patterns](#58-component-library--ui-patterns)
@@ -85,7 +85,7 @@ All three modules share common patterns: create content, host a session (live or
 | Language        | TypeScript                        | ^5        |
 | State           | Redux Toolkit + redux-persist     | ^2.8      |
 | HTTP Client     | Axios                             | ^1.9      |
-| Real-Time       | Socket.IO Client                  | ^4.8      |
+| Real-Time       | Laravel Echo + Reverb             | Echo ^2.3 |
 | UI Library      | Ant Design                        | ^5.25     |
 | CSS             | Tailwind CSS                      | ^3.4      |
 | Rich Text       | Tiptap                            | ^3.9      |
@@ -101,7 +101,7 @@ All three modules share common patterns: create content, host a session (live or
 |----------------|------|
 | Frontend       | 2000 |
 | Backend API    | 8000 |
-| Socket.IO      | 4001 |
+| Reverb         | 8080 |
 | Filament Admin | 8000 (path: `/super-admin`) |
 
 ---
@@ -769,9 +769,9 @@ frontend/src/
 │   ├── quizService.ts                      # Quiz API calls (minimal)
 │   ├── surveyService.ts                    # Survey API calls (comprehensive)
 │   └── redux/                              # Redux-specific services
-├── socket/                                 # Socket.IO configuration (see §5.5)
-│   ├── socket.ts                           # Quiz socket manager
-│   └── quest-socket.ts                     # Quest socket manager
+├── features/live/                          # Live Reverb hooks, services, and UI
+├── lib/
+│   └── echo.ts                             # Laravel Echo/Reverb client
 ├── stores/                                 # Redux store (see §5.3)
 │   ├── store.ts                            # Store configuration + persist whitelist
 │   └── features/                           # Redux slices
@@ -906,15 +906,16 @@ createApiResource<T>(resourcePath) → {
 - `services/surveyService.ts` — Full CRUD + page/question operations
 - `services/quizService.ts` — Minimal (most quiz API calls done inline or via Redux thunks)
 
-### 5.5 Socket.IO Real-Time Communication
+### 5.5 Laravel Reverb Real-Time Communication
 
-Two independent socket managers with identical configuration:
+Quiz and Quest live sessions now use Laravel Echo with Reverb. The frontend subscribes to public participant-safe session channels and private host channels:
 
-**Quiz Socket** (`socket/socket.ts`):
-- URL: `NEXT_PUBLIC_SOCKET_URL` (default: `https://quest.bdren.net.bd`)
-- Path: `NEXT_PUBLIC_SOCKET_PATH` (default: `/socket.io`)
-- Transport: websocket first, polling fallback
-- Reconnection: infinite attempts, 500ms–15s exponential backoff
+**Echo/Reverb client** (`src/lib/echo.ts`):
+- App key: `NEXT_PUBLIC_REVERB_APP_KEY`
+- Host: `NEXT_PUBLIC_REVERB_HOST`
+- Port: `NEXT_PUBLIC_REVERB_PORT`
+- Scheme: `NEXT_PUBLIC_REVERB_SCHEME`
+- Auth endpoint: derived from the backend origin as `/broadcasting/auth`
 
 | Emit Event | Purpose |
 |------------|---------|
@@ -1298,7 +1299,7 @@ All backend responses use `ApiResponseTrait`. The standard shape:
 | Survey uses `Quiz` type | `surveyInformationSlice.ts` types its state as `Quiz | null` instead of a Survey-specific type. | Medium — works because shapes overlap, but can cause confusion. |
 | `questInformation` uses `Quiz` type | Same issue — quest metadata slice typed as `Quiz`. | Medium — same concern. |
 | Zone.Identifier files | Windows → WSL file transfer left `.Zone.Identifier` companion files everywhere. | Low — should be gitignored and cleaned up. |
-| Socket server not in repo | The Socket.IO server that handles real-time events is external. The frontend connects to it but the server code is not in this repository. | High — live features depend on an external service. |
+| Legacy realtime removed | Live quiz/quest flows now use Laravel Reverb from the backend instead of an external websocket service. | Medium — continue load testing Reverb/Redis before production. |
 | No Docker setup | No `docker-compose.yml` despite README references. | Medium — manual setup required. |
 | Quiz service sparse | `quizService.ts` is mostly empty — quiz API calls are scattered across components and Redux thunks. Survey service is comprehensive by comparison. | Medium — inconsistent patterns. |
 | Multiple charting libraries | ApexCharts, Recharts, Highcharts, and D3 are all used. | Medium — bundle size, inconsistent chart styles. |
@@ -1324,8 +1325,10 @@ All backend responses use `ApiResponseTrait`. The standard shape:
 | Variable | Purpose |
 |----------|---------|
 | `NEXT_PUBLIC_API_BASE_URL` | Points to backend API (http://localhost:8000/api/v1) |
-| `NEXT_PUBLIC_SOCKET_URL` | Socket.IO server URL |
-| `NEXT_PUBLIC_SOCKET_PATH` | Socket.IO path (/socket.io) |
+| `NEXT_PUBLIC_REVERB_APP_KEY` | Laravel Reverb app key |
+| `NEXT_PUBLIC_REVERB_HOST` | Reverb websocket host |
+| `NEXT_PUBLIC_REVERB_PORT` | Reverb websocket port |
+| `NEXT_PUBLIC_REVERB_SCHEME` | `http` locally, `https` in production |
 | `APP_URL` | Frontend URL (http://localhost:2000) |
 | `OPENAI_API_KEY` | For AI quiz generation |
 
@@ -1348,7 +1351,7 @@ These are gaps in the current codebase that future development will likely need 
 
 | Area | Status | Notes |
 |------|--------|-------|
-| **Socket.IO Server** | Not in this repo | The frontend connects to an external Socket.IO server. The server code needs to be built or integrated. |
+| **Reverb Server** | Backend-managed | Run Laravel Reverb and Redis queue workers for live quiz/quest sessions. |
 | **Database** | Not created | No `database.sqlite` or MySQL database exists yet. Run migrations after setup. |
 | **Docker / Containerization** | Not set up | No `docker-compose.yml`. Needs manual environment setup (see SETUP_GUIDE.md). |
 | **CI/CD Pipeline** | Not configured | No GitHub Actions, no deployment scripts. |

@@ -1,5 +1,6 @@
 import axios, {
 	AxiosInstance,
+	AxiosRequestConfig,
 	AxiosResponse,
 	InternalAxiosRequestConfig,
 	AxiosHeaders,
@@ -22,6 +23,11 @@ if (!apiConfig.baseURL && typeof window !== "undefined") {
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
 	_retry?: boolean;
 }
+
+type ApiRequestConfig = AxiosRequestConfig & {
+	_retry?: boolean;
+};
+
 const axiosInstance: AxiosInstance = axios.create({
 	baseURL: apiConfig.baseURL,
 	headers: apiConfig.jsonHeaders,
@@ -29,6 +35,26 @@ const axiosInstance: AxiosInstance = axios.create({
 	timeout: apiConfig.timeoutMs,
 	// withCredentials: true,
 });
+
+const liveParticipantModuleForUrl = (url?: string): "quest" | "quiz" | null => {
+	if (!url) return null;
+	if (/\/quest-attempts\/[^/]+\/(answer|status)/.test(url)) return "quest";
+	if (/\/quiz-attempts\/[^/]+\/(answer|status)/.test(url)) return "quiz";
+	return null;
+};
+
+const getParticipantTokenForCurrentSession = (
+	module: "quest" | "quiz"
+): string | null => {
+	if (typeof window === "undefined") return null;
+
+	const sessionId = new URLSearchParams(window.location.search).get("sid");
+	if (!sessionId) return null;
+
+	return window.sessionStorage.getItem(
+		`mindspear:live:${module}:${sessionId}:participant_token`
+	);
+};
 
 // Request interceptor with proper typing
 axiosInstance.interceptors.request.use(
@@ -41,6 +67,21 @@ axiosInstance.interceptors.request.use(
 				customConfig.headers =
 					customConfig.headers || new AxiosHeaders();
 				customConfig.headers.set("Authorization", `Bearer ${token}`);
+			}
+
+			const participantModule = liveParticipantModuleForUrl(
+				customConfig.url
+			);
+			const participantToken = participantModule
+				? getParticipantTokenForCurrentSession(participantModule)
+				: null;
+			if (participantToken) {
+				customConfig.headers =
+					customConfig.headers || new AxiosHeaders();
+				customConfig.headers.set(
+					"X-Participant-Token",
+					participantToken
+				);
 			}
 
 			const csrfToken = document.cookie
@@ -110,7 +151,7 @@ axiosInstance.interceptors.response.use(
 export const api = {
 	get: async <T>(
 		url: string,
-		config?: CustomAxiosRequestConfig
+		config?: ApiRequestConfig
 	): Promise<ApiResponse<T>> => {
 		const response = await axiosInstance.get<ApiResponse<T>>(url, config);
 		return response.data;
@@ -118,7 +159,7 @@ export const api = {
 	post: async <T>(
 		url: string,
 		data?: unknown,
-		config?: CustomAxiosRequestConfig
+		config?: ApiRequestConfig
 	): Promise<ApiResponse<T>> => {
 		const response = await axiosInstance.post<ApiResponse<T>>(
 			url,
@@ -130,7 +171,7 @@ export const api = {
 	put: async <T>(
 		url: string,
 		data?: unknown,
-		config?: CustomAxiosRequestConfig
+		config?: ApiRequestConfig
 	): Promise<ApiResponse<T>> => {
 		const response = await axiosInstance.put<ApiResponse<T>>(
 			url,
@@ -141,7 +182,7 @@ export const api = {
 	},
 	delete: async <T>(
 		url: string,
-		config?: CustomAxiosRequestConfig
+		config?: ApiRequestConfig
 	): Promise<ApiResponse<T>> => {
 		const response = await axiosInstance.delete<ApiResponse<T>>(
 			url,

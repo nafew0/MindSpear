@@ -23,7 +23,7 @@ class EndLiveRequest extends BaseFormRequest
     public function rules(): array
     {
         return [
-            'end_datetime' => 'required|date|after:start_datetime',
+            'end_datetime' => 'nullable|date',
         ];
     }
 }
