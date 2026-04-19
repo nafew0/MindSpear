@@ -496,10 +496,18 @@ REVERB_APP_SECRET=your-secret-here
 REVERB_HOST=localhost
 REVERB_PORT=8080
 REVERB_SCHEME=http
+FRONTEND_URL=http://localhost:2000
+CORS_ALLOWED_ORIGINS=http://localhost:2000,http://127.0.0.1:2000
+REVERB_ALLOWED_ORIGINS=http://localhost:2000,http://127.0.0.1:2000
+SANCTUM_STATEFUL_DOMAINS=
 CACHE_STORE=redis
 QUEUE_CONNECTION=redis
 REDIS_CLIENT=phpredis
 ```
+
+`CORS_ALLOWED_ORIGINS` controls Laravel HTTP requests such as `/broadcasting/auth`.
+`REVERB_ALLOWED_ORIGINS` controls browser websocket origins accepted by Reverb.
+Leave `SANCTUM_STATEFUL_DOMAINS` empty while frontend auth uses bearer tokens. If it includes the frontend domain, Sanctum treats API requests as cookie-based SPA requests and POST routes such as `/api/v1/login` require a CSRF cookie.
 
 Database queue/cache drivers are acceptable for quick local smoke tests only. For realistic live-session testing, use Redis from the start of Phase 2.
 

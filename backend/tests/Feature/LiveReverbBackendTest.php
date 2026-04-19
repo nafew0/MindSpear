@@ -33,6 +33,31 @@ beforeEach(function () {
     ]);
 });
 
+it('allows frontend cors preflights to broadcasting auth without bypassing auth', function () {
+    config([
+        'cors.allowed_origins' => ['http://localhost:2000'],
+    ]);
+
+    $this->withHeaders([
+        'Origin' => 'http://localhost:2000',
+        'Access-Control-Request-Method' => 'POST',
+        'Access-Control-Request-Headers' => 'authorization,content-type',
+    ])
+        ->options('/broadcasting/auth')
+        ->assertNoContent()
+        ->assertHeader('Access-Control-Allow-Origin', 'http://localhost:2000')
+        ->assertHeader('Access-Control-Allow-Methods', 'POST')
+        ->assertHeader('Access-Control-Allow-Headers', 'authorization,content-type');
+
+    $this->withHeader('Origin', 'http://localhost:2000')
+        ->postJson('/broadcasting/auth', [
+            'socket_id' => '123.456',
+            'channel_name' => 'private-host.quiz.1',
+        ])
+        ->assertUnauthorized()
+        ->assertHeader('Access-Control-Allow-Origin', 'http://localhost:2000');
+});
+
 function liveTestUser(): User
 {
     return User::create([
@@ -135,11 +160,14 @@ it('lets a quest owner read state and change the current task', function () {
         'end_datetime' => now()->addHour(),
         'timezone' => 'UTC',
     ]);
+    liveTestQuestParticipant($quest, $session, 'Visible Quest Player');
 
     $this->getJson("/api/v1/quest-sessions/{$session->id}/state")
         ->assertOk()
         ->assertJsonPath('data.state.module', LiveSessionService::MODULE_QUEST)
         ->assertJsonPath('data.state.session_id', $session->id)
+        ->assertJsonPath('data.state.participant_count', 1)
+        ->assertJsonPath('data.state.active_participants.0.participant_name', 'Visible Quest Player')
         ->assertJsonStructure(['data' => ['state' => ['public_channel_key', 'public_channel']]]);
 
     $this->postJson("/api/v1/quest-sessions/{$session->id}/change-task", [
@@ -194,7 +222,8 @@ it('lets anonymous quest participants read state with their raw participant toke
         ->getJson("/api/v1/quest-sessions/{$session->id}/state")
         ->assertOk()
         ->assertJsonPath('data.state.public_channel_key', 'questparticipantstatekey')
-        ->assertJsonPath('data.state.current_task_id', $task->id);
+        ->assertJsonPath('data.state.current_task_id', $task->id)
+        ->assertJsonMissingPath('data.state.active_participants');
 });
 
 it('authorizes private quest host broadcast channels only for the owner', function () {
@@ -248,6 +277,17 @@ it('ends a quest live session with a server timestamp and revokes participant to
         'is_published' => true,
         'visibility' => 'public',
     ]);
+    $task = QuestTask::create([
+        'quest_id' => $quest->id,
+        'title' => 'Partial Result Task',
+        'task_type' => 'single_choice',
+        'task_data' => [
+            'questions' => [
+                ['id' => 0, 'text' => 'Alpha'],
+                ['id' => 1, 'text' => 'Beta'],
+            ],
+        ],
+    ]);
     $session = QuestSession::create([
         'quest_id' => $quest->id,
         'title' => 'Endable Quest Session',
@@ -260,6 +300,7 @@ it('ends a quest live session with a server timestamp and revokes participant to
     ]);
     $participant = liveTestQuestParticipant($quest, $session, 'Ending Player');
     app(ParticipantTokenService::class)->issue($participant, $session);
+    liveTestQuestCompletion($participant, $task, [1]);
 
     $this->postJson("/api/v1/quests/end-host-live/{$session->id}", [])
         ->assertOk()
@@ -270,12 +311,25 @@ it('ends a quest live session with a server timestamp and revokes participant to
 
     expect($session->running_status)->toBeFalse()
         ->and($session->end_datetime)->not->toBeNull()
+        ->and($participant->status)->toBe('Completed')
+        ->and($participant->end_time)->not->toBeNull()
         ->and($participant->participant_token_revoked_at)->not->toBeNull();
 
     $this->getJson("/api/v1/quest-sessions/{$session->id}/state")
         ->assertOk()
         ->assertJsonPath('data.state.running_status', false)
         ->assertJsonPath('data.state.end_datetime', $session->end_datetime->toISOString());
+
+    $this->getJson("/api/v1/quest-attempts/{$participant->id}")
+        ->assertOk()
+        ->assertJsonPath('data.attempt.status', 'Completed')
+        ->assertJsonPath('data.attempt.task_completions.0.task_id', $task->id);
+
+    $this->getJson("/api/v1/quest-leaderboard/session-details-combined-score/{$session->id}")
+        ->assertOk()
+        ->assertJsonPath('data.questSession.running_status', false)
+        ->assertJsonPath('data.questTasks.0.id', $task->id)
+        ->assertJsonPath('data.questTasks.0.optionsCount.1.count', 1);
 });
 
 it('adds canonical live chart scores for quest ranking sorting and scales snapshots', function () {
@@ -371,11 +425,22 @@ it('lets a quiz owner read state and change the current question', function () {
         'timezone' => 'UTC',
         'is_host_live' => true,
     ]);
+    QuizParticipant::create([
+        'quiz_id' => $quiz->id,
+        'quiz_session_id' => $session->id,
+        'is_anonymous' => true,
+        'anonymous_details' => ['name' => 'Visible Quiz Player'],
+        'start_time' => now(),
+        'score' => 0,
+        'status' => 'In Progress',
+    ]);
 
     $this->getJson("/api/v1/quiz-sessions/{$session->id}/state")
         ->assertOk()
         ->assertJsonPath('data.state.module', LiveSessionService::MODULE_QUIZ)
-        ->assertJsonPath('data.state.session_id', $session->id);
+        ->assertJsonPath('data.state.session_id', $session->id)
+        ->assertJsonPath('data.state.participant_count', 1)
+        ->assertJsonPath('data.state.active_participants.0.participant_name', 'Visible Quiz Player');
 
     $this->postJson("/api/v1/quiz-sessions/{$session->id}/change-question", [
         'question_id' => $question->id,
@@ -432,7 +497,8 @@ it('lets anonymous quiz participants read state with their raw participant token
         ->getJson("/api/v1/quiz-sessions/{$session->id}/state")
         ->assertOk()
         ->assertJsonPath('data.state.public_channel_key', 'quizparticipantstatekey')
-        ->assertJsonPath('data.state.current_question_id', $question->id);
+        ->assertJsonPath('data.state.current_question_id', $question->id)
+        ->assertJsonMissingPath('data.state.active_participants');
 });
 
 it('authorizes private quiz host broadcast channels only for the owner', function () {

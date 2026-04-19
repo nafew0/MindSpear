@@ -10,6 +10,7 @@ use App\Http\Requests\Quest\HostLive\StoreRequest as HostLiveStoreRequest;
 use App\Http\Requests\Quest\Quest\StoreRequest;
 use App\Http\Requests\Quest\Quest\UpdateRequest;
 use App\Models\Quest\Quest;
+use App\Models\Quest\QuestParticipant;
 use App\Models\Quest\QuestSession;
 use App\Services\Live\LiveSessionService;
 use App\Services\Live\ParticipantTokenService;
@@ -522,6 +523,14 @@ class QuestController extends ApiBaseController
             $questSession->quest->update([
                 'status' => Quest::STATUS_ENDED,
             ]);
+
+            QuestParticipant::query()
+                ->where('quest_session_id', $questSession->id)
+                ->where('status', 'In Progress')
+                ->update([
+                    'status' => 'Completed',
+                    'end_time' => $endedAt,
+                ]);
 
             app(ParticipantTokenService::class)->revokeForSession(LiveSessionService::MODULE_QUEST, $questSession->id);
             app(LiveSessionService::class)->broadcastPublic(LiveSessionService::MODULE_QUEST, $questSession, 'session.ended', [

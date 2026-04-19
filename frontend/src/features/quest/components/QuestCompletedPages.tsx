@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import axiosInstance from "@/utils/axiosInstance";
 import React, { useEffect, useState } from "react";
 import { IoMdHappy } from "react-icons/io";
 import { useSearchParams } from "next/navigation";
@@ -11,7 +10,6 @@ import { RootState } from "@/stores/store";
 import { Modal } from "@/components/ui";
 import AllQuestResult from "@/components/ResultComponent/AllQuestResult";
 import { clearCache } from "@/features/live/store/leaderboardSlice";
-import useLatestQuestSession from "@/hooks/useLatestQuestSession";
 export type QuestProps = {
 	pagesStatus?: string;
 };
@@ -22,39 +20,29 @@ export const QuestCompletedPages: React.FC<QuestProps> = ({ pagesStatus }) => {
 	const searchParams = useSearchParams();
 	const router = useRouter();
 	const attempId = searchParams.get("aid");
-	const qId = searchParams.get("qid");
+	const sessionIdFromUrl = searchParams.get("sid");
 	const [resultShowAttemId, setResultShowAttemId] = useState(0);
 	const [isModalStatus, setIsModalStatus] = useState(false);
-
-	const { latestSessionId } = useLatestQuestSession(qId ?? undefined);
-
-	console.log("latestSessionId", latestSessionId);
 
 	const questSession: any = useSelector(
 		(state: RootState) => state.questSession.questSession
 	);
 
 	const scopeType = useSelector((state: any) => state?.leaderboard);
+	const resolvedSessionId = Number(
+		sessionIdFromUrl || questSession?.id || 0
+	);
+	const hasResultSession = Number.isFinite(resolvedSessionId) && resolvedSessionId > 0;
 
 	useEffect(() => {
 		if (typeof window !== "undefined") {
 			// Clear Local stores
 			clearAppStorage();
 		}
-
-		const dataFetch = async () => {
-			const payload = { status: "Completed" };
-			await axiosInstance.put(
-				`/quest-attempts/${attempId}/status`,
-				payload
-			);
-		};
-		if (pagesStatus === "user") {
-			dataFetch();
-		}
 	}, []);
 
 	const resultView = () => {
+		if (!attempId) return;
 		router.push(`/result-view/${attempId}`);
 	};
 	const backToHome = () => {
@@ -65,12 +53,16 @@ export const QuestCompletedPages: React.FC<QuestProps> = ({ pagesStatus }) => {
 	console.log("questSession", questSession);
 
 	const openDetails = () => {
-		console.log("questSession", questSession);
+		if (!hasResultSession) return;
 		setIsModalStatus(true);
-		setResultShowAttemId(
-			questSession?.id || parseInt(latestSessionId || "0")
-		);
+		setResultShowAttemId(resolvedSessionId);
 	};
+
+	const resultButtonClass = `flex text-[.875rem] items-center text-[#fff] hover:text-[#222] font-bold py-3 px-4 w-full justify-center rounded-md ${
+		hasResultSession
+			? "bg-primary"
+			: "bg-gray-400 cursor-not-allowed"
+	}`;
 
 	return (
 		<div>
@@ -96,7 +88,8 @@ export const QuestCompletedPages: React.FC<QuestProps> = ({ pagesStatus }) => {
 
 									<button
 										onClick={() => openDetails()}
-										className="flex text-[.875rem] items-center bg-primary text-[#fff] hover:text-[#222] font-bold py-3 px-4 w-full justify-center rounded-md"
+										disabled={!hasResultSession}
+										className={resultButtonClass}
 									>
 										Show Results For Quest
 									</button>
@@ -125,7 +118,8 @@ export const QuestCompletedPages: React.FC<QuestProps> = ({ pagesStatus }) => {
 
 								<button
 									onClick={() => openDetails()}
-									className="flex text-[.875rem]  items-center bg-primary text-[#fff] hover:text-[#222] font-bold py-3 px-4 w-full justify-center rounded-md"
+									disabled={!hasResultSession}
+									className={resultButtonClass}
 								>
 									{" "}
 									Show Results For Quest
@@ -140,6 +134,7 @@ export const QuestCompletedPages: React.FC<QuestProps> = ({ pagesStatus }) => {
 					<h3 className="mb-[20px]"> Thanks for joining! </h3>
 					<button
 						onClick={resultView}
+						disabled={!attempId}
 						className="px-6 py-3 text-[14px] font-bold bg-[#ff9f48] text-white rounded hover:bg-[#556fb6]"
 					>
 						{" "}

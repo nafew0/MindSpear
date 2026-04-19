@@ -82,7 +82,30 @@ return [
                     'scheme' => env('REVERB_SCHEME', 'https'),
                     'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
                 ],
-                'allowed_origins' => array_filter(array_map('trim', explode(',', env('REVERB_ALLOWED_ORIGINS', '*')))),
+                /*
+                |--------------------------------------------------------------------------
+                | Allowed Origins
+                |--------------------------------------------------------------------------
+                |
+                | Reverb validates only the host portion of the browser Origin header.
+                | Accept full origins in .env for operator clarity, then normalize them
+                | here so values like "http://localhost:2000" match "localhost".
+                |
+                */
+                'allowed_origins' => array_values(array_unique(array_filter(array_map(
+                    static function (string $origin): string {
+                        $origin = trim($origin);
+
+                        if ($origin === '' || $origin === '*') {
+                            return $origin;
+                        }
+
+                        return parse_url($origin, PHP_URL_HOST)
+                            ?: parse_url("http://{$origin}", PHP_URL_HOST)
+                            ?: $origin;
+                    },
+                    explode(',', env('REVERB_ALLOWED_ORIGINS', '*'))
+                )))),
                 'ping_interval' => env('REVERB_APP_PING_INTERVAL', 60),
                 'activity_timeout' => env('REVERB_APP_ACTIVITY_TIMEOUT', 30),
                 'max_connections' => env('REVERB_APP_MAX_CONNECTIONS'),

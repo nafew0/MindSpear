@@ -43,6 +43,17 @@ const liveParticipantModuleForUrl = (url?: string): "quest" | "quiz" | null => {
 	return null;
 };
 
+const isAnonymousLiveRequest = (url?: string): boolean => {
+	if (!url) return false;
+
+	return (
+		/\/quest-attempts\/[^/]+\/(answer|status)/.test(url) ||
+		/\/quiz-attempts\/[^/]+\/(answer|status)/.test(url) ||
+		/\/quest-sessions\/[^/]+\/state/.test(url) ||
+		/\/quiz-sessions\/[^/]+\/state/.test(url)
+	);
+};
+
 const getParticipantTokenForCurrentSession = (
 	module: "quest" | "quiz"
 ): string | null => {
@@ -114,7 +125,10 @@ axiosInstance.interceptors.response.use(
 					console.error("Bad request:", error.response.data);
 					break;
 				case 401:
-					if (typeof window !== "undefined") {
+					if (
+						typeof window !== "undefined" &&
+						!isAnonymousLiveRequest(error.config?.url)
+					) {
 						localStorage.removeItem("auth_token");
 						window.location.href = "/";
 					}

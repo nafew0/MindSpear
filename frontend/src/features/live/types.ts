@@ -22,6 +22,7 @@ export type SessionSnapshot = {
 	current_task_id: number | null;
 	timer_state: TimerState;
 	participant_count: number;
+	active_participants?: LiveParticipant[];
 	current_aggregate?: AnswerAggregatePayload | null;
 	start_datetime?: string | null;
 	end_datetime?: string | null;
@@ -77,6 +78,20 @@ export type HostAnswerPayload = SessionEventPayload & {
 export type HostParticipantPayload = SessionEventPayload & {
 	participant_id?: number;
 	participant_count?: number;
+	participant_name?: string | null;
+	participant_user_id?: number | null;
+	is_anonymous?: boolean | null;
+	status?: string | null;
+	joined_at?: string | null;
+};
+
+export type LiveParticipant = {
+	participant_id: number;
+	participant_name: string | null;
+	participant_user_id?: number | null;
+	is_anonymous?: boolean | null;
+	status?: string | null;
+	joined_at?: string | null;
 };
 
 export type LiveChannelState = {

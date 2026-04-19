@@ -12,7 +12,10 @@ import { RootState } from "@/stores/store";
 
 import { clearCache } from "@/features/live/store/leaderboardSlice";
 import { clearAppStorage } from "@/utils/storageCleaner";
-import { changeQuestTask } from "@/features/live/services/liveSessionApi";
+import {
+	changeQuestTask,
+	getSessionState,
+} from "@/features/live/services/liveSessionApi";
 import { useHostChannel } from "@/features/live/hooks/useHostChannel";
 
 import {
@@ -23,12 +26,40 @@ import {
 import { CirclePlay, Users } from "lucide-react";
 import moment from "@/lib/dayjs";
 import { toast } from "react-toastify";
-import type { TimerState } from "@/features/live/types";
+import type {
+	HostParticipantPayload,
+	LiveParticipant,
+	TimerState,
+} from "@/features/live/types";
 
 interface ActiveUser {
 	userName: string;
 	userId: string;
 }
+
+const participantToActiveUser = (
+	participant: LiveParticipant | HostParticipantPayload,
+): ActiveUser | null => {
+	const participantId = participant.participant_id;
+	if (!participantId) return null;
+
+	return {
+		userId: `${participantId}`,
+		userName:
+			participant.participant_name?.trim() ||
+			`Participant ${participantId}`,
+	};
+};
+
+const mergeActiveUser = (
+	previous: ActiveUser[],
+	nextUser: ActiveUser | null,
+): ActiveUser[] => {
+	if (!nextUser) return previous;
+	if (previous.some((item) => item.userId === nextUser.userId)) return previous;
+
+	return [...previous, nextUser];
+};
 
 function QuizReport() {
 	const params = useParams();
@@ -58,25 +89,40 @@ function QuizReport() {
 		setConnected(true);
 	}, []);
 
+	useEffect(() => {
+		if (!questSession?.id) return;
+
+		let cancelled = false;
+
+		const syncParticipants = async () => {
+			try {
+				const snapshot = await getSessionState("quest", questSession.id);
+				if (cancelled) return;
+
+				setparticipantsActive(snapshot.participant_count ?? 0);
+				setActiveUsersData(
+					(snapshot.active_participants ?? [])
+						.map(participantToActiveUser)
+						.filter((participant): participant is ActiveUser => Boolean(participant)),
+				);
+			} catch (error) {
+				console.error("Failed to sync active quest participants:", error);
+			}
+		};
+
+		void syncParticipants();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [questSession?.id]);
+
 	useHostChannel("quest", questSession?.id, {
 		onParticipantJoined: (payload) => {
 			setparticipantsActive(payload?.participant_count ?? 0);
-			if (!payload?.participant_id) return;
-
-			setActiveUsersData((previous) => {
-				const userId = `${payload.participant_id}`;
-				if (previous.some((item) => item.userId === userId)) {
-					return previous;
-				}
-
-				return [
-					...previous,
-					{
-						userId,
-						userName: `Participant ${payload.participant_id}`,
-					},
-				];
-			});
+			setActiveUsersData((previous) =>
+				mergeActiveUser(previous, participantToActiveUser(payload)),
+			);
 		},
 		onParticipantCountUpdated: (payload) => {
 			setparticipantsActive(payload?.participant_count ?? 0);

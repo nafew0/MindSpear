@@ -14,7 +14,10 @@ import {
 	// clearQuestData,
 } from "@/features/quest/store/questQuestionTimeSlice";
 import { Switch } from "antd";
-import { changeQuizQuestion } from "@/features/live/services/liveSessionApi";
+import {
+	changeQuizQuestion,
+	getSessionState,
+} from "@/features/live/services/liveSessionApi";
 import { useHostChannel } from "@/features/live/hooks/useHostChannel";
 import { RootState } from "@/stores/store";
 import { CirclePlay, Users } from "lucide-react";
@@ -23,11 +26,44 @@ import {
 	userQuizCompletedLastSlider,
 } from "@/features/live/store/leaderboardSlice";
 import { toast } from "react-toastify";
-import type { TimerState } from "@/features/live/types";
+import type {
+	HostParticipantPayload,
+	LiveParticipant,
+	TimerState,
+} from "@/features/live/types";
 
 interface QuizResponse {
 	quiz: Quiz;
 }
+
+interface ActiveUser {
+	userName: string;
+	userId: string;
+}
+
+const participantToActiveUser = (
+	participant: LiveParticipant | HostParticipantPayload
+): ActiveUser | null => {
+	const participantId = participant.participant_id;
+	if (!participantId) return null;
+
+	return {
+		userId: `${participantId}`,
+		userName:
+			participant.participant_name?.trim() ||
+			`Participant ${participantId}`,
+	};
+};
+
+const mergeActiveUser = (
+	previous: ActiveUser[],
+	nextUser: ActiveUser | null
+): ActiveUser[] => {
+	if (!nextUser) return previous;
+	if (previous.some((item) => item.userId === nextUser.userId)) return previous;
+
+	return [...previous, nextUser];
+};
 
 function QuizReport() {
 	const params = useParams();
@@ -55,7 +91,7 @@ function QuizReport() {
 	const [participantsActiveNumber, setparticipantsActiveNumber] =
 		useState<number>(0);
 
-	const [activeUsersData, setActiveUsersData] = useState<any>([]);
+	const [activeUsersData, setActiveUsersData] = useState<ActiveUser[]>([]);
 	const [participantsActiveData, setparticipantsActiveData] = useState<any>(
 		{}
 	);
@@ -86,10 +122,41 @@ function QuizReport() {
 		setQuizCreated(true);
 	}, [response?.quiz.title, params?.id]);
 
+	useEffect(() => {
+		if (!activeSessionId) return;
+
+		let cancelled = false;
+
+		const syncParticipants = async () => {
+			try {
+				const snapshot = await getSessionState("quiz", activeSessionId);
+				if (cancelled) return;
+
+				setparticipantsActiveNumber(snapshot.participant_count ?? 0);
+				setActiveUsersData(
+					(snapshot.active_participants ?? [])
+						.map(participantToActiveUser)
+						.filter((participant): participant is ActiveUser => Boolean(participant))
+				);
+			} catch (error) {
+				console.error("Failed to sync active quiz participants:", error);
+			}
+		};
+
+		void syncParticipants();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [activeSessionId]);
+
 	useHostChannel("quiz", activeSessionId, {
 		onParticipantJoined: (payload) => {
 			setparticipantsActiveData(payload);
 			setparticipantsActiveNumber(payload?.participant_count ?? 0);
+			setActiveUsersData((previous) =>
+				mergeActiveUser(previous, participantToActiveUser(payload))
+			);
 		},
 		onParticipantCountUpdated: (payload) => {
 			setparticipantsActiveData(payload);
@@ -254,7 +321,7 @@ function QuizReport() {
 							</div>
 
 							<span className="text-sm text-gray-600">
-								{participantsActiveData?.participantCount || 0}{" "}
+								{participantsActiveNumber}{" "}
 								joined
 							</span>
 						</div>
@@ -331,7 +398,7 @@ function QuizReport() {
 							Active Participants
 						</h4>
 						<span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-							{activeUsersData?.length || 0} Online
+							{participantsActiveNumber} Online
 						</span>
 					</div>
 

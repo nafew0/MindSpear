@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import QuizLiveFooter from "@/components/Layouts/quiz/QuizLiveFooter";
@@ -28,7 +28,6 @@ import {
 } from "@/features/live/services/realtimeBridge";
 import QuestCompletedPages from "@/features/quest/components/QuestCompletedPages";
 import { useSearchParams } from "next/navigation";
-import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import { useDispatch } from "react-redux";
 import { setQuestData } from "@/features/quest/store/questQuestionTimeSlice";
@@ -112,7 +111,6 @@ export interface NavigatorProps {
 }
 
 const TaskNavigator: React.FC<NavigatorProps> = ({ tasks, sessionStatus }) => {
-	const router = useRouter();
 	const dispatch = useDispatch();
 	const [questions, setQuestions] = useState<string>("");
 	const { showLeaderboard } = useSelector((state: any) => state.leaderboard);
@@ -191,8 +189,9 @@ const TaskNavigator: React.FC<NavigatorProps> = ({ tasks, sessionStatus }) => {
 	const currentTask = currentIsWaiting
 		? undefined
 		: ordered.find((t) => t.id === steps[idx].id)!;
+	const isEnded = liderBoardShow || sessionStatus === "ended";
 
-	const handleLeaveQuiz = async () => {
+	const handleLeaveQuiz = useCallback(async () => {
 		try {
 			// await emitLeaveQuiz({
 			// 	quizId,
@@ -210,9 +209,11 @@ const TaskNavigator: React.FC<NavigatorProps> = ({ tasks, sessionStatus }) => {
 		} catch (error) {
 			console.error("Error leaving quiz:", error);
 		}
-	};
+	}, []);
 
 	useEffect(() => {
+		if (isEnded) return;
+
 		const handleBeforeUnload = (event: BeforeUnloadEvent) => {
 			handleLeaveQuiz();
 			event.preventDefault();
@@ -223,7 +224,7 @@ const TaskNavigator: React.FC<NavigatorProps> = ({ tasks, sessionStatus }) => {
 		return () => {
 			window.removeEventListener("beforeunload", handleBeforeUnload);
 		};
-	}, []);
+	}, [handleLeaveQuiz, isEnded]);
 
 	console.log(
 		showLeaderboard,
@@ -359,7 +360,8 @@ const TaskNavigator: React.FC<NavigatorProps> = ({ tasks, sessionStatus }) => {
 				waitForQuestEndedAll((payload: any) => {
 					//console.log("Quest Ended:", payload);
 					// clearAllLocalStorage()
-					router.replace(`/result-view/${attempId}`);
+					clearQuestionDataFromStorage();
+					setLiderBoardShow(true);
 				});
 
 				// const completed2 = await waitForQuestionChangedSingle();
@@ -435,7 +437,7 @@ const TaskNavigator: React.FC<NavigatorProps> = ({ tasks, sessionStatus }) => {
 				<h3> {userName} </h3>{" "}
 			</div>
 
-			{liderBoardShow || sessionStatus === "ended" ? (
+			{isEnded ? (
 				<QuestCompletedPages pagesStatus={"user"} />
 			) : (
 				<>

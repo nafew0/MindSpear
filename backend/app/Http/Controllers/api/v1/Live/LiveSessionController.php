@@ -30,12 +30,19 @@ class LiveSessionController extends ApiBaseController
             return $this->notFoundResponse([], __('Quest session not found.'));
         }
 
+        $isHost = $this->isQuestHost($request, $session);
+
         if ($response = $this->ensureQuestStateAccess($request, $session)) {
             return $response;
         }
 
+        $state = $this->stateWithAggregate(LiveSessionService::MODULE_QUEST, $session);
+        if ($isHost) {
+            $state['active_participants'] = $this->liveSessions->activeParticipantsPayload($session);
+        }
+
         return $this->okResponse([
-            'state' => $this->stateWithAggregate(LiveSessionService::MODULE_QUEST, $session),
+            'state' => $state,
         ], __('Quest session state retrieved successfully.'));
     }
 
@@ -90,12 +97,19 @@ class LiveSessionController extends ApiBaseController
             return $this->notFoundResponse([], __('Quiz session not found.'));
         }
 
+        $isHost = $this->isQuizHost($request, $session);
+
         if ($response = $this->ensureQuizStateAccess($request, $session)) {
             return $response;
         }
 
+        $state = $this->stateWithAggregate(LiveSessionService::MODULE_QUIZ, $session);
+        if ($isHost) {
+            $state['active_participants'] = $this->liveSessions->activeParticipantsPayload($session);
+        }
+
         return $this->okResponse([
-            'state' => $this->stateWithAggregate(LiveSessionService::MODULE_QUIZ, $session),
+            'state' => $state,
         ], __('Quiz session state retrieved successfully.'));
     }
 
@@ -161,15 +175,15 @@ class LiveSessionController extends ApiBaseController
 
     private function ensureQuestStateAccess(Request $request, QuestSession $session): ?JsonResponse
     {
-        $user = $request->user('sanctum') ?? $request->user();
-
-        if ($user && $session->quest && $session->quest->creator_id === $user->id) {
+        if ($this->isQuestHost($request, $session)) {
             return null;
         }
 
         if ($this->participantTokens->participantForSession($request, LiveSessionService::MODULE_QUEST, (int) $session->id)) {
             return null;
         }
+
+        $user = $request->user('sanctum') ?? $request->user();
 
         return $user
             ? $this->forbiddenResponse([], __('You are not allowed to access this quest session.'))
@@ -178,15 +192,15 @@ class LiveSessionController extends ApiBaseController
 
     private function ensureQuizStateAccess(Request $request, QuizSession $session): ?JsonResponse
     {
-        $user = $request->user('sanctum') ?? $request->user();
-
-        if ($user && $session->quiz && $session->quiz->user_id === $user->id) {
+        if ($this->isQuizHost($request, $session)) {
             return null;
         }
 
         if ($this->participantTokens->participantForSession($request, LiveSessionService::MODULE_QUIZ, (int) $session->id)) {
             return null;
         }
+
+        $user = $request->user('sanctum') ?? $request->user();
 
         return $user
             ? $this->forbiddenResponse([], __('You are not allowed to access this quiz session.'))
@@ -200,5 +214,23 @@ class LiveSessionController extends ApiBaseController
         }
 
         return null;
+    }
+
+    private function isQuestHost(Request $request, QuestSession $session): bool
+    {
+        $user = $request->user('sanctum') ?? $request->user();
+
+        return (bool) $user
+            && (bool) $session->quest
+            && (int) $session->quest->creator_id === (int) $user->id;
+    }
+
+    private function isQuizHost(Request $request, QuizSession $session): bool
+    {
+        $user = $request->user('sanctum') ?? $request->user();
+
+        return (bool) $user
+            && (bool) $session->quiz
+            && (int) $session->quiz->user_id === (int) $user->id;
     }
 }

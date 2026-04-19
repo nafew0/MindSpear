@@ -1315,8 +1315,12 @@ All backend responses use `ApiResponseTrait`. The standard shape:
 |----------|---------|
 | `APP_KEY` | Laravel encryption key (auto-generated) |
 | `APP_URL` | Backend URL (http://localhost:8000) |
+| `FRONTEND_URL` | Frontend URL (http://localhost:2000 locally) |
+| `CORS_ALLOWED_ORIGINS` | Browser origin allow-list for Laravel HTTP routes, including `/broadcasting/auth` |
+| `SANCTUM_STATEFUL_DOMAINS` | Leave empty for bearer-token frontend auth; only set when implementing cookie-based Sanctum SPA auth |
 | `DB_CONNECTION` | `sqlite` or `mysql` |
 | `MAIL_MAILER` | `log` (dev) or `smtp` (prod) |
+| `REVERB_ALLOWED_ORIGINS` | Browser origin allow-list for Reverb websocket clients (e.g. `http://localhost:2000,http://127.0.0.1:2000`) |
 | `GOOGLE_CLIENT_ID/SECRET` | Google OAuth |
 | `MICROSOFT_CLIENT_ID/SECRET` | Microsoft OAuth |
 | `SUPER_ADMIN_EMAIL/PASSWORD` | Filament admin seeder |

@@ -3,7 +3,9 @@
 namespace App\Services\Live;
 
 use App\Events\Live\LiveBroadcastEvent;
+use App\Models\Quest\QuestParticipant;
 use App\Models\Quest\QuestSession;
+use App\Models\Quiz\QuizParticipant;
 use App\Models\Quiz\QuizSession;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -107,14 +109,30 @@ class LiveSessionService
         ];
     }
 
+    public function activeParticipantsPayload(QuestSession|QuizSession $session): array
+    {
+        return $session->participants()
+            ->with('user')
+            ->where('status', 'In Progress')
+            ->oldest()
+            ->get()
+            ->map(fn (Model $participant) => $this->participantPayload($participant))
+            ->values()
+            ->all();
+    }
+
     public function broadcastParticipantJoined(string $module, QuestSession|QuizSession $session, int $participantId): void
     {
-        $payload = array_merge($this->participantCountPayload($session), [
+        $publicPayload = array_merge($this->participantCountPayload($session), [
             'participant_id' => $participantId,
         ]);
+        $hostPayload = array_merge(
+            $publicPayload,
+            $this->participantPayload($this->findParticipant($module, $participantId)),
+        );
 
-        $this->broadcastPublic($module, $session, 'participant.joined', $payload);
-        $this->broadcastHost($module, $session, 'participant.joined', $payload);
+        $this->broadcastPublic($module, $session, 'participant.joined', $publicPayload);
+        $this->broadcastHost($module, $session, 'participant.joined', $hostPayload);
         $this->broadcastParticipantCount($module, $session);
     }
 
@@ -183,5 +201,58 @@ class LiveSessionService
                 'message' => $exception->getMessage(),
             ]);
         }
+    }
+
+    private function findParticipant(string $module, int $participantId): ?Model
+    {
+        $participantClass = $module === self::MODULE_QUEST
+            ? QuestParticipant::class
+            : QuizParticipant::class;
+
+        return $participantClass::with('user')->find($participantId);
+    }
+
+    private function participantPayload(?Model $participant): array
+    {
+        if (! $participant) {
+            return [
+                'participant_name' => null,
+                'participant_user_id' => null,
+                'is_anonymous' => null,
+                'status' => null,
+            ];
+        }
+
+        return [
+            'participant_id' => (int) $participant->getKey(),
+            'participant_name' => $this->participantDisplayName($participant),
+            'participant_user_id' => $participant->user_id ? (int) $participant->user_id : null,
+            'is_anonymous' => (bool) $participant->is_anonymous,
+            'status' => $participant->status,
+            'joined_at' => optional($participant->created_at)->toISOString(),
+        ];
+    }
+
+    private function participantDisplayName(Model $participant): string
+    {
+        $anonymousName = data_get($participant->anonymous_details, 'name');
+
+        if ($anonymousName) {
+            return (string) $anonymousName;
+        }
+
+        if ($participant->relationLoaded('user') && $participant->user) {
+            $fullName = trim((string) $participant->user->full_name);
+
+            if ($fullName !== '') {
+                return $fullName;
+            }
+
+            if ($participant->user->email) {
+                return $participant->user->email;
+            }
+        }
+
+        return 'Participant ' . $participant->getKey();
     }
 }
