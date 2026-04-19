@@ -22,6 +22,91 @@ Production hosting guide for MindSpear (Laravel 11 + Next.js 14 + Laravel Reverb
 
 ---
 
+## Quick Start (sequential — fresh Ubuntu 24.04)
+
+Run top-to-bottom. DNS for `mindspear.app`, `www.mindspear.app`, `api.mindspear.app`, `ws.mindspear.app` must already point to this server. Everything tagged `REPLACE_*` is listed in [§11 Replace Before Go-Live](#11-replace-before-go-live).
+
+```bash
+# 1) Base + firewall
+sudo apt update && sudo apt -y upgrade
+sudo apt -y install ca-certificates curl gnupg git unzip ufw software-properties-common lsb-release \
+  nginx certbot python3-certbot-nginx supervisor redis-server \
+  postgresql-16 postgresql-client-16
+sudo ufw allow OpenSSH && sudo ufw allow 'Nginx Full' && sudo ufw --force enable
+
+# 2) PHP 8.3
+sudo add-apt-repository -y ppa:ondrej/php && sudo apt update
+sudo apt -y install php8.3 php8.3-fpm php8.3-cli php8.3-common \
+  php8.3-pgsql php8.3-redis php8.3-mbstring php8.3-xml php8.3-curl \
+  php8.3-zip php8.3-bcmath php8.3-intl php8.3-gd php8.3-opcache
+
+# 3) Composer + Node 20 + PM2
+curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt -y install nodejs && sudo npm install -g pm2
+
+# 4) Database + Redis (edit configs afterwards — see §11)
+sudo -u postgres psql -c "CREATE USER mindspear WITH PASSWORD 'REPLACE_DB_PASSWORD';"
+sudo -u postgres psql -c "CREATE DATABASE mindspear OWNER mindspear;"
+sudo -u postgres psql -c "ALTER DATABASE mindspear SET timezone TO 'UTC';"
+# edit /etc/redis/redis.conf: set `requirepass REPLACE_REDIS_PASSWORD`, `appendonly yes`, `maxmemory 512mb`, `maxmemory-policy allkeys-lru`
+sudo systemctl enable --now postgresql redis-server
+sudo systemctl restart redis-server
+
+# 5) Clone
+sudo mkdir -p /var/www/mindspear
+sudo chown -R $USER:www-data /var/www/mindspear
+cd /var/www/mindspear
+git clone REPLACE_REPO_URL .
+
+# 6) Backend
+cd /var/www/mindspear/backend
+composer install --no-dev --optimize-autoloader --no-interaction
+cp .env.production .env
+# edit .env — fill REPLACE_* values (DB/Redis/Reverb) — see §11
+php artisan key:generate --force
+php artisan migrate --force
+php artisan db:seed --class=SuperAdminSeeder --force
+php artisan storage:link
+php artisan config:cache && php artisan route:cache && php artisan event:cache && php artisan view:cache
+sudo chown -R www-data:www-data storage bootstrap/cache
+
+# 7) Frontend
+cd /var/www/mindspear/frontend
+cp .env.production .env.production.local
+# edit .env.production.local — fill REPLACE_* values — see §11
+npm ci && npm run build
+pm2 start ecosystem.config.js && pm2 save
+pm2 startup systemd -u $USER --hp $HOME        # run the sudo command it prints
+
+# 8) Supervisor (queue worker + Reverb)
+sudo mkdir -p /var/log/mindspear && sudo chown www-data:www-data /var/log/mindspear
+# paste the file from §3 into /etc/supervisor/conf.d/mindspear.conf
+sudo supervisorctl reread && sudo supervisorctl update && sudo supervisorctl status
+
+# 9) Nginx — HTTP-only first (§4). Do NOT add 443/ssl manually; certbot adds it.
+# paste the three vhosts from §4 into /etc/nginx/sites-available/
+sudo ln -s /etc/nginx/sites-available/mindspear.app     /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/api.mindspear.app /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/ws.mindspear.app  /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl reload nginx
+
+# 10) TLS — certbot rewrites the vhosts to add the 443 server blocks automatically
+sudo certbot --nginx \
+  -d mindspear.app -d www.mindspear.app \
+  -d api.mindspear.app \
+  -d ws.mindspear.app \
+  --redirect --agree-tos -m REPLACE_ADMIN_EMAIL --no-eff-email
+
+# 11) Laravel scheduler
+echo '* * * * * cd /var/www/mindspear/backend && php artisan schedule:run >> /dev/null 2>&1' | sudo crontab -u www-data -
+```
+
+Everything below is the long version with the why, the config files to paste, and post-deploy operations.
+
+---
+
 ## 1. Provision the Server
 
 ### 1.1 Base packages
@@ -293,27 +378,19 @@ sudo supervisorctl restart mindspear-reverb
 
 ## 4. Nginx — Three Virtual Hosts
 
+> **Important:** these vhosts listen on **port 80 only**. Do **not** add `listen 443 ssl`, `ssl_certificate`, or `ssl_certificate_key` by hand — `certbot --nginx` rewrites each file to add the HTTPS server block and the HTTP→HTTPS redirect automatically. If you pre-add SSL directives before the cert files exist, `nginx -t` will fail.
+
 ### 4.1 Backend API — `/etc/nginx/sites-available/api.mindspear.app`
 
 ```nginx
 server {
     listen 80;
     server_name api.mindspear.app;
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name api.mindspear.app;
 
     root /var/www/mindspear/backend/public;
     index index.php;
 
     client_max_body_size 50M;
-
-    # TLS (filled by certbot --nginx)
-    # ssl_certificate     /etc/letsencrypt/live/api.mindspear.app/fullchain.pem;
-    # ssl_certificate_key /etc/letsencrypt/live/api.mindspear.app/privkey.pem;
 
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
@@ -345,15 +422,6 @@ server {
 server {
     listen 80;
     server_name ws.mindspear.app;
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name ws.mindspear.app;
-
-    # ssl_certificate     /etc/letsencrypt/live/ws.mindspear.app/fullchain.pem;
-    # ssl_certificate_key /etc/letsencrypt/live/ws.mindspear.app/privkey.pem;
 
     location / {
         proxy_pass http://127.0.0.1:8080;
@@ -381,23 +449,6 @@ server {
 server {
     listen 80;
     server_name mindspear.app www.mindspear.app;
-    return 301 https://mindspear.app$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name www.mindspear.app;
-    # ssl_certificate     /etc/letsencrypt/live/mindspear.app/fullchain.pem;
-    # ssl_certificate_key /etc/letsencrypt/live/mindspear.app/privkey.pem;
-    return 301 https://mindspear.app$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name mindspear.app;
-
-    # ssl_certificate     /etc/letsencrypt/live/mindspear.app/fullchain.pem;
-    # ssl_certificate_key /etc/letsencrypt/live/mindspear.app/privkey.pem;
 
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
@@ -424,6 +475,8 @@ server {
     error_log  /var/log/nginx/mindspear.app.error.log;
 }
 ```
+
+> After `certbot --nginx ... --redirect` runs, re-check these files: you'll see new `listen 443 ssl` blocks and a small `if ($host = ...)` redirect in the port-80 block. That's expected.
 
 ### 4.4 Enable + TLS
 
@@ -731,6 +784,76 @@ Add to root's crontab:
 ```
 
 Ship the gzipped dumps off-box (S3, restic, whatever) — on-disk backups don't survive a disk failure.
+
+---
+
+## 11. Replace Before Go-Live
+
+Everything in the Quick Start that said `REPLACE_*` maps to a real value here. Generate secrets with `openssl rand -hex 32` (for passwords/keys) or `openssl rand -hex 16` (for IDs).
+
+### 11.1 Shell-command placeholders
+
+| Placeholder | Where it appears | What to put there |
+|---|---|---|
+| `REPLACE_DB_PASSWORD` | `CREATE USER mindspear` in Quick Start step 4 | Strong random password. Must match `DB_PASSWORD` in backend `.env`. |
+| `REPLACE_REDIS_PASSWORD` | `/etc/redis/redis.conf` → `requirepass` | Strong random password. Must match `REDIS_PASSWORD` in backend `.env`. |
+| `REPLACE_REPO_URL` | `git clone ...` in step 5 | `git@github.com:your-org/mindspear.git` (or HTTPS clone URL). |
+| `REPLACE_ADMIN_EMAIL` | `certbot ... -m ...` in step 10 | Email for Let's Encrypt expiry notices, e.g. `admin@mindspear.app`. |
+
+### 11.2 Backend — `/var/www/mindspear/backend/.env`
+
+| Key | Value |
+|---|---|
+| `APP_KEY` | Filled by `php artisan key:generate --force` — do not set by hand. |
+| `DB_PASSWORD` | Same value as `REPLACE_DB_PASSWORD` above. |
+| `REDIS_PASSWORD` | Same value as `REPLACE_REDIS_PASSWORD` above. |
+| `REVERB_APP_ID` | `openssl rand -hex 8` — numeric-ish ID (any unique string works). |
+| `REVERB_APP_KEY` | `openssl rand -hex 20` — **must be copied verbatim into** `NEXT_PUBLIC_REVERB_APP_KEY`. |
+| `REVERB_APP_SECRET` | `openssl rand -hex 32` — server-only, never exposed to the browser. |
+| `MAIL_HOST` / `MAIL_USERNAME` / `MAIL_PASSWORD` | Your real SMTP provider (Mailgun, Postmark, SES, etc.). |
+| `SUPER_ADMIN_PASSWORD` | Strong admin password. Change and redeploy after first login. |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | From https://console.cloud.google.com/apis/credentials. Optional. |
+| `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET` | From Azure App registrations. Optional. |
+
+After editing `.env`, run:
+
+```bash
+php artisan config:cache && php artisan route:cache && php artisan event:cache
+php artisan queue:restart
+sudo supervisorctl restart mindspear-reverb
+```
+
+### 11.3 Frontend — `/var/www/mindspear/frontend/.env.production.local`
+
+| Key | Value |
+|---|---|
+| `NEXT_PUBLIC_REVERB_APP_KEY` | **Exact same value** as backend `REVERB_APP_KEY`. If they diverge, WSS handshake fails. |
+| `OPENAI_API_KEY` | Fresh key from https://platform.openai.com/api-keys. **Rotate the one that was committed in the dev `.env` — treat it as leaked.** |
+
+After editing, **rebuild** (Next.js bakes `NEXT_PUBLIC_*` into the bundle at build time):
+
+```bash
+cd /var/www/mindspear/frontend
+npm run build
+pm2 reload mindspear-frontend
+```
+
+### 11.4 Post-SSL sanity check
+
+After `certbot --nginx ... --redirect` rewrites the vhosts:
+
+```bash
+sudo nginx -t
+curl -sI https://mindspear.app           # expect HTTP/2 200
+curl -sI https://api.mindspear.app       # expect HTTP/2 200 (or 404 on /)
+curl -sI --http1.1 -H "Upgrade: websocket" -H "Connection: Upgrade" https://ws.mindspear.app  # expect 101 or 426
+```
+
+Then in a browser console on `https://mindspear.app`:
+
+```js
+new WebSocket("wss://ws.mindspear.app/app/<YOUR_REVERB_APP_KEY>").onopen = () => console.log("ok")
+```
 
 ---
 
