@@ -6,52 +6,57 @@ Production hosting guide for MindSpear (Laravel 11 + Next.js 14 + Laravel Reverb
 - **Backend API:** `https://api.mindspear.app` (Laravel + PHP-FPM + Nginx)
 - **Reverb WSS:** `wss://ws.mindspear.app` (Laravel Reverb behind Nginx)
 
+Design choices baked in:
+- **PHP 8.4** via the Ondrej PPA.
+- **Redis with default config** — loopback-only bind, no password, no AOF tweaking. Safe because UFW only exposes 22/80/443.
+- **systemd** for long-running backend processes (Reverb + queue worker). No Supervisor.
+- **PM2** for the Next.js frontend.
+
 ---
 
 ## Architecture at a Glance
 
 | Concern | Dev command | Production equivalent |
 |---|---|---|
-| HTTP app | `php artisan serve` | Nginx + **PHP-FPM 8.3** (systemd) |
-| Queues | `php artisan queue:work redis --tries=3` | **Supervisor** → `queue:work` with production flags |
-| Redis | `redis-server --bind 127.0.0.1 --port 6379` | **systemd redis-server**, bind to loopback, password, AOF persistence |
-| WebSockets | `php artisan reverb:start --host=0.0.0.0 --port=8080 --debug` | **Supervisor** → `reverb:start` (no `--debug`), behind Nginx WSS |
+| HTTP app | `php artisan serve` | Nginx + **PHP-FPM 8.4** (systemd) |
+| Queues | `php artisan queue:work redis --tries=3` | **systemd** → `mindspear-queue.service` |
+| Redis | `redis-server` | **systemd redis-server**, default config |
+| WebSockets | `php artisan reverb:start --host=0.0.0.0 --port=8080 --debug` | **systemd** → `mindspear-reverb.service` (no `--debug`), behind Nginx WSS |
 | Frontend | `npm run dev` | **PM2** → `next start` behind Nginx |
 
-> Put **PHP-FPM**, **PostgreSQL**, **Redis**, and **Nginx** under **systemd** (OS-level services that exist forever). Put **queue workers**, **Reverb**, and the **Next.js process** under **Supervisor / PM2** (app processes that restart on deploy).
+> PHP-FPM, PostgreSQL, Redis, Nginx, Reverb, and the queue worker are all under **systemd** — one tool, one log stream (`journalctl`), no extra packages. PM2 manages the Next.js process because Next's cluster mode plays nicely with it.
 
 ---
 
 ## Quick Start (sequential — fresh Ubuntu 24.04)
 
-Run top-to-bottom. DNS for `mindspear.app`, `www.mindspear.app`, `api.mindspear.app`, `ws.mindspear.app` must already point to this server. Everything tagged `REPLACE_*` is listed in [§11 Replace Before Go-Live](#11-replace-before-go-live).
+Run top-to-bottom. DNS for `mindspear.app`, `www.mindspear.app`, `api.mindspear.app`, `ws.mindspear.app` must already resolve to this server. Everything tagged `REPLACE_*` is listed in [§11 Replace Before Go-Live](#11-replace-before-go-live).
 
 ```bash
 # 1) Base + firewall
 sudo apt update && sudo apt -y upgrade
 sudo apt -y install ca-certificates curl gnupg git unzip ufw software-properties-common lsb-release \
-  nginx certbot python3-certbot-nginx supervisor redis-server \
+  nginx certbot python3-certbot-nginx redis-server \
   postgresql-16 postgresql-client-16
 sudo ufw allow OpenSSH && sudo ufw allow 'Nginx Full' && sudo ufw --force enable
 
-# 2) PHP 8.3
+# 2) PHP 8.4
 sudo add-apt-repository -y ppa:ondrej/php && sudo apt update
-sudo apt -y install php8.3 php8.3-fpm php8.3-cli php8.3-common \
-  php8.3-pgsql php8.3-redis php8.3-mbstring php8.3-xml php8.3-curl \
-  php8.3-zip php8.3-bcmath php8.3-intl php8.3-gd php8.3-opcache
+sudo apt -y install php8.4 php8.4-fpm php8.4-cli php8.4-common \
+  php8.4-pgsql php8.4-redis php8.4-mbstring php8.4-xml php8.4-curl \
+  php8.4-zip php8.4-bcmath php8.4-intl php8.4-gd php8.4-opcache
 
 # 3) Composer + Node 20 + PM2
 curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt -y install nodejs && sudo npm install -g pm2
 
-# 4) Database + Redis (edit configs afterwards — see §11)
+# 4) Services + Database (Redis uses default config — no editing)
+sudo systemctl enable --now php8.4-fpm postgresql redis-server nginx
+redis-cli ping                         # expect: PONG
 sudo -u postgres psql -c "CREATE USER mindspear WITH PASSWORD 'REPLACE_DB_PASSWORD';"
 sudo -u postgres psql -c "CREATE DATABASE mindspear OWNER mindspear;"
 sudo -u postgres psql -c "ALTER DATABASE mindspear SET timezone TO 'UTC';"
-# edit /etc/redis/redis.conf: set `requirepass REPLACE_REDIS_PASSWORD`, `appendonly yes`, `maxmemory 512mb`, `maxmemory-policy allkeys-lru`
-sudo systemctl enable --now postgresql redis-server
-sudo systemctl restart redis-server
 
 # 5) Clone
 sudo mkdir -p /var/www/mindspear
@@ -63,7 +68,7 @@ git clone REPLACE_REPO_URL .
 cd /var/www/mindspear/backend
 composer install --no-dev --optimize-autoloader --no-interaction
 cp .env.production .env
-# edit .env — fill REPLACE_* values (DB/Redis/Reverb) — see §11
+# edit .env — fill REPLACE_* values (DB/Reverb/Mail), keep REDIS_PASSWORD=null — see §11
 php artisan key:generate --force
 php artisan migrate --force
 php artisan db:seed --class=SuperAdminSeeder --force
@@ -79,10 +84,11 @@ npm ci && npm run build
 pm2 start ecosystem.config.js && pm2 save
 pm2 startup systemd -u $USER --hp $HOME        # run the sudo command it prints
 
-# 8) Supervisor (queue worker + Reverb)
-sudo mkdir -p /var/log/mindspear && sudo chown www-data:www-data /var/log/mindspear
-# paste the file from §3 into /etc/supervisor/conf.d/mindspear.conf
-sudo supervisorctl reread && sudo supervisorctl update && sudo supervisorctl status
+# 8) systemd units (queue worker + Reverb)
+# paste the two unit files from §3 into /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now mindspear-reverb mindspear-queue
+sudo systemctl status mindspear-reverb mindspear-queue
 
 # 9) Nginx — HTTP-only first (§4). Do NOT add 443/ssl manually; certbot adds it.
 # paste the three vhosts from §4 into /etc/nginx/sites-available/
@@ -100,7 +106,7 @@ sudo certbot --nginx \
   --redirect --agree-tos -m REPLACE_ADMIN_EMAIL --no-eff-email
 
 # 11) Laravel scheduler
-echo '* * * * * cd /var/www/mindspear/backend && php artisan schedule:run >> /dev/null 2>&1' | sudo crontab -u www-data -
+echo '* * * * * cd /var/www/mindspear/backend && php /usr/bin/php8.4 artisan schedule:run >> /dev/null 2>&1' | sudo crontab -u www-data -
 ```
 
 Everything below is the long version with the why, the config files to paste, and post-deploy operations.
@@ -124,17 +130,17 @@ sudo ufw allow 'Nginx Full'
 sudo ufw --force enable
 ```
 
-### 1.3 PHP 8.3 + extensions
+### 1.3 PHP 8.4 + extensions
 
 ```bash
 sudo add-apt-repository -y ppa:ondrej/php
 sudo apt update
-sudo apt -y install php8.3 php8.3-fpm php8.3-cli php8.3-common \
-  php8.3-pgsql php8.3-redis php8.3-mbstring php8.3-xml php8.3-curl \
-  php8.3-zip php8.3-bcmath php8.3-intl php8.3-gd php8.3-opcache
+sudo apt -y install php8.4 php8.4-fpm php8.4-cli php8.4-common \
+  php8.4-pgsql php8.4-redis php8.4-mbstring php8.4-xml php8.4-curl \
+  php8.4-zip php8.4-bcmath php8.4-intl php8.4-gd php8.4-opcache
 ```
 
-Harden `/etc/php/8.3/fpm/php.ini` (production values):
+Harden `/etc/php/8.4/fpm/php.ini` (production values):
 
 ```ini
 memory_limit = 512M
@@ -151,14 +157,15 @@ opcache.validate_timestamps = 0
 ```
 
 ```bash
-sudo systemctl restart php8.3-fpm
-sudo systemctl enable php8.3-fpm
+sudo systemctl restart php8.4-fpm
+sudo systemctl enable php8.4-fpm
 ```
 
 ### 1.4 Composer
 
 ```bash
 curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
+composer --version
 ```
 
 ### 1.5 Node.js 20 LTS + PM2
@@ -167,6 +174,7 @@ curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/loca
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt -y install nodejs
 sudo npm install -g pm2
+node -v && npm -v
 ```
 
 ### 1.6 PostgreSQL 16
@@ -187,35 +195,31 @@ ALTER DATABASE mindspear SET timezone TO 'UTC';
 SQL
 ```
 
-### 1.7 Redis 7
+### 1.7 Redis — default config, no editing
+
+Install and enable. **Do not edit `/etc/redis/redis.conf`** — the defaults already do exactly what we want.
 
 ```bash
 sudo apt -y install redis-server
-```
-
-Edit `/etc/redis/redis.conf`:
-
-```
-bind 127.0.0.1 ::1
-protected-mode yes
-port 6379
-requirepass REPLACE_WITH_STRONG_REDIS_PASSWORD
-supervised systemd
-appendonly yes
-maxmemory 512mb
-maxmemory-policy allkeys-lru
-```
-
-```bash
 sudo systemctl enable --now redis-server
-sudo systemctl restart redis-server
+redis-cli ping                         # expect: PONG
 ```
 
-### 1.8 Nginx + Certbot + Supervisor
+Why the defaults are safe:
+
+| Default setting | What it does | Why it's fine |
+|---|---|---|
+| `bind 127.0.0.1 -::1` | Listens on loopback only | Nothing outside the server can reach Redis |
+| `protected-mode yes` | Refuses external connections if no password is set | Belt-and-braces with the bind above |
+| no `requirepass` | No password required locally | Combined with the loopback bind + UFW (only 22/80/443 open), it's not exposed |
+
+If you ever want password protection later, add `requirepass <secret>` to the conf and update `REDIS_PASSWORD` in backend `.env` accordingly. For now, keep it default — it's one fewer moving part.
+
+### 1.8 Nginx + Certbot
 
 ```bash
-sudo apt -y install nginx certbot python3-certbot-nginx supervisor
-sudo systemctl enable --now nginx supervisor
+sudo apt -y install nginx certbot python3-certbot-nginx
+sudo systemctl enable --now nginx
 ```
 
 ---
@@ -260,7 +264,14 @@ sudo find /var/www/mindspear/backend/storage -type d -exec chmod 775 {} \;
 sudo find /var/www/mindspear/backend/storage -type f -exec chmod 664 {} \;
 ```
 
-### 2.5 Laravel scheduler (cron)
+### 2.5 Smoke-test Redis from Laravel
+
+```bash
+php artisan tinker --execute="cache()->put('ping','ok',10); echo cache('ping');"
+# expected output: ok
+```
+
+### 2.6 Laravel scheduler (cron)
 
 ```bash
 sudo crontab -u www-data -e
@@ -269,109 +280,98 @@ sudo crontab -u www-data -e
 Append:
 
 ```
-* * * * * cd /var/www/mindspear/backend && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /var/www/mindspear/backend && /usr/bin/php8.4 artisan schedule:run >> /dev/null 2>&1
 ```
 
 ---
 
-## 3. Supervisor — The Four Background Processes
+## 3. systemd — The Two Background Processes
 
-Supervisor replaces your dev terminals. Create `/etc/supervisor/conf.d/mindspear.conf`:
+Ubuntu ships with systemd, so we use it for Reverb and the queue worker. No extra packages.
+
+### 3.1 `/etc/systemd/system/mindspear-reverb.service`
 
 ```ini
-; ============================================================
-; Redis is managed by systemd (see §1.7). Do NOT run it here.
-; ============================================================
+[Unit]
+Description=MindSpear Reverb WebSocket
+After=network.target redis-server.service
+Requires=redis-server.service
 
-; ------------------------------------------------------------
-; 1) Queue worker  (replaces: php artisan queue:work redis --tries=3)
-; ------------------------------------------------------------
-[program:mindspear-queue]
-process_name=%(program_name)s_%(process_num)02d
-command=php /var/www/mindspear/backend/artisan queue:work redis --queue=default,broadcasts --sleep=1 --tries=3 --backoff=3 --max-time=3600 --max-jobs=1000 --timeout=60
-directory=/var/www/mindspear/backend
-autostart=true
-autorestart=true
-user=www-data
-numprocs=2
-redirect_stderr=true
-stdout_logfile=/var/log/mindspear/queue.log
-stdout_logfile_maxbytes=10MB
-stdout_logfile_backups=5
-stopwaitsecs=70
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/mindspear/backend
+ExecStart=/usr/bin/php8.4 artisan reverb:start --host=127.0.0.1 --port=8080
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/mindspear/reverb.log
+StandardError=append:/var/log/mindspear/reverb.log
 
-; ------------------------------------------------------------
-; 2) Reverb WebSocket server  (replaces: php artisan reverb:start --host=0.0.0.0 --port=8080 --debug)
-;    NOTE: no --debug in production. Bind to loopback; Nginx terminates TLS and proxies WSS.
-; ------------------------------------------------------------
-[program:mindspear-reverb]
-process_name=%(program_name)s
-command=php /var/www/mindspear/backend/artisan reverb:start --host=127.0.0.1 --port=8080
-directory=/var/www/mindspear/backend
-autostart=true
-autorestart=true
-user=www-data
-numprocs=1
-redirect_stderr=true
-stdout_logfile=/var/log/mindspear/reverb.log
-stdout_logfile_maxbytes=20MB
-stdout_logfile_backups=5
-stopwaitsecs=15
-
-; ------------------------------------------------------------
-; 3) Next.js frontend
-;    Alternative: use PM2 (see §5). If you prefer Supervisor, uncomment below.
-; ------------------------------------------------------------
-;[program:mindspear-frontend]
-;process_name=%(program_name)s
-;command=/usr/bin/node /var/www/mindspear/frontend/node_modules/.bin/next start -p 2000
-;directory=/var/www/mindspear/frontend
-;environment=NODE_ENV="production",PORT="2000"
-;autostart=true
-;autorestart=true
-;user=www-data
-;stdout_logfile=/var/log/mindspear/frontend.log
-;stdout_logfile_maxbytes=20MB
-;stdout_logfile_backups=5
-;stopwaitsecs=15
-
-[group:mindspear]
-programs=mindspear-queue,mindspear-reverb
+[Install]
+WantedBy=multi-user.target
 ```
 
-Production flag notes:
+### 3.2 `/etc/systemd/system/mindspear-queue.service`
+
+```ini
+[Unit]
+Description=MindSpear queue worker
+After=network.target redis-server.service postgresql.service
+Requires=redis-server.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/mindspear/backend
+ExecStart=/usr/bin/php8.4 artisan queue:work redis --queue=default,broadcasts --sleep=1 --tries=3 --backoff=3 --max-time=3600 --max-jobs=1000 --timeout=60
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/mindspear/queue.log
+StandardError=append:/var/log/mindspear/queue.log
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### 3.3 Flag notes
 
 - `--sleep=1 --tries=3 --backoff=3` — modest retry, no busy loop.
-- `--max-time=3600 --max-jobs=1000` — auto-recycle the worker every hour or 1000 jobs so leaked memory never accumulates. Supervisor restarts it immediately.
-- `--timeout=60` — kill stuck jobs after 60s.
-- `--queue=default,broadcasts` — priority order; raise `broadcasts` first for live-aggregate events.
-- `numprocs=2` — start with two queue workers; scale with Reverb traffic.
-- Reverb: **remove `--debug`**. Debug mode logs every frame and is very expensive under load.
-- Reverb binds to `127.0.0.1:8080` in production — Nginx handles TLS + the public `:443` endpoint.
+- `--max-time=3600 --max-jobs=1000` — worker auto-exits every hour or 1000 jobs so leaked memory never accumulates. systemd restarts it immediately via `Restart=always`.
+- `--timeout=60` — kill stuck jobs after 60 seconds.
+- `--queue=default,broadcasts` — priority order; `broadcasts` gets picked first so live-aggregate events don't queue behind slow jobs.
+- Reverb: **no `--debug`**. Debug mode logs every frame and is very expensive under load.
+- Reverb binds to `127.0.0.1:8080` — Nginx handles TLS on `wss://ws.mindspear.app:443`.
 
-Apply:
+### 3.4 Enable + start
 
 ```bash
 sudo mkdir -p /var/log/mindspear
 sudo chown www-data:www-data /var/log/mindspear
-sudo supervisorctl reread
-sudo supervisorctl update
-sudo supervisorctl status
+sudo systemctl daemon-reload
+sudo systemctl enable --now mindspear-reverb mindspear-queue
+sudo systemctl status mindspear-reverb mindspear-queue     # both should be "active (running)"
 ```
 
-Useful:
+### 3.5 Want two queue workers?
+
+systemd uses **template units** for parallel instances. Rename the file to `mindspear-queue@.service` (note the `@`) and start `mindspear-queue@1` and `mindspear-queue@2`. For most deployments, a single worker is plenty — scale only if the queue backs up.
+
+### 3.6 Day-to-day
 
 ```bash
-sudo supervisorctl restart mindspear:*      # full restart (post-deploy)
-sudo supervisorctl restart mindspear-queue:*  # workers only
-sudo supervisorctl tail -f mindspear-reverb
+sudo systemctl restart mindspear-reverb mindspear-queue   # after a deploy
+sudo systemctl status  mindspear-reverb mindspear-queue   # quick health check
+sudo journalctl -u mindspear-reverb -f                    # tail Reverb
+sudo journalctl -u mindspear-queue  -f                    # tail queue
 ```
 
 After every deploy that touches code:
 
 ```bash
-php artisan queue:restart                   # tells workers to exit after current job
-sudo supervisorctl restart mindspear-reverb
+php artisan queue:restart                     # tells workers to exit after current job; systemd respawns them
+sudo systemctl restart mindspear-reverb       # Reverb needs a hard restart to pick up code changes
 ```
 
 ---
@@ -401,7 +401,7 @@ server {
     }
 
     location ~ \.php$ {
-        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_pass unix:/run/php/php8.4-fpm.sock;
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
         include fastcgi_params;
@@ -598,6 +598,7 @@ DB_PASSWORD=REPLACE_WITH_STRONG_DB_PASSWORD
 
 # ============================================
 # Cache / Queue / Session / Broadcast
+# Redis runs with default config — no password.
 # ============================================
 CACHE_STORE=redis
 QUEUE_CONNECTION=redis
@@ -607,7 +608,7 @@ BROADCAST_CONNECTION=reverb
 REDIS_CLIENT=phpredis
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
-REDIS_PASSWORD=REPLACE_WITH_STRONG_REDIS_PASSWORD
+REDIS_PASSWORD=null
 REDIS_DB=0
 REDIS_CACHE_DB=1
 
@@ -712,8 +713,9 @@ php artisan config:cache
 php artisan route:cache
 php artisan event:cache
 php artisan view:cache
-php artisan queue:restart
-sudo supervisorctl restart mindspear-reverb
+php artisan queue:restart                 # graceful worker recycle
+sudo systemctl restart mindspear-reverb   # Reverb needs a hard restart
+sudo systemctl reload php8.4-fpm          # opcache picks up new bytecode
 
 # Frontend
 cd ../frontend
@@ -729,17 +731,18 @@ Put that in `/usr/local/bin/mindspear-deploy.sh` once it stabilises.
 ## 8. Health Checks
 
 ```bash
-# PHP-FPM, Nginx, Redis, Postgres
-systemctl status php8.3-fpm nginx redis-server postgresql
+# Core systemd services
+systemctl status php8.4-fpm nginx redis-server postgresql \
+                 mindspear-reverb mindspear-queue
 
-# Supervisor-managed processes
-sudo supervisorctl status
-
-# Reverb listening
+# Reverb listening on loopback
 ss -tlnp | grep 8080
 
 # Frontend
 pm2 status
+
+# Redis reachable from Laravel
+php artisan tinker --execute="cache()->put('x',1,5); echo cache('x');"   # expect: 1
 
 # End-to-end
 curl -sI https://api.mindspear.app/api/v1/health || true
@@ -754,17 +757,27 @@ new WebSocket("wss://ws.mindspear.app/app/REPLACE_WITH_REAL_APP_KEY")
 
 You should see `readyState === 1` within a second.
 
+Tail logs:
+
+```bash
+sudo journalctl -u mindspear-reverb -f
+sudo journalctl -u mindspear-queue  -f
+sudo journalctl -u php8.4-fpm       -f
+sudo tail -f /var/log/nginx/api.mindspear.app.error.log
+```
+
 ---
 
 ## 9. Common Pitfalls
 
-- **`--debug` left on Reverb in production** — floods disk, chews CPU. Strip it in the Supervisor config.
+- **`--debug` left on Reverb in production** — floods disk, chews CPU. The unit file in §3.1 already omits it; don't add it back.
 - **`APP_DEBUG=true` in production** — leaks stack traces containing env values. Keep it `false`.
 - **Missing `SESSION_DOMAIN=.mindspear.app`** — Sanctum cookies won't cross the subdomain boundary and host-channel auth fails silently.
 - **Forgetting `REVERB_ALLOWED_ORIGINS`** — browser connects, then Reverb drops the handshake.
-- **Running `queue:work` without `--max-time` / `--max-jobs`** — long-lived worker memory grows until OOM. Always let Supervisor recycle it.
-- **Queue not restarted after deploy** — workers keep running old code. Always run `php artisan queue:restart`.
-- **Opcache + `validate_timestamps=0` + no reload** — PHP keeps serving pre-deploy bytecode. Reload PHP-FPM (`sudo systemctl reload php8.3-fpm`) after deploy, or add it to the deploy script.
+- **Running `queue:work` without `--max-time` / `--max-jobs`** — long-lived worker memory grows until OOM. The §3.2 unit already sets these; don't strip them.
+- **Queue not restarted after deploy** — workers keep running old code. Always run `php artisan queue:restart` (graceful) plus `sudo systemctl restart mindspear-reverb` (hard).
+- **Opcache + `validate_timestamps=0` + no reload** — PHP keeps serving pre-deploy bytecode. `sudo systemctl reload php8.4-fpm` after every deploy, or put it in the deploy script.
+- **Setting `REDIS_PASSWORD` in `.env` without `requirepass` in redis.conf** (or vice-versa) — connection fails with `NOAUTH Authentication required` or `ERR Client sent AUTH, but no password is set`. Keep both unset for now, or set both together if you enable auth later.
 - **DB migrations forgotten on deploy** — `migrate --force` belongs in the deploy script, not in your memory.
 
 ---
@@ -789,14 +802,13 @@ Ship the gzipped dumps off-box (S3, restic, whatever) — on-disk backups don't 
 
 ## 11. Replace Before Go-Live
 
-Everything in the Quick Start that said `REPLACE_*` maps to a real value here. Generate secrets with `openssl rand -hex 32` (for passwords/keys) or `openssl rand -hex 16` (for IDs).
+Everything in the Quick Start that said `REPLACE_*` maps to a real value here. Generate secrets with `openssl rand -hex 32` (for keys/secrets) or `openssl rand -hex 16` (for IDs).
 
 ### 11.1 Shell-command placeholders
 
 | Placeholder | Where it appears | What to put there |
 |---|---|---|
 | `REPLACE_DB_PASSWORD` | `CREATE USER mindspear` in Quick Start step 4 | Strong random password. Must match `DB_PASSWORD` in backend `.env`. |
-| `REPLACE_REDIS_PASSWORD` | `/etc/redis/redis.conf` → `requirepass` | Strong random password. Must match `REDIS_PASSWORD` in backend `.env`. |
 | `REPLACE_REPO_URL` | `git clone ...` in step 5 | `git@github.com:your-org/mindspear.git` (or HTTPS clone URL). |
 | `REPLACE_ADMIN_EMAIL` | `certbot ... -m ...` in step 10 | Email for Let's Encrypt expiry notices, e.g. `admin@mindspear.app`. |
 
@@ -806,7 +818,7 @@ Everything in the Quick Start that said `REPLACE_*` maps to a real value here. G
 |---|---|
 | `APP_KEY` | Filled by `php artisan key:generate --force` — do not set by hand. |
 | `DB_PASSWORD` | Same value as `REPLACE_DB_PASSWORD` above. |
-| `REDIS_PASSWORD` | Same value as `REPLACE_REDIS_PASSWORD` above. |
+| `REDIS_PASSWORD` | **Keep as `null`** — we run Redis with no password. |
 | `REVERB_APP_ID` | `openssl rand -hex 8` — numeric-ish ID (any unique string works). |
 | `REVERB_APP_KEY` | `openssl rand -hex 20` — **must be copied verbatim into** `NEXT_PUBLIC_REVERB_APP_KEY`. |
 | `REVERB_APP_SECRET` | `openssl rand -hex 32` — server-only, never exposed to the browser. |
@@ -820,7 +832,7 @@ After editing `.env`, run:
 ```bash
 php artisan config:cache && php artisan route:cache && php artisan event:cache
 php artisan queue:restart
-sudo supervisorctl restart mindspear-reverb
+sudo systemctl restart mindspear-reverb
 ```
 
 ### 11.3 Frontend — `/var/www/mindspear/frontend/.env.production.local`
@@ -857,4 +869,4 @@ new WebSocket("wss://ws.mindspear.app/app/<YOUR_REVERB_APP_KEY>").onopen = () =>
 
 ---
 
-**You're live.** Open https://mindspear.app, log in as the super admin, create a quest session, join it from a second device, and confirm participants show up in real time. If the WSS handshake works and live events flow, the four backend processes are doing their job.
+**You're live.** Open https://mindspear.app, log in as the super admin, create a quest session, join it from a second device, and confirm participants show up in real time. If the WSS handshake works and live events flow, the backend services are doing their job.
