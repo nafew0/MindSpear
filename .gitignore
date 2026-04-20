@@ -61,3 +61,4 @@ auth.json
 
 # Local AI/tooling state
 .claude/settings.local.json
+backend/.env.production
