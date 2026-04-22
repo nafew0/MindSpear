@@ -565,6 +565,7 @@ export default function LiveQuiz() {
 				const changedPromise = waitForQuestionChangedQuestSingle();
 
 				await emitChangeQuestionQuest({
+					sessionId: activeSessionId,
 					questId: quest.id,
 					questionId: nextTask?.id,
 					questTitle: "quest.title",
@@ -628,6 +629,7 @@ export default function LiveQuiz() {
 			{
 				if (existing?.connected) {
 					await emitChangeQuestionQuest({
+						sessionId: activeSessionId,
 						questId: quest.id,
 						questionId: nextTask?.id,
 						questTitle: quest.title,
@@ -675,6 +677,7 @@ export default function LiveQuiz() {
 						const joined = await waitForQuestStartedOnce();
 						if (joined) {
 							await emitChangeQuestionQuest({
+								sessionId: activeSessionId,
 								questId: quest.id,
 								questionId: nextTask?.id,
 								questTitle: "quest.title",
@@ -693,12 +696,12 @@ export default function LiveQuiz() {
 	};
 
 	const endHostLive = async () => {
-		if (!sessionId) {
+		if (!activeSessionId) {
 			console.error("session_id missing");
 			return;
 		}
 		try {
-			await endLiveSession("quest", sessionId);
+			await endLiveSession("quest", activeSessionId);
 
 			setEndModalOpen(false);
 			dispatch(forceEndLive());

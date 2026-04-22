@@ -69,6 +69,7 @@ function QuizAttempt() {
 		sessionId,
 		participantToken,
 		onSync: handleSnapshot,
+		pollMs: 5000,
 	});
 
 	const channelState = useSessionChannel(

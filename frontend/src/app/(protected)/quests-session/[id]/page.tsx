@@ -156,11 +156,26 @@ function QuizReport() {
 			return;
 		}
 
-		const question = response?.tasks.find(
-			(item: { serial_number: number }) =>
-				Number(item.serial_number) === 1,
+		const orderedTasks = [...(response?.tasks ?? [])].sort(
+			(
+				a: { serial_number?: number; id?: number },
+				b: { serial_number?: number; id?: number },
+			) =>
+				Number(a.serial_number ?? 0) - Number(b.serial_number ?? 0) ||
+				Number(a.id ?? 0) - Number(b.id ?? 0),
 		);
-		const questionId = question?.id || "20";
+		const question =
+			orderedTasks.find(
+				(item: { serial_number?: number }) =>
+					Number(item.serial_number) === 1,
+			) ?? orderedTasks[0];
+
+		if (!question?.id) {
+			toast.error("This quest has no task to start.");
+			throw new Error("Quest start failed: no task was found.");
+		}
+
+		const questionId = question.id;
 
 		const questiQsenStartTime = moment().format("MMMM Do YYYY, h:mm:ss");
 		const timeLimit = Number(
