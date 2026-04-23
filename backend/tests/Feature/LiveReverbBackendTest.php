@@ -226,6 +226,35 @@ it('lets anonymous quest participants read state with their raw participant toke
         ->assertJsonMissingPath('data.state.active_participants');
 });
 
+it('lets a quest owner read state with a bearer token on the public state route', function () {
+    $user = liveTestUser();
+    $token = $user->createToken(config('app.name'))->plainTextToken;
+
+    $quest = Quest::create([
+        'title' => 'Bearer State Quest',
+        'creator_id' => $user->id,
+        'is_published' => true,
+        'visibility' => 'public',
+    ]);
+    $session = QuestSession::create([
+        'quest_id' => $quest->id,
+        'title' => 'Bearer State Session',
+        'session_id' => 'QUEST-BEARER-STATE',
+        'public_channel_key' => 'questbearerstatekey',
+        'running_status' => true,
+        'start_datetime' => now(),
+        'end_datetime' => now()->addHour(),
+        'timezone' => 'UTC',
+    ]);
+    liveTestQuestParticipant($quest, $session, 'Bearer Quest Player');
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson("/api/v1/quest-sessions/{$session->id}/state")
+        ->assertOk()
+        ->assertJsonPath('data.state.public_channel_key', 'questbearerstatekey')
+        ->assertJsonPath('data.state.active_participants.0.participant_name', 'Bearer Quest Player');
+});
+
 it('authorizes private quest host broadcast channels only for the owner', function () {
     config([
         'broadcasting.default' => 'reverb',
@@ -499,6 +528,53 @@ it('lets anonymous quiz participants read state with their raw participant token
         ->assertJsonPath('data.state.public_channel_key', 'quizparticipantstatekey')
         ->assertJsonPath('data.state.current_question_id', $question->id)
         ->assertJsonMissingPath('data.state.active_participants');
+});
+
+it('lets a quiz owner read state with a bearer token on the public state route', function () {
+    $user = liveTestUser();
+    $token = $user->createToken(config('app.name'))->plainTextToken;
+
+    $quiz = Quiz::create([
+        'title' => 'Bearer State Quiz',
+        'user_id' => $user->id,
+        'is_published' => true,
+        'visibility' => 'public',
+    ]);
+    $question = Question::create([
+        'quiz_id' => $quiz->id,
+        'question_text' => 'Bearer question?',
+        'question_type' => 'quiz_single_choice',
+        'visibility' => 'public',
+        'options' => ['choices' => ['A', 'B'], 'correct_answer' => 0],
+    ]);
+    $session = QuizSession::create([
+        'quiz_id' => $quiz->id,
+        'title' => 'Bearer Quiz State Session',
+        'session_id' => 'QUIZ-BEARER-STATE',
+        'public_channel_key' => 'quizbearerstatekey',
+        'current_question_id' => $question->id,
+        'running_status' => true,
+        'start_datetime' => now(),
+        'end_datetime' => now()->addHour(),
+        'timezone' => 'UTC',
+        'is_host_live' => true,
+    ]);
+    QuizParticipant::create([
+        'quiz_id' => $quiz->id,
+        'quiz_session_id' => $session->id,
+        'is_anonymous' => true,
+        'anonymous_details' => ['name' => 'Bearer Quiz Player'],
+        'start_time' => now(),
+        'score' => 0,
+        'status' => 'In Progress',
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson("/api/v1/quiz-sessions/{$session->id}/state")
+        ->assertOk()
+        ->assertJsonPath('data.state.public_channel_key', 'quizbearerstatekey')
+        ->assertJsonPath('data.state.current_question_id', $question->id)
+        ->assertJsonPath('data.state.active_participants.0.participant_name', 'Bearer Quiz Player');
 });
 
 it('authorizes private quiz host broadcast channels only for the owner', function () {

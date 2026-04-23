@@ -12,9 +12,11 @@ use App\Models\Quiz\QuizSession;
 use App\Services\Live\LiveAggregateService;
 use App\Services\Live\LiveSessionService;
 use App\Services\Live\ParticipantTokenService;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class LiveSessionController extends ApiBaseController
 {
@@ -286,7 +288,7 @@ class LiveSessionController extends ApiBaseController
             return null;
         }
 
-        $user = $request->user('sanctum') ?? $request->user();
+        $user = $this->resolveLiveUser($request);
 
         return $user
             ? $this->forbiddenResponse([], __('You are not allowed to access this quest session.'))
@@ -303,7 +305,7 @@ class LiveSessionController extends ApiBaseController
             return null;
         }
 
-        $user = $request->user('sanctum') ?? $request->user();
+        $user = $this->resolveLiveUser($request);
 
         return $user
             ? $this->forbiddenResponse([], __('You are not allowed to access this quiz session.'))
@@ -321,7 +323,7 @@ class LiveSessionController extends ApiBaseController
 
     private function isQuestHost(Request $request, QuestSession $session): bool
     {
-        $user = $request->user('sanctum') ?? $request->user();
+        $user = $this->resolveLiveUser($request);
 
         return (bool) $user
             && (bool) $session->quest
@@ -330,10 +332,32 @@ class LiveSessionController extends ApiBaseController
 
     private function isQuizHost(Request $request, QuizSession $session): bool
     {
-        $user = $request->user('sanctum') ?? $request->user();
+        $user = $this->resolveLiveUser($request);
 
         return (bool) $user
             && (bool) $session->quiz
             && (int) $session->quiz->user_id === (int) $user->id;
+    }
+
+    private function resolveLiveUser(Request $request): ?Authenticatable
+    {
+        $user = $request->user('api')
+            ?? $request->user('sanctum')
+            ?? $request->user()
+            ?? auth('api')->user();
+
+        if ($user) {
+            return $user;
+        }
+
+        $token = $request->bearerToken();
+        if (! is_string($token) || $token === '') {
+            return null;
+        }
+
+        $accessToken = PersonalAccessToken::findToken($token);
+        $tokenable = $accessToken?->tokenable;
+
+        return $tokenable instanceof Authenticatable ? $tokenable : null;
     }
 }
