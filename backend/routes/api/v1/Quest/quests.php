@@ -18,6 +18,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/add-my-library/{id}', [QuestController::class, 'addMyLibrary'])->name('quests.add.my.library');
 
         Route::post('/host-live/{id}', [QuestController::class, 'hostLive'])->name('quests.host.live');
+        Route::get('/{id}/host-live-session', [LiveSessionController::class, 'questHostSession'])->name('quests.host.live.session');
         Route::post('/update-host-live/{id}', [QuestController::class, 'updateHostLive'])->name('quests.update.host.live');
         Route::post('/end-host-live/{id}', [QuestController::class, 'endLive'])->name('quests.end.live');
         Route::post('/status-host-live/{id}', [QuestController::class, 'statusLive'])->name('quests.status.live');

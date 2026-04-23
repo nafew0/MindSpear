@@ -19,6 +19,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/add-my-library/{id}', [QuizController::class, 'addMyLibrary'])->name('quizes.add.my.library');
 
         Route::post('/host-live/{id}', [QuizController::class, 'hostLive'])->name('quiz.host.live');
+        Route::get('/{id}/host-live-session', [LiveSessionController::class, 'quizHostSession'])->name('quiz.host.live.session');
         Route::post('/update-host-live/{id}', [QuizController::class, 'updateHostLive'])->name('quiz.update.host.live');
         Route::post('/end-host-live/{id}', [QuizController::class, 'endLive'])->name('quiz.end.live');
         Route::post('/status-host-live/{id}', [QuizController::class, 'statusLive'])->name('quiz.status.live');

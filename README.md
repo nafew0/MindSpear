@@ -21,9 +21,9 @@ Design choices baked in:
 - Reverb: `wss://ws.mindspear.app`
 - App path: `/var/www/mindspear`
 
-### Pull latest + deploy
+### Regular app update
 
-Use after pushing new code to git.
+Use for normal code updates.
 
 ```bash
 cd /var/www/mindspear
@@ -38,18 +38,37 @@ php artisan route:cache
 php artisan event:cache
 php artisan view:cache
 php artisan queue:restart
-sudo systemctl restart mindspear-reverb
+sudo systemctl restart mindspear-reverb mindspear-queue
 sudo systemctl reload php8.4-fpm
 
 cd /var/www/mindspear/frontend
+node -v
 npm ci
 npm run build
 pm2 reload mindspear-frontend --update-env
 ```
 
-### Clear Laravel cache
+### Frontend PM2 reset
 
-Use after `.env`, config, routes, events, views, or backend code changes.
+Use instead of `pm2 reload mindspear-frontend --update-env` when:
+- `frontend/ecosystem.config.js` changed
+- Node version changed
+- PM2 keeps restarting/crashing
+- frontend env/runtime is acting strange
+
+```bash
+cd /var/www/mindspear/frontend
+node -v   # should be v20.x
+npm ci
+npm run build
+pm2 delete mindspear-frontend || true
+pm2 start ecosystem.config.js
+pm2 save
+```
+
+### Backend cache + restart
+
+Use after backend `.env`, CORS, Sanctum, Reverb, routes, events, or config changes.
 
 ```bash
 cd /var/www/mindspear/backend
@@ -58,6 +77,9 @@ php artisan config:cache
 php artisan route:cache
 php artisan event:cache
 php artisan view:cache
+php artisan queue:restart
+sudo systemctl restart mindspear-reverb mindspear-queue
+sudo systemctl reload php8.4-fpm
 ```
 
 ### Stop services

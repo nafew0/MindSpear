@@ -9,18 +9,18 @@ import { useForm, Controller } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { DatePicker } from "antd";
 import dayjs from "dayjs";
 import { Switch } from "@/components/FormElements/switch";
 import moment from "@/lib/dayjs";
 import { setQuest } from "@/features/quest/store/questInformationSlice";
-import { RootState } from "@/stores/store";
 
 import {
 	setQuestSession,
 	clearQuestSession,
 } from "@/features/quest/store/questSessionSlice";
+import { getHostLiveSession } from "@/features/live/services/liveSessionApi";
 
 import { toast } from "react-toastify";
 
@@ -41,9 +41,7 @@ const quizSchema = z
 		path: ["end_datetime"],
 	})
 	.refine(
-		(data) => {
-			console.log(data.quiztime_mode, "data.quiztime_mode");
-
+		() => {
 			// if (data.quiztime_mode) {
 			//   return typeof data.duration === "number" && data.duration >= 1;
 			// }
@@ -79,13 +77,9 @@ const HostLive: React.FC<HostLiveProps> = ({
 	const questId = `${params?.id}`;
 	const currentTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-	const handleClearCache = () => {
-		dispatch(clearQuestSession());
-	};
-
 	useEffect(() => {
-		handleClearCache();
-	}, []);
+		dispatch(clearQuestSession());
+	}, [dispatch]);
 
 	const {
 		control,
@@ -176,7 +170,7 @@ const HostLive: React.FC<HostLiveProps> = ({
 			quiztime_mode: data.quiztime_mode ? 1 : 0,
 		};
 		try {
-			const response = axiosInstance.post(
+			await axiosInstance.post(
 				`/quests/update/${params?.id}`,
 				obj
 			);
@@ -209,7 +203,24 @@ const HostLive: React.FC<HostLiveProps> = ({
 
 	// Start the QUEST
 	const quizeStartFunction = async () => {
-		router.push(`/live/quests?jlk=${questData}&qid=${questId}`);
+		try {
+			const session = await getHostLiveSession("quest", questId);
+			dispatch(setQuestSession(session));
+
+			const search = new URLSearchParams({
+				jlk: questData,
+				qid: questId,
+				sid: String(session.id),
+			});
+			if (session.public_channel_key) {
+				search.set("pck", session.public_channel_key);
+			}
+
+			router.push(`/live/quests?${search.toString()}`);
+		} catch (error) {
+			console.error("Failed to continue live quest:", error);
+			toast.error("Unable to continue the live quest right now.");
+		}
 	};
 
 	const onSubmit = (data: QuizFormValues): void => {
@@ -231,10 +242,6 @@ const HostLive: React.FC<HostLiveProps> = ({
 		if (shouldFetch(data_quest)) {
 			const responseData = await axiosInstance.get(
 				`/quests/show/${params?.id}`
-			);
-			console.log(
-				responseData?.data.data.quest.end_datetime,
-				"responseData?.data"
 			);
 			dispatch(setQuest(responseData?.data?.data.quest));
 			const endDateTimeString =
@@ -278,32 +285,22 @@ const HostLive: React.FC<HostLiveProps> = ({
 
 			// Store the quest session data in Redux
 			if (respnson?.data.data.questSession) {
-				dispatch(setQuestSession(respnson?.data.data.questSession));
-				router.push(`/quests-session/${params?.id}`);
+				const questSession = respnson?.data.data.questSession;
+				dispatch(setQuestSession(questSession));
+
+				const search = new URLSearchParams({
+					sid: String(questSession.id),
+				});
+				if (questSession.public_channel_key) {
+					search.set("pck", questSession.public_channel_key);
+				}
+
+				router.push(`/quests-session/${params?.id}?${search.toString()}`);
 			}
 		} catch (error) {
 			console.error("API call failed:", error);
 		}
 	};
-
-	// Fetch quest by id and return quest object (or null on error)
-	const fetchQuest = async () => {
-		try {
-			const response = await axiosInstance.get(
-				`/quests/show/${params?.id}`
-			);
-
-			return response?.data?.data?.quest || null;
-		} catch (error) {
-			console.error("Failed to fetch quest:", error);
-			return null;
-		}
-	};
-
-	useEffect(() => {
-		if (!params?.id) return;
-		fetchQuest();
-	}, [params?.id]);
 
 	return (
 		<div>

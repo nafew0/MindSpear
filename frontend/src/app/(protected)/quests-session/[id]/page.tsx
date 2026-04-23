@@ -4,16 +4,21 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
 
 import Summary from "@/features/quest/components/QuestReports/Summary";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
+import { AxiosError } from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { setQuest } from "@/features/quest/store/questInformationSlice";
 import { RootState } from "@/stores/store";
 
 import { clearCache } from "@/features/live/store/leaderboardSlice";
 import { clearAppStorage } from "@/utils/storageCleaner";
-import { changeQuestTask } from "@/features/live/services/liveSessionApi";
+import {
+	changeQuestTask,
+	getHostLiveSession,
+} from "@/features/live/services/liveSessionApi";
 import { useLiveSession } from "@/features/live/hooks/useLiveSession";
+import { setQuestSession } from "@/features/quest/store/questSessionSlice";
 
 import {
 	setQuestData,
@@ -24,6 +29,7 @@ import { CirclePlay, Users } from "lucide-react";
 import moment from "@/lib/dayjs";
 import { toast } from "react-toastify";
 import type {
+	HostLiveSessionBootstrap,
 	HostParticipantPayload,
 	LiveParticipant,
 	SessionSnapshot,
@@ -62,6 +68,7 @@ const mergeActiveUser = (
 function QuizReport() {
 	const params = useParams();
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const dispatch = useDispatch();
 	const questSession = useSelector(
 		(state: RootState) => state.questSession.questSession,
@@ -71,8 +78,28 @@ function QuizReport() {
 	const [activeUsersData, setActiveUsersData] = useState<ActiveUser[]>([]);
 	const [participantsActive, setparticipantsActive] = useState(0);
 	const [titleInput, setTitleInput] = useState("");
+	const [bootstrapSession, setBootstrapSession] =
+		useState<HostLiveSessionBootstrap | null>(null);
+	const [bootstrapStatus, setBootstrapStatus] = useState<
+		"checking" | "ready" | "missing" | "error"
+	>("checking");
+	const [bootstrapError, setBootstrapError] = useState<string | null>(null);
 
 	const questId = `${params?.id}`;
+	const sessionIdFromUrl = searchParams.get("sid");
+	const publicChannelKeyFromUrl = searchParams.get("pck");
+	const hasCurrentQuestSession =
+		Boolean(questSession?.id) &&
+		Number(questSession?.quest_id) === Number(params?.id) &&
+		questSession?.running_status !== false;
+	const activeSessionId =
+		sessionIdFromUrl ??
+		bootstrapSession?.id ??
+		(hasCurrentQuestSession ? questSession?.id : null);
+	const activePublicChannelKey =
+		publicChannelKeyFromUrl ??
+		bootstrapSession?.public_channel_key ??
+		(hasCurrentQuestSession ? questSession?.public_channel_key ?? null : null);
 
 	useEffect(() => {
 		if (typeof window !== "undefined") {
@@ -91,6 +118,61 @@ function QuizReport() {
 		);
 	}, []);
 
+	useEffect(() => {
+		if (hasCurrentQuestSession) {
+			setBootstrapStatus("ready");
+			return;
+		}
+
+		let cancelled = false;
+
+		const loadHostSession = async () => {
+			try {
+				setBootstrapStatus("checking");
+				const session = await getHostLiveSession("quest", questId);
+				if (cancelled) return;
+
+				setBootstrapSession(session);
+				setBootstrapError(null);
+				setBootstrapStatus("ready");
+				setparticipantsActive(session.participant_count ?? 0);
+				setActiveUsersData(
+					(session.active_participants ?? [])
+						.map(participantToActiveUser)
+						.filter(
+							(participant): participant is ActiveUser =>
+								Boolean(participant),
+						),
+				);
+				dispatch(setQuestSession(session));
+			} catch (error) {
+				if (cancelled) return;
+
+				const axiosError = error as AxiosError<{ message?: string }>;
+				if (axiosError.response?.status === 404) {
+					setBootstrapSession(null);
+					setBootstrapError(null);
+					setBootstrapStatus("missing");
+					return;
+				}
+
+				setBootstrapSession(null);
+				setBootstrapStatus("error");
+				setBootstrapError(
+					axiosError.response?.data?.message ??
+						axiosError.message ??
+						"Unable to load the active live session.",
+				);
+			}
+		};
+
+		void loadHostSession();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [dispatch, hasCurrentQuestSession, questId]);
+
 	const {
 		channelState,
 		hostSubscriptionStatus,
@@ -98,7 +180,8 @@ function QuizReport() {
 		error: liveConnectionError,
 	} = useLiveSession({
 		module: "quest",
-		sessionId: questSession?.id,
+		sessionId: activeSessionId,
+		publicChannelKey: activePublicChannelKey,
 		role: "host",
 		onSnapshot: syncParticipantsFromSnapshot,
 		onHostParticipantJoined: (payload) => {
@@ -115,10 +198,26 @@ function QuizReport() {
 	const connected =
 		hostSubscriptionStatus === "subscribed" &&
 		publicSubscriptionStatus === "subscribed";
+	const hasActiveSession = Boolean(activeSessionId);
 	const connectionFailed =
-		hostSubscriptionStatus === "error" ||
-		publicSubscriptionStatus === "error" ||
-		Boolean(liveConnectionError);
+		hasActiveSession &&
+		(hostSubscriptionStatus === "error" ||
+			publicSubscriptionStatus === "error" ||
+			Boolean(liveConnectionError));
+	const connectionLabel =
+		bootstrapStatus === "checking"
+			? "Loading live session"
+			: bootstrapStatus === "missing"
+				? "No active live session"
+				: bootstrapStatus === "error"
+					? "Live session lookup failed"
+					: connectionFailed
+						? "Live connection error"
+						: connected
+							? "Live - Ready to start"
+							: hasActiveSession
+								? "Connecting to live session"
+								: "No active live session";
 
 	useEffect(() => {
 		setparticipantsActive(channelState.participantCount);
@@ -136,6 +235,11 @@ function QuizReport() {
 	}, [params?.id]);
 
 	const quizeStartFunction = async () => {
+		if (!hasActiveSession) {
+			toast.error("No active live quest session was found.");
+			return;
+		}
+
 		if (!connected) {
 			toast.error("Live Reverb connection is not ready yet.");
 			return;
@@ -151,7 +255,7 @@ function QuizReport() {
 	};
 
 	const handleChangeQuestion = async () => {
-		if (!questSession?.id) {
+		if (!activeSessionId) {
 			toast.error("No live quest session was found.");
 			return;
 		}
@@ -192,7 +296,7 @@ function QuizReport() {
 		};
 
 		const liveState = await changeQuestTask(
-			questSession.id,
+			activeSessionId,
 			questionId,
 			timerState,
 		);
@@ -208,7 +312,7 @@ function QuizReport() {
 		);
 
 		router.push(
-			`/live/quests?jlk=${response?.join_link}&qid=${questId}&sid=${questSession.id}&pck=${liveState.public_channel_key}`,
+			`/live/quests?jlk=${response?.join_link}&qid=${questId}&sid=${activeSessionId}&pck=${liveState.public_channel_key}`,
 		);
 	};
 
@@ -249,12 +353,16 @@ function QuizReport() {
 	}, [titleInput]);
 
 	const updateHostLiveSession = async () => {
+		if (!activeSessionId) {
+			throw new Error("No live quest session was found.");
+		}
+
 		try {
 			const payload = {
 				title: titleInput,
 			};
 			const response = await axiosInstance.post(
-				`/quests/update-host-live/${questSession?.id}`,
+				`/quests/update-host-live/${activeSessionId}`,
 				payload,
 			);
 			return response.data;
@@ -279,11 +387,7 @@ function QuizReport() {
 								}`}
 							/>
 							<span className="text-sm font-medium text-gray-700">
-								{connectionFailed
-									? "Live connection error"
-									: connected
-									? "Live - Ready to start"
-									: "Offline - Check connection"}
+								{connectionLabel}
 							</span>
 						</div>
 						<span className="text-sm text-gray-600">
@@ -299,23 +403,26 @@ function QuizReport() {
 							onChange={handleTitleChange}
 							placeholder="Session title..."
 							className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-primary disabled:bg-gray-100"
-							disabled={!connected}
+							disabled={!connected || !hasActiveSession}
 						/>
 
 						<button
 							onClick={quizeStartFunction}
-							disabled={!connected}
+							disabled={!connected || !hasActiveSession}
 							className="w-full bg-primary disabled:bg-gray-400 text-white py-3 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
 						>
-							{connected ? (
+							{connected && hasActiveSession ? (
 								<>
 									<CirclePlay size={18} />
 									Start Session
 								</>
 							) : (
-								"Waiting for Connection..."
+								"Waiting for Live Session..."
 							)}
 						</button>
+						{bootstrapError && (
+							<p className="text-sm text-red-600">{bootstrapError}</p>
+						)}
 					</div>
 				</div>
 				<div className="md:col-span-5 p-4 bg-white rounded-lg border h-auto">

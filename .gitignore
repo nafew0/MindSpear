@@ -62,3 +62,16 @@ auth.json
 # Local AI/tooling state
 .claude/settings.local.json
 backend/.env.production
+
+# Root-level docs — keep only README.md; everything else is internal/planning
+/*.md
+!/README.md
+
+# Stray build / runtime artifacts not needed in production
+a.out
+*.rdb
+
+# Database dumps must never be committed (contains user data)
+db_dumps/
+/*.sql
+*.dump

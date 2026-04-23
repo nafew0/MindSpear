@@ -7,6 +7,7 @@ import Summary from "@/features/quiz/components/QuizReports/Summary";
 import moment from "@/lib/dayjs";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
+import { AxiosError } from "axios";
 import { setQuiz } from "@/features/quiz/store/quizInformationSlice";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -16,6 +17,7 @@ import {
 import { Switch } from "antd";
 import {
 	changeQuizQuestion,
+	getHostLiveSession,
 } from "@/features/live/services/liveSessionApi";
 import { useLiveSession } from "@/features/live/hooks/useLiveSession";
 import { CirclePlay, Users } from "lucide-react";
@@ -23,8 +25,10 @@ import {
 	setScope,
 	userQuizCompletedLastSlider,
 } from "@/features/live/store/leaderboardSlice";
+import { setQuestSession } from "@/features/quest/store/questSessionSlice";
 import { toast } from "react-toastify";
 import type {
+	HostLiveSessionBootstrap,
 	HostParticipantPayload,
 	LiveParticipant,
 	SessionSnapshot,
@@ -73,14 +77,30 @@ function QuizReport() {
 	const [sessionResponse, setSessionResponse] = useState<QuizResponse | any>(
 		null
 	);
+	const [bootstrapSession, setBootstrapSession] =
+		useState<HostLiveSessionBootstrap | null>(null);
+	const [bootstrapStatus, setBootstrapStatus] = useState<
+		"checking" | "ready" | "missing" | "error"
+	>("checking");
+	const [bootstrapError, setBootstrapError] = useState<string | null>(null);
 	const quizSession = useSelector(
 		(state: any) => state.questSession.questSession
 	);
 	const sessionIdFromUrl = searchParams.get("sid");
-	const activeSessionId = quizSession?.id ?? sessionIdFromUrl;
-	console.log(quizSession, "quizSessionquizSessionquizSession");
 	const { scope } = useSelector((state: any) => state.leaderboard);
-	console.log(scope, "ddddddddddddddddddddddddd");
+	const publicChannelKeyFromUrl = searchParams.get("pck");
+	const hasCurrentQuizSession =
+		Boolean(quizSession?.id) &&
+		Number(quizSession?.quiz_id) === Number(params?.id) &&
+		quizSession?.running_status !== false;
+	const activeSessionId =
+		sessionIdFromUrl ??
+		bootstrapSession?.id ??
+		(hasCurrentQuizSession ? quizSession?.id : null);
+	const activePublicChannelKey =
+		publicChannelKeyFromUrl ??
+		bootstrapSession?.public_channel_key ??
+		(hasCurrentQuizSession ? quizSession?.public_channel_key ?? null : null);
 
 	const [isQuizMode, setIsQuizMode] = useState(true);
 
@@ -112,6 +132,61 @@ function QuizReport() {
 		);
 	}, []);
 
+	useEffect(() => {
+		if (hasCurrentQuizSession) {
+			setBootstrapStatus("ready");
+			return;
+		}
+
+		let cancelled = false;
+
+		const loadHostSession = async () => {
+			try {
+				setBootstrapStatus("checking");
+				const session = await getHostLiveSession("quiz", quizId);
+				if (cancelled) return;
+
+				setBootstrapSession(session);
+				setBootstrapError(null);
+				setBootstrapStatus("ready");
+				setparticipantsActiveNumber(session.participant_count ?? 0);
+				setActiveUsersData(
+					(session.active_participants ?? [])
+						.map(participantToActiveUser)
+						.filter(
+							(participant): participant is ActiveUser =>
+								Boolean(participant)
+						)
+				);
+				dispatch(setQuestSession(session));
+			} catch (error) {
+				if (cancelled) return;
+
+				const axiosError = error as AxiosError<{ message?: string }>;
+				if (axiosError.response?.status === 404) {
+					setBootstrapSession(null);
+					setBootstrapError(null);
+					setBootstrapStatus("missing");
+					return;
+				}
+
+				setBootstrapSession(null);
+				setBootstrapStatus("error");
+				setBootstrapError(
+					axiosError.response?.data?.message ??
+						axiosError.message ??
+						"Unable to load the active live session."
+				);
+			}
+		};
+
+		void loadHostSession();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [dispatch, hasCurrentQuizSession, quizId]);
+
 	const {
 		channelState,
 		hostSubscriptionStatus,
@@ -120,6 +195,7 @@ function QuizReport() {
 	} = useLiveSession({
 		module: "quiz",
 		sessionId: activeSessionId,
+		publicChannelKey: activePublicChannelKey,
 		role: "host",
 		onSnapshot: syncParticipantsFromSnapshot,
 		onHostParticipantJoined: (payload) => {
@@ -136,10 +212,26 @@ function QuizReport() {
 	const connected =
 		hostSubscriptionStatus === "subscribed" &&
 		publicSubscriptionStatus === "subscribed";
+	const hasActiveSession = Boolean(activeSessionId);
 	const connectionFailed =
-		hostSubscriptionStatus === "error" ||
-		publicSubscriptionStatus === "error" ||
-		Boolean(liveConnectionError);
+		hasActiveSession &&
+		(hostSubscriptionStatus === "error" ||
+			publicSubscriptionStatus === "error" ||
+			Boolean(liveConnectionError));
+	const connectionLabel =
+		bootstrapStatus === "checking"
+			? "Loading live session"
+			: bootstrapStatus === "missing"
+				? "No active live session"
+				: bootstrapStatus === "error"
+					? "Live session lookup failed"
+					: connectionFailed
+						? "Live connection error"
+						: connected
+							? "Live - Ready to start"
+							: hasActiveSession
+								? "Connecting to live session"
+								: "No active live session";
 
 	useEffect(() => {
 		setparticipantsActiveNumber(channelState.participantCount);
@@ -159,6 +251,9 @@ function QuizReport() {
 					`/quizes/show-with-sessions/${activeSessionId}`
 				);
 				setSessionResponse(responseQuizSessionData?.data.data);
+				if (responseQuizSessionData?.data?.data?.session) {
+					dispatch(setQuestSession(responseQuizSessionData.data.data.session));
+				}
 			}
 			setresponse(responseData?.data?.data);
 			dispatch(setQuiz(responseData?.data?.data));
@@ -178,6 +273,11 @@ function QuizReport() {
 
 	// quizeStart
 	const quizeStartFunction = async () => {
+		if (!hasActiveSession) {
+			toast.error("No active live quiz session was found.");
+			return;
+		}
+
 		if (!connected) {
 			toast.error("Live Reverb connection is not ready yet.");
 			return;
@@ -221,11 +321,6 @@ function QuizReport() {
 			throw error;
 		}
 	};
-
-	console.log(
-		sessionResponse,
-		"responseresponseresponseresponseresponseresponse"
-	);
 
 	const handleChangeQuestion = async () => {
 		if (!activeSessionId) {
@@ -280,11 +375,6 @@ function QuizReport() {
 		);
 	};
 
-	console.log(
-		activeUsersData,
-		"activeUsersDataactiveUsersDataactiveUsersDataactiveUsersData"
-	);
-
 	return (
 		<div className="h-screen overflow-auto scrollbar-hidden">
 			<div className="grid grid-cols-1 md:grid-cols-12 gap-5 ">
@@ -300,11 +390,7 @@ function QuizReport() {
 									}`}
 								/>
 								<span className="text-sm font-medium text-gray-700">
-									{connectionFailed
-										? "Live connection error"
-										: connected
-										? "Live - Ready to start"
-										: "Offline - Check connection"}
+									{connectionLabel}
 								</span>
 							</div>
 
@@ -358,23 +444,28 @@ function QuizReport() {
 									onChange={handleTitleChange}
 									placeholder="Session title..."
 									className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-primary disabled:bg-gray-100"
-									disabled={!connected}
+									disabled={!connected || !hasActiveSession}
 								/>
 
 								<button
 									onClick={quizeStartFunction}
-									disabled={!connected}
+									disabled={!connected || !hasActiveSession}
 									className="w-full bg-primary disabled:bg-gray-400 text-white py-3 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
 								>
-									{connected ? (
+									{connected && hasActiveSession ? (
 										<>
 											<CirclePlay size={18} />
 											Start Session
 										</>
 									) : (
-										"Waiting for Connection..."
+										"Waiting for Live Session..."
 									)}
 								</button>
+								{bootstrapError && (
+									<p className="text-sm text-red-600">
+										{bootstrapError}
+									</p>
+								)}
 							</div>
 						</div>
 					</div>

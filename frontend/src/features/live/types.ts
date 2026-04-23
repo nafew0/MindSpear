@@ -35,6 +35,28 @@ export type SessionSnapshot = {
 	updated_at?: string | null;
 };
 
+export type HostLiveSessionBootstrap = {
+	id: number;
+	session_id: string;
+	title?: string | null;
+	quest_id?: number | null;
+	quiz_id?: number | null;
+	public_channel_key: string | null;
+	running_status: boolean;
+	current_question_id: number | null;
+	current_task_id: number | null;
+	timer_state: TimerState;
+	participant_count: number;
+	active_participants: LiveParticipant[];
+	start_datetime?: string | null;
+	end_datetime?: string | null;
+	timezone?: string | null;
+	updated_at?: string | null;
+	created_at?: string | null;
+	join_link?: string | null;
+	join_code?: string | null;
+};
+
 export type ParticipantTokenBundle = {
 	module: LiveModule;
 	sessionId: number;

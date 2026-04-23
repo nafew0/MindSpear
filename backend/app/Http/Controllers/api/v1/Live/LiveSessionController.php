@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\api\v1\Live;
 
 use App\Http\Controllers\api\v1\ApiBaseController;
+use App\Models\Quest\Quest;
 use App\Models\Quest\QuestSession;
 use App\Models\Quest\QuestTask;
 use App\Models\Quiz\Question;
+use App\Models\Quiz\Quiz;
 use App\Models\Quiz\QuizSession;
 use App\Services\Live\LiveAggregateService;
 use App\Services\Live\LiveSessionService;
@@ -21,6 +23,91 @@ class LiveSessionController extends ApiBaseController
         private readonly ParticipantTokenService $participantTokens,
         private readonly LiveAggregateService $aggregates,
     ) {}
+
+    public function questHostSession(Request $request, int $id): JsonResponse
+    {
+        $quest = Quest::find($id);
+
+        if (! $quest) {
+            return $this->notFoundResponse([], __('Quest not found.'));
+        }
+
+        if ((int) $quest->creator_id !== (int) auth()->id()) {
+            return $this->forbiddenResponse([], __('You are not allowed to access this quest.'));
+        }
+
+        $session = QuestSession::with('quest')
+            ->where('quest_id', $quest->id)
+            ->where('running_status', true)
+            ->latest()
+            ->first();
+
+        if (! $session) {
+            return $this->notFoundResponse([], __('No active quest session found.'));
+        }
+
+        $payload = array_merge(
+            $this->liveSessions->state(LiveSessionService::MODULE_QUEST, $session),
+            [
+                'id' => $session->id,
+                'session_id' => (string) $session->session_id,
+                'title' => $session->title,
+                'quest_id' => $session->quest_id,
+                'timezone' => $session->timezone,
+                'created_at' => optional($session->created_at)->toISOString(),
+                'active_participants' => $this->liveSessions->activeParticipantsPayload($session),
+                'join_link' => $quest->join_link,
+                'join_code' => $quest->join_code,
+            ],
+        );
+
+        return $this->okResponse([
+            'session' => $payload,
+        ], __('Active quest host session retrieved successfully.'));
+    }
+
+    public function quizHostSession(Request $request, int $id): JsonResponse
+    {
+        $quiz = Quiz::find($id);
+
+        if (! $quiz) {
+            return $this->notFoundResponse([], __('Quiz not found.'));
+        }
+
+        if ((int) $quiz->user_id !== (int) auth()->id()) {
+            return $this->forbiddenResponse([], __('You are not allowed to access this quiz.'));
+        }
+
+        $session = QuizSession::with('quiz')
+            ->where('quiz_id', $quiz->id)
+            ->where('is_host_live', true)
+            ->where('running_status', true)
+            ->latest()
+            ->first();
+
+        if (! $session) {
+            return $this->notFoundResponse([], __('No active quiz session found.'));
+        }
+
+        $payload = array_merge(
+            $this->liveSessions->state(LiveSessionService::MODULE_QUIZ, $session),
+            [
+                'id' => $session->id,
+                'session_id' => (string) $session->getRawOriginal('session_id'),
+                'title' => $session->title,
+                'quiz_id' => $session->quiz_id,
+                'timezone' => $session->timezone,
+                'created_at' => optional($session->created_at)->toISOString(),
+                'active_participants' => $this->liveSessions->activeParticipantsPayload($session),
+                'join_link' => $session->join_link,
+                'join_code' => $session->join_code,
+            ],
+        );
+
+        return $this->okResponse([
+            'session' => $payload,
+        ], __('Active quiz host session retrieved successfully.'));
+    }
 
     public function questState(Request $request, int $sessionId): JsonResponse
     {
