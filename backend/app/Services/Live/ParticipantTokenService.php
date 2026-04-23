@@ -131,7 +131,11 @@ class ParticipantTokenService
     {
         $cap = now()->addHours(self::TTL_HOURS);
 
-        if ($session->end_datetime && $session->end_datetime->lessThan($cap)) {
+        if (
+            $session->end_datetime
+            && $session->end_datetime->greaterThan(now())
+            && $session->end_datetime->lessThan($cap)
+        ) {
             return $session->end_datetime;
         }
 

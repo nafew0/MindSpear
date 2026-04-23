@@ -391,16 +391,20 @@ class QuizController extends ApiBaseController
                 return $response;
             }
 
-            // Check Latest Quiz Session availability
-            $quizSession = QuizSession::where('quiz_id', $quiz->id)->isHostLive(true)->latest()->first();
+            $quizSession = QuizSession::where('quiz_id', $quiz->id)
+                ->isHostLive(true)
+                ->where('running_status', true)
+                ->latest()
+                ->first();
+            $liveSessions = app(LiveSessionService::class);
 
-            // If no session exists or the start time is different, create a new session
-            if (! $quizSession || $quizSession->start_datetime != $validatedData['start_datetime']) {
-                // If no session exists, create a default one
+            if (! $quizSession) {
                 $quizSession = QuizSession::create([
                     'quiz_id' => $quiz->id,
                     'title' => $validatedData['title'],
                     'running_status' => true,
+                    'current_question_id' => null,
+                    'timer_state' => null,
                     'session_id' => generate_quiz_session_id($quiz->id, $validatedData['start_datetime']),
                     'start_datetime' => $validatedData['start_datetime'],
                     'end_datetime' => $validatedData['end_datetime'],
@@ -410,22 +414,15 @@ class QuizController extends ApiBaseController
                     'quiz_mode' => $validatedData['quiz_mode'] ?? null,
                 ]);
 
-                // New Join Link and Join Code generation
                 $quizSession->update([
                     'join_link' => generate_quiz_join_link(),
                     'join_code' => generate_quiz_join_code(),
                 ]);
             }
 
-            $liveSessions = app(LiveSessionService::class);
             $liveSessions->ensurePublicChannelKey($quizSession);
 
-            $payload = [
-                'session_id' => $quizSession->id,
-                'public_channel_key' => $quizSession->public_channel_key,
-                'public_channel' => $liveSessions->publicChannel(LiveSessionService::MODULE_QUIZ, $quizSession->public_channel_key),
-                'running_status' => (bool) $quizSession->running_status,
-            ];
+            $payload = $liveSessions->state(LiveSessionService::MODULE_QUIZ, $quizSession);
 
             $liveSessions->broadcastPublic(LiveSessionService::MODULE_QUIZ, $quizSession, 'session.started', $payload);
             $liveSessions->broadcastHost(LiveSessionService::MODULE_QUIZ, $quizSession, 'session.started', $payload);
@@ -494,16 +491,11 @@ class QuizController extends ApiBaseController
             ]);
 
             app(ParticipantTokenService::class)->revokeForSession(LiveSessionService::MODULE_QUIZ, $quizSession->id);
-            app(LiveSessionService::class)->broadcastPublic(LiveSessionService::MODULE_QUIZ, $quizSession, 'session.ended', [
-                'session_id' => $quizSession->id,
-                'running_status' => false,
-                'end_datetime' => optional($quizSession->end_datetime)->toISOString(),
-            ]);
-            app(LiveSessionService::class)->broadcastHost(LiveSessionService::MODULE_QUIZ, $quizSession, 'session.ended', [
-                'session_id' => $quizSession->id,
-                'running_status' => false,
-                'end_datetime' => optional($quizSession->end_datetime)->toISOString(),
-            ]);
+
+            $liveSessions = app(LiveSessionService::class);
+            $payload = $liveSessions->state(LiveSessionService::MODULE_QUIZ, $quizSession->refresh());
+            $liveSessions->broadcastPublic(LiveSessionService::MODULE_QUIZ, $quizSession, 'session.ended', $payload);
+            $liveSessions->broadcastHost(LiveSessionService::MODULE_QUIZ, $quizSession, 'session.ended', $payload);
 
             return $this->okResponse(['quizSession' => $quizSession], __('Quiz session ended successfully.'));
         } catch (Exception $e) {

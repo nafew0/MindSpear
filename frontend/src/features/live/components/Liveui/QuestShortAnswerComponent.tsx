@@ -1,12 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {
-	connectSocket,
-	emitSubmitTask,
-	// getSocket,
-	waitForAnswerProcessedQuestOnce,
-} from "@/features/live/services/realtimeBridge";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { upsertAnswer } from "@/features/live/store/leaderboardAnswersSlice";
@@ -49,7 +43,6 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 	const [submitted, setSubmitted] = useState(false);
 	const [error, setError] = useState("");
 	const searchParams = useSearchParams();
-	const userId = searchParams.get("ujid");
 	const [watingData, setwatingData] = useState(true);
 	const [currentTimeGet, setcurrentTimeGet] = useState<number>(0);
 	const [chalangeData, setchalangeData] = useState<any>({});
@@ -160,19 +153,6 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 
 	console.log(answer, "answeransweransweransweranswer");
 
-	const reqSoketData = (list: any[]) => {
-		emitSubmitTask({
-			userId: `${userId}`,
-			questionId: dataNew?.id,
-			userName: `${userId}`,
-			questionTitle: `${task?.title}`,
-			questionType: `${task?.task_type}`,
-			selectedOption: list,
-			optionType: "text",
-		});
-		setwatingData(true);
-	};
-
 	const saveAnswer = async (nextList: any) => {
 		try {
 			const currentTime = moment().format("YYYY-MM-DD HH:mm:ss");
@@ -228,23 +208,9 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 			})
 		);
 
-		// const existing = getSocket();
-		// if (existing?.connected) {
-		// 	reqSoketData(nextList);
-		// } else {
-		// 	connectSocket().then(() => reqSoketData(nextList));
-		// }
-
-		reqSoketData(nextList);
-		const submitStatusCheck = await waitForAnswerProcessedQuestOnce();
-		if (!submitStatusCheck) {
-			connectSocket().then(() => {
-				reqSoketData(nextList);
-			});
-		}
-
 		setError("");
 		setSubmitted(true);
+		setwatingData(false);
 		onChange?.(trimmed);
 	};
 

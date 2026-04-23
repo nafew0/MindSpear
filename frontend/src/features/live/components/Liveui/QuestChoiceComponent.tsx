@@ -9,9 +9,6 @@ import React, {
 	useState,
 } from "react";
 import clsx from "clsx";
-import {
-	emitSubmitTask,
-} from "@/features/live/services/realtimeBridge";
 import { useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { upsertAnswer } from "@/features/live/store/leaderboardAnswersSlice";
@@ -58,7 +55,6 @@ const QuestChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 	//   const answers = useSelector((state: RootState) => state.answers);
 	const searchParams = useSearchParams();
 	const joinid = searchParams.get("jid");
-	const userId = searchParams.get("ujid");
 	const attempId = searchParams.get("aid");
 
 	const [watingData, setwatingData] = useState(true);
@@ -243,7 +239,8 @@ const QuestChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 
 	const dataSubmit = async () => {
 		await saveAnswer();
-		reqSoketData();
+		if (task?.id) setTaskExpired(task.id);
+		setwatingData(false);
 
 		if (typeof window !== "undefined") {
 			localStorage.setItem("currentId", `${task?.id}`);
@@ -269,21 +266,6 @@ const QuestChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 		} catch (error) {
 			console.error("Error saving answer:", error);
 		}
-	};
-
-	const reqSoketData = () => {
-		emitSubmitTask({
-			userId: `${userId}`,
-			questionId: dataNew?.id,
-			userName: `${userId}`,
-			questionTitle: `${task?.title}`,
-			questionType: `${task?.task_type}`,
-			// send array for multi, single index otherwise
-			selectedOption: isMulti ? selectedIndices : selectedIndex,
-			optionType: "option",
-		});
-		setTaskExpired(dataNew?.id);
-		setwatingData(false);
 	};
 
 	const handleExpire = () => {

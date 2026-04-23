@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { Quiz } from "@/types/types";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 import Summary from "@/features/quiz/components/QuizReports/Summary";
 import moment from "@/lib/dayjs";
@@ -16,10 +16,8 @@ import {
 import { Switch } from "antd";
 import {
 	changeQuizQuestion,
-	getSessionState,
 } from "@/features/live/services/liveSessionApi";
-import { useHostChannel } from "@/features/live/hooks/useHostChannel";
-import { RootState } from "@/stores/store";
+import { useLiveSession } from "@/features/live/hooks/useLiveSession";
 import { CirclePlay, Users } from "lucide-react";
 import {
 	setScope,
@@ -29,6 +27,7 @@ import { toast } from "react-toastify";
 import type {
 	HostParticipantPayload,
 	LiveParticipant,
+	SessionSnapshot,
 	TimerState,
 } from "@/features/live/types";
 
@@ -74,7 +73,6 @@ function QuizReport() {
 	const [sessionResponse, setSessionResponse] = useState<QuizResponse | any>(
 		null
 	);
-	const user = useSelector((state: RootState) => state.auth.user) as any;
 	const quizSession = useSelector(
 		(state: any) => state.questSession.questSession
 	);
@@ -85,84 +83,67 @@ function QuizReport() {
 	console.log(scope, "ddddddddddddddddddddddddd");
 
 	const [isQuizMode, setIsQuizMode] = useState(true);
-	const [participants, setParticipants] = useState<any[]>([]);
-	console.log(participants);
 
 	const [participantsActiveNumber, setparticipantsActiveNumber] =
 		useState<number>(0);
 
 	const [activeUsersData, setActiveUsersData] = useState<ActiveUser[]>([]);
-	const [participantsActiveData, setparticipantsActiveData] = useState<any>(
-		{}
-	);
 
 	const [quizCreated, setQuizCreated] = useState(false);
 	const [titleInput, setTitleInput] = useState("");
 
-	const [connected, setConnected] = useState(false);
-
 	const quizId = `${params?.id}`;
-	const quizTitle = `${response?.quiz.title}` || "quiz Title";
 
-	// 	useEffect(() => {
-	// const existing = getSocket();
-	// console.log(existing?.connected, "existingexistingexistingexistingexistingexisting");
-
-	// 	}, [])
-
-	const handleQuizCompletion = (payload: any) => {
-		// Your existing code...
-		//console.log("000000000", payload);
+	const handleQuizCompletion = useCallback(() => {
 		dispatch(userQuizCompletedLastSlider());
-	};
+	}, [dispatch]);
 
 	useEffect(() => {
-		handleQuizCompletion("payload");
-		setConnected(true);
+		handleQuizCompletion();
 		setQuizCreated(true);
-	}, [response?.quiz.title, params?.id]);
+	}, [handleQuizCompletion, response?.quiz.title, params?.id]);
 
-	useEffect(() => {
-		if (!activeSessionId) return;
+	const syncParticipantsFromSnapshot = useCallback((snapshot: SessionSnapshot) => {
+		setparticipantsActiveNumber(snapshot.participant_count ?? 0);
+		setActiveUsersData(
+			(snapshot.active_participants ?? [])
+				.map(participantToActiveUser)
+				.filter((participant): participant is ActiveUser => Boolean(participant))
+		);
+	}, []);
 
-		let cancelled = false;
-
-		const syncParticipants = async () => {
-			try {
-				const snapshot = await getSessionState("quiz", activeSessionId);
-				if (cancelled) return;
-
-				setparticipantsActiveNumber(snapshot.participant_count ?? 0);
-				setActiveUsersData(
-					(snapshot.active_participants ?? [])
-						.map(participantToActiveUser)
-						.filter((participant): participant is ActiveUser => Boolean(participant))
-				);
-			} catch (error) {
-				console.error("Failed to sync active quiz participants:", error);
-			}
-		};
-
-		void syncParticipants();
-
-		return () => {
-			cancelled = true;
-		};
-	}, [activeSessionId]);
-
-	useHostChannel("quiz", activeSessionId, {
-		onParticipantJoined: (payload) => {
-			setparticipantsActiveData(payload);
+	const {
+		channelState,
+		hostSubscriptionStatus,
+		publicSubscriptionStatus,
+		error: liveConnectionError,
+	} = useLiveSession({
+		module: "quiz",
+		sessionId: activeSessionId,
+		role: "host",
+		onSnapshot: syncParticipantsFromSnapshot,
+		onHostParticipantJoined: (payload) => {
 			setparticipantsActiveNumber(payload?.participant_count ?? 0);
 			setActiveUsersData((previous) =>
 				mergeActiveUser(previous, participantToActiveUser(payload))
 			);
 		},
-		onParticipantCountUpdated: (payload) => {
-			setparticipantsActiveData(payload);
+		onHostParticipantCountUpdated: (payload) => {
 			setparticipantsActiveNumber(payload?.participant_count ?? 0);
 		},
 	});
+
+	const connected =
+		hostSubscriptionStatus === "subscribed" &&
+		publicSubscriptionStatus === "subscribed";
+	const connectionFailed =
+		hostSubscriptionStatus === "error" ||
+		publicSubscriptionStatus === "error" ||
+		Boolean(liveConnectionError);
+
+	useEffect(() => {
+		setparticipantsActiveNumber(channelState.participantCount);
+	}, [channelState.participantCount]);
 
 	const start = moment.utc(response?.quiz?.open_datetime).startOf("day");
 	const end = moment.utc(response?.quiz?.close_datetime).startOf("day");
@@ -183,7 +164,7 @@ function QuizReport() {
 			dispatch(setQuiz(responseData?.data?.data));
 		};
 		dataFetch();
-	}, [params?.id, activeSessionId]);
+	}, [params?.id, activeSessionId, dispatch]);
 
 	const handleQuizChange = (checked: boolean) => {
 		setIsQuizMode(checked);
@@ -197,6 +178,11 @@ function QuizReport() {
 
 	// quizeStart
 	const quizeStartFunction = async () => {
+		if (!connected) {
+			toast.error("Live Reverb connection is not ready yet.");
+			return;
+		}
+
 		try {
 			await updateHostLiveSession();
 			await handleChangeQuestion();
@@ -314,7 +300,9 @@ function QuizReport() {
 									}`}
 								/>
 								<span className="text-sm font-medium text-gray-700">
-									{connected
+									{connectionFailed
+										? "Live connection error"
+										: connected
 										? "Live - Ready to start"
 										: "Offline - Check connection"}
 								</span>

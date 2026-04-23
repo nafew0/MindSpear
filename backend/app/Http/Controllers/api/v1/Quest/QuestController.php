@@ -180,16 +180,15 @@ class QuestController extends ApiBaseController
 
             $questSession = $quest->sessions()
                 ->withCount('participants')
+                ->where('running_status', true)
                 ->latest()
                 ->first();
 
             if (! $questSession) {
-                return $this->notFoundResponse([], __('Quest session not found.'));
-            }
-
-            if (! $questSession->running_status) {
                 return $this->badRequestResponse([], __('Quest session has ended.'));
             }
+
+            app(LiveSessionService::class)->ensurePublicChannelKey($questSession);
 
             return $this->okResponse(
                 ['quest' => $quest, 'questSession' => $questSession],
@@ -410,10 +409,11 @@ class QuestController extends ApiBaseController
                 ->where('running_status', true)
                 ->latest()
                 ->first();
+            $liveSessions = app(LiveSessionService::class);
 
             if ($runningSession) {
                 $quest->update(['status' => Quest::STATUS_RUNNING]);
-                app(LiveSessionService::class)->ensurePublicChannelKey($runningSession);
+                $liveSessions->ensurePublicChannelKey($runningSession);
 
                 return $this->okResponse(
                     ['quest' => $quest, 'questSession' => $runningSession],
@@ -421,42 +421,30 @@ class QuestController extends ApiBaseController
                 );
             }
 
-            // Check Latest Quest Session availability
-            $questSession = $quest->sessions()->latest()->first();
+            $questSession = $quest->sessions()->create([
+                'quest_id' => $quest->id,
+                'title' => $validatedData['title'],
+                'running_status' => true,
+                'current_task_id' => null,
+                'timer_state' => null,
+                'session_id' => generate_quest_session_id($quest->id, $validatedData['start_datetime']),
+                'start_datetime' => $validatedData['start_datetime'],
+                'end_datetime' => $validatedData['end_datetime'],
+                'timezone' => $quest->timezone ?? config('app.timezone', 'UTC'),
+            ]);
 
-            // If no session exists or the start time is different, create a new session
-            if (! $questSession || $questSession->start_datetime != $validatedData['start_datetime']) {
-                // If no session exists, create a default one
-                $questSession = $quest->sessions()->create([
-                    'quest_id' => $quest->id,
-                    'title' => $validatedData['title'],
-                    'running_status' => true,
-                    'session_id' => generate_quest_session_id($quest->id, $validatedData['start_datetime']),
-                    'start_datetime' => $validatedData['start_datetime'],
-                    'end_datetime' => $validatedData['end_datetime'],
-                    'timezone' => $quest->timezone ?? config('app.timezone', 'UTC'),
-                ]);
+            $quest->update([
+                'join_link' => generate_quest_join_link(),
+                'join_code' => generate_quest_join_code(),
+            ]);
 
-                // New Join Link and Join Code generation
-                $quest->update([
-                    'join_link' => generate_quest_join_link(),
-                    'join_code' => generate_quest_join_code(),
-                ]);
-            }
-
-            $liveSessions = app(LiveSessionService::class);
             $liveSessions->ensurePublicChannelKey($questSession);
 
             $quest->update([
-                'status' => $questSession->running_status ? Quest::STATUS_RUNNING : Quest::STATUS_INITIATED,
+                'status' => Quest::STATUS_RUNNING,
             ]);
 
-            $payload = [
-                'session_id' => $questSession->id,
-                'public_channel_key' => $questSession->public_channel_key,
-                'public_channel' => $liveSessions->publicChannel(LiveSessionService::MODULE_QUEST, $questSession->public_channel_key),
-                'running_status' => (bool) $questSession->running_status,
-            ];
+            $payload = $liveSessions->state(LiveSessionService::MODULE_QUEST, $questSession);
 
             $liveSessions->broadcastPublic(LiveSessionService::MODULE_QUEST, $questSession, 'session.started', $payload);
             $liveSessions->broadcastHost(LiveSessionService::MODULE_QUEST, $questSession, 'session.started', $payload);
@@ -533,16 +521,11 @@ class QuestController extends ApiBaseController
                 ]);
 
             app(ParticipantTokenService::class)->revokeForSession(LiveSessionService::MODULE_QUEST, $questSession->id);
-            app(LiveSessionService::class)->broadcastPublic(LiveSessionService::MODULE_QUEST, $questSession, 'session.ended', [
-                'session_id' => $questSession->id,
-                'running_status' => false,
-                'end_datetime' => optional($questSession->end_datetime)->toISOString(),
-            ]);
-            app(LiveSessionService::class)->broadcastHost(LiveSessionService::MODULE_QUEST, $questSession, 'session.ended', [
-                'session_id' => $questSession->id,
-                'running_status' => false,
-                'end_datetime' => optional($questSession->end_datetime)->toISOString(),
-            ]);
+
+            $liveSessions = app(LiveSessionService::class);
+            $payload = $liveSessions->state(LiveSessionService::MODULE_QUEST, $questSession->refresh());
+            $liveSessions->broadcastPublic(LiveSessionService::MODULE_QUEST, $questSession, 'session.ended', $payload);
+            $liveSessions->broadcastHost(LiveSessionService::MODULE_QUEST, $questSession, 'session.ended', $payload);
 
             return $this->okResponse(['questSession' => $questSession], __('Quest session ended successfully.'));
         } catch (Exception $e) {

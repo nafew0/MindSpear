@@ -10,8 +10,7 @@ import {
 	getParticipantToken,
 	getStoredPublicChannelKey,
 } from "@/features/live/services/liveStorage";
-import { useSessionChannel } from "@/features/live/hooks/useSessionChannel";
-import { useSessionSync } from "@/features/live/hooks/useSessionSync";
+import { useLiveSession } from "@/features/live/hooks/useLiveSession";
 import moment from "@/lib/dayjs";
 import { useDispatch } from "react-redux";
 import { setQuestData } from "@/features/quest/store/questQuestionTimeSlice";
@@ -64,19 +63,13 @@ function QuizAttempt() {
 		[dispatchLiveState]
 	);
 
-	const { snapshot } = useSessionSync({
+	const { channelState } = useLiveSession({
 		module: "quest",
 		sessionId,
+		publicChannelKey,
 		participantToken,
-		onSync: handleSnapshot,
-		pollMs: 5000,
+		onSnapshot: handleSnapshot,
 	});
-
-	const channelState = useSessionChannel(
-		"quest",
-		publicChannelKey ?? snapshot?.public_channel_key,
-		snapshot
-	);
 
 	useEffect(() => {
 		dispatchLiveState(channelState.currentTaskId, channelState.timerState);
@@ -158,6 +151,7 @@ function QuizAttempt() {
 			<QuestPlayComponent
 				tasks={tasks}
 				sessionStatus={channelState.sessionStatus}
+				currentItemId={channelState.currentTaskId}
 			/>
 		</div>
 	);

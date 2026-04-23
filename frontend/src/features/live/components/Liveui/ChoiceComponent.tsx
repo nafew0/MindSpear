@@ -2,11 +2,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
-import {
-	connectSocket,
-	submitAnswer,
-	waitForAnswerProcessedQuizOnce,
-} from "@/features/live/services/realtimeBridge";
 
 import { useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
@@ -49,7 +44,6 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 	// const answers = useSelector((state: RootState) => state.answers);
 	const searchParams = useSearchParams();
 	const joinid = searchParams.get("jid");
-	const userId = searchParams.get("ujid");
 	const attempId = searchParams.get("aid");
 
 	const [watingData, setwatingData] = useState(true);
@@ -263,34 +257,12 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 			console.log(dataNew?.id, "dataNew?.id 3");
 			setwatingData(true);
 		}
-	}, [dataNew?.id]);
-
-	// const dataSubmit = async () => {
-	// 	const existing = getSocket();
-	// 	if (existing?.connected) {
-	// 		reqSoketData();
-	// 		saveAnswer();
-	// 	} else {
-	// 		connectSocket().then(() => {
-	// 			reqSoketData();
-	// 			saveAnswer();
-	// 		});
-	// 	}
-	// };
+	}, [dataNew?.id, task?.id]);
 
 	const dataSubmit = async () => {
-		reqSoketData();
-		saveAnswer();
-		const submitStatusCheck = await waitForAnswerProcessedQuizOnce();
-		if (!submitStatusCheck) {
-			connectSocket().then(() => {
-				reqSoketData();
-				saveAnswer();
-				if (typeof window !== "undefined") {
-					localStorage.setItem("currentId", `${task?.id}`);
-				}
-			});
-		}
+		await saveAnswer();
+		if (task?.id) setTaskExpired(task.id);
+		setwatingData(false);
 
 		if (typeof window !== "undefined") {
 			localStorage.setItem("currentId", `${task?.id}`);
@@ -300,9 +272,6 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 	const saveAnswer = async () => {
 		try {
 			const currentTime = moment().format("YYYY-MM-DD HH:mm:ss");
-			// task?.time_limit_seconds
-			// const currentData = await waitForQuestionChangedAll();
-			// const getSecend = task?.time_limit_seconds - currentTimeGet;
 			const diffSeconds = moment(currentTime).diff(
 				moment(quizStartTimeTime),
 				"seconds"
@@ -323,19 +292,6 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 		} catch (error) {
 			console.error("Error saving answer:", error);
 		}
-	};
-
-	const reqSoketData = () => {
-		submitAnswer({
-			userid: userId,
-			questionId: dataNew?.id,
-			userName: `${userId}`,
-			questionTitle: task?.title,
-			questionType: dataNew?.question_type,
-			selectedOption: selectedIndex,
-			option: "option",
-		});
-		setwatingData(false);
 	};
 
 	console.log(currentTimeGet, "rawrawrawrawrawrawrawraw");
@@ -395,15 +351,13 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 	// }, [dataNew?.id, handleExpire]);
 
 	// const currentTime = moment(questTimeData?.questiQsenStartTime).format("YYYY-MM-DD HH:mm:ss");
-	const date = questTimeData?.questiQsenStartTime;
+	const date = questTimeData?.questiQsenStartTime ?? "";
 	const cleanDate = date.replace(/(\d+)(st|nd|rd|th)/, "$1");
 	const quizStartTimeTime = moment(
 		cleanDate,
 		"MMMM D YYYY, h:mm:ss",
 		true
 	).format("YYYY-MM-DD HH:mm:ss");
-
-	// waitForQuestionChangedAll
 
 	const htmlToText = (html?: string) => {
 		if (!html) return "";

@@ -2,7 +2,7 @@
 
 namespace App\Services\Live;
 
-use App\Events\Live\LiveBroadcastEvent;
+use App\Events\Live\ImmediateLiveBroadcastEvent;
 use App\Models\Quest\QuestParticipant;
 use App\Models\Quest\QuestSession;
 use App\Models\Quiz\QuizParticipant;
@@ -53,7 +53,7 @@ class LiveSessionService
         $this->afterCommit(function () use ($module, $publicChannelKey, $event, $payload) {
             $channel = $this->publicChannel($module, $publicChannelKey);
 
-            $this->broadcastSafely(new LiveBroadcastEvent(
+            $this->broadcastSafely(new ImmediateLiveBroadcastEvent(
                 $channel,
                 $event,
                 $this->withMeta($module, $event, $payload),
@@ -66,7 +66,7 @@ class LiveSessionService
         $this->afterCommit(function () use ($module, $session, $event, $payload) {
             $channel = $this->hostChannel($module, (int) $session->id);
 
-            $this->broadcastSafely(new LiveBroadcastEvent(
+            $this->broadcastSafely(new ImmediateLiveBroadcastEvent(
                 $channel,
                 $event,
                 $this->withMeta($module, $event, $payload),
@@ -190,7 +190,7 @@ class LiveSessionService
         ]);
     }
 
-    private function broadcastSafely(LiveBroadcastEvent $event, string $channel, string $eventName): void
+    private function broadcastSafely(ImmediateLiveBroadcastEvent $event, string $channel, string $eventName): void
     {
         try {
             broadcast($event);

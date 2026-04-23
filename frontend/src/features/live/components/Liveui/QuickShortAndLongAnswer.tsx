@@ -1,40 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import React, { useEffect } from "react";
-import {
-	getSocket,
-	connectSocket,
-	waitAnswerSubmittedToQuestCreatorQuickForm,
-} from "@/features/live/services/realtimeBridge";
+
+import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 function QuickShortAndLongAnswer({ answerData }: any) {
-	const existing = getSocket();
-	console.log(existing?.connected, "existing?.connected");
-
-	useEffect(() => {
-		if (existing?.connected) {
-			waitAnswerSubmittedToQuestCreatorQuickForm((payload: any) => {
-				//console.log("🎉 Question Changed:", payload);
-			});
-		} else {
-			connectSocket()
-				.then(async (s) => {
-					//console.log("Socket Connected:", s.id);
-
-					waitAnswerSubmittedToQuestCreatorQuickForm(
-						(payload: any) => {
-							//console.log("🎉 Question Changed:", payload);
-						}
-					);
-				})
-				.catch((err) => {
-					console.error("Socket Connection failed:", err);
-					// alert("Socket connection failed");
-				});
-		}
-	}, []);
-
 	return (
 		<div>
 			<div className="h-[400px] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [-webkit-overflow-scrolling:touch]">

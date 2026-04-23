@@ -1,14 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-expressions */
 "use client";
 import { IoIosClose } from "react-icons/io";
 import Image from "next/image";
 import Link from "next/link";
-// import { clearCache } from "@/services/redux/features/leaderboardSlice";
-// import { useDispatch, useSelector } from "react-redux";
-// import { emitEndQuest, setCurrentQuest } from "@/features/live/services/realtimeBridge";
-// import { useSearchParams, useRouter, useParams } from "next/navigation";
-// import { emitEndQuiz } from "@/features/live/services/realtimeBridge";
 
 interface HeaderProps {
 	onClose?: () => void;

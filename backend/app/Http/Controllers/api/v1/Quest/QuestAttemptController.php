@@ -329,18 +329,25 @@ class QuestAttemptController extends ApiBaseController
                 return $this->notFoundResponse([], __('Quest not found or not available.'));
             }
 
-            $now = now();
+            $questSession = QuestSession::where('quest_id', $quest->id)
+                ->where('running_status', true)
+                ->latest()
+                ->first();
 
-            if ($now < $quest->start_datetime) {
-                return $this->badRequestResponse([], __('This quest is not start yet.'));
+            if (! $questSession) {
+                return $this->badRequestResponse([], __('Quest live session has ended.'));
             }
 
-            if ($now > $quest->end_datetime) {
-                return $this->badRequestResponse([], __('This quest has already ended.'));
-            }
+            $liveSessions = app(LiveSessionService::class);
+            $liveSessions->ensurePublicChannelKey($questSession);
 
             return $this->okResponse(
-                ['quest' => $quest],
+                [
+                    'quest' => $quest,
+                    'questSession' => $questSession,
+                    'public_channel_key' => $questSession->public_channel_key,
+                    'public_channel' => $liveSessions->publicChannel(LiveSessionService::MODULE_QUEST, $questSession->public_channel_key),
+                ],
                 __('Quest details retrieved successfully.')
             );
         } catch (\Exception $e) {
@@ -411,7 +418,7 @@ class QuestAttemptController extends ApiBaseController
                 $anonymousName = $this->generateUniqueAnonymousName($quest, $anonymousName);
             }
 
-            $attempt = $this->createNewAttempt($quest, $userId, $request);
+            $attempt = $this->createNewAttempt($quest, $existingSession, $userId, $request);
             $participantToken = app(ParticipantTokenService::class)->issue($attempt, $existingSession);
             $liveSessions = app(LiveSessionService::class);
             $liveSessions->ensurePublicChannelKey($existingSession);
@@ -1750,12 +1757,13 @@ class QuestAttemptController extends ApiBaseController
      */
     protected function createNewAttempt(
         Quest $quest,
+        QuestSession $questSession,
         ?int $userId,
         $request
     ): QuestParticipant {
         return QuestParticipant::create([
             'quest_id' => $quest->id,
-            'quest_session_id' => $this->getLatestSessionId($quest->id),
+            'quest_session_id' => $questSession->id,
             'user_id' => $userId,
             'is_anonymous' => ! $userId,
             'anonymous_details' => ! $userId ? [

@@ -448,7 +448,14 @@ server {
 ```nginx
 server {
     listen 80;
-    server_name mindspear.app www.mindspear.app;
+    server_name www.mindspear.app;
+
+    return 301 https://mindspear.app$request_uri;
+}
+
+server {
+    listen 80;
+    server_name mindspear.app;
 
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
@@ -575,7 +582,7 @@ APP_FALLBACK_LOCALE=en
 
 FRONTEND_URL=https://mindspear.app
 CORS_ALLOWED_ORIGINS=https://mindspear.app
-SANCTUM_STATEFUL_DOMAINS=
+SANCTUM_STATEFUL_DOMAINS=mindspear.app
 SESSION_DOMAIN=.mindspear.app
 SESSION_SECURE_COOKIE=true
 SESSION_SAME_SITE=lax
@@ -773,7 +780,7 @@ sudo tail -f /var/log/nginx/api.mindspear.app.error.log
 - **`--debug` left on Reverb in production** — floods disk, chews CPU. The unit file in §3.1 already omits it; don't add it back.
 - **`APP_DEBUG=true` in production** — leaks stack traces containing env values. Keep it `false`.
 - **Missing `SESSION_DOMAIN=.mindspear.app`** — Sanctum cookies won't cross the subdomain boundary and host-channel auth fails silently.
-- **Forgetting `REVERB_ALLOWED_ORIGINS`** — browser connects, then Reverb drops the handshake.
+- **Serving live pages from `www.mindspear.app`** — keep `www` redirected to `https://mindspear.app`; otherwise browser Origin becomes `https://www.mindspear.app` and Reverb/Sanctum will correctly reject it.
 - **Running `queue:work` without `--max-time` / `--max-jobs`** — long-lived worker memory grows until OOM. The §3.2 unit already sets these; don't strip them.
 - **Queue not restarted after deploy** — workers keep running old code. Always run `php artisan queue:restart` (graceful) plus `sudo systemctl restart mindspear-reverb` (hard).
 - **Opcache + `validate_timestamps=0` + no reload** — PHP keeps serving pre-deploy bytecode. `sudo systemctl reload php8.4-fpm` after every deploy, or put it in the deploy script.

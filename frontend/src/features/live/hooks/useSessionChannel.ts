@@ -19,6 +19,9 @@ const initialState: LiveChannelState = {
 	sessionStatus: "pending",
 	answerAggregate: null,
 	leaderboard: null,
+	connectionStatus: "unavailable",
+	publicSubscriptionStatus: "unavailable",
+	hostSubscriptionStatus: "unavailable",
 	isConnected: false,
 	lastEvent: null,
 };
@@ -134,7 +137,11 @@ export function useSessionChannel(
 		const channelName = `session.${module}.${publicChannelKey}`;
 		const channel = echo.channel(channelName);
 
-		const setConnected = () => setState((previous) => ({ ...previous, isConnected: true }));
+		const setConnected = () =>
+			setState((previous) => ({
+				...previous,
+				isConnected: echo.connector.pusher.connection.state === "connected",
+			}));
 		const setDisconnected = () => setState((previous) => ({ ...previous, isConnected: false }));
 
 		const remember = (payload: SessionEventPayload) => {
@@ -144,6 +151,16 @@ export function useSessionChannel(
 		};
 
 		channel
+			.subscribed(() => {
+				setConnected();
+			})
+			.error((error: unknown) => {
+				console.error(`Live ${module} channel subscription failed:`, {
+					channel: channelName,
+					error,
+				});
+				setDisconnected();
+			})
 			.listen(".session.started", (payload: SessionEventPayload) => {
 				remember(payload);
 				setState((previous) => ({
@@ -210,11 +227,15 @@ export function useSessionChannel(
 
 		const unbindConnected = bindEchoConnection("connected", setConnected);
 		const unbindDisconnected = bindEchoConnection("disconnected", setDisconnected);
+		const unbindUnavailable = bindEchoConnection("unavailable", setDisconnected);
+		const unbindFailed = bindEchoConnection("failed", setDisconnected);
 		setConnected();
 
 		return () => {
 			unbindConnected();
 			unbindDisconnected();
+			unbindUnavailable();
+			unbindFailed();
 			echo.leave(channelName);
 		};
 	}, [module, publicChannelKey]);

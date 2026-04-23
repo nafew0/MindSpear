@@ -1,6 +1,5 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { connectSocket, getSocket, submitAnswer } from "@/features/live/services/realtimeBridge";
 import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { upsertAnswer } from "@/features/live/store/leaderboardAnswersSlice";
@@ -45,7 +44,6 @@ const ShortAnswerComponent: React.FC<Props> = ({ task, value, onChange }) => {
 	const [submitted, setSubmitted] = useState(false);
 	const [error, setError] = useState("");
 	const searchParams = useSearchParams();
-	const userId = searchParams.get("ujid");
 	const attempId = searchParams.get("aid");
 	const joinid = searchParams.get("jid");
 
@@ -128,20 +126,7 @@ const ShortAnswerComponent: React.FC<Props> = ({ task, value, onChange }) => {
 		}, 300); // 300ms debounce
 
 		return () => clearTimeout(t);
-	}, [answer, task?.id, dispatch]);
-
-	const reqSoketData = () => {
-		submitAnswer({
-			userid: userId,
-			questionId: dataNew?.id,
-			userName: `${userId}`,
-			questionTitle: (dataNew as any)?.title,
-			questionType: (dataNew as any)?.question_type,
-			selectedOption: `${answer}`,
-			option: "text",
-		});
-		setwatingData(true);
-	};
+	}, [answer, task, dispatch]);
 
 	const saveAnswer = async (nextList: any) => {
 		try {
@@ -197,15 +182,9 @@ const ShortAnswerComponent: React.FC<Props> = ({ task, value, onChange }) => {
 			})
 		);
 
-		const existing = getSocket();
-		if (existing?.connected) {
-			reqSoketData();
-		} else {
-			connectSocket().then(() => reqSoketData());
-		}
-
 		setError("");
 		setSubmitted(true);
+		setwatingData(false);
 		onChange?.(trimmed);
 	};
 

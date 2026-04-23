@@ -137,14 +137,3 @@ export function aggregatePayloadToResult(
 
 	return { quest_id: questId, task_type: taskType, id: taskId, number };
 }
-
-export function numberResultToScoreMap(result: LiveResultDatum | null) {
-	if (!result || !("number" in result)) return null;
-
-	return {
-		questionId: result.id,
-		percentageScores: Object.fromEntries(
-			result.number.map((value, index) => [index, Math.round(value)])
-		),
-	};
-}

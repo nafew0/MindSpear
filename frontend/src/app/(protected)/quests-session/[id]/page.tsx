@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 
 import Summary from "@/features/quest/components/QuestReports/Summary";
 import { useParams, useRouter } from "next/navigation";
@@ -12,11 +12,8 @@ import { RootState } from "@/stores/store";
 
 import { clearCache } from "@/features/live/store/leaderboardSlice";
 import { clearAppStorage } from "@/utils/storageCleaner";
-import {
-	changeQuestTask,
-	getSessionState,
-} from "@/features/live/services/liveSessionApi";
-import { useHostChannel } from "@/features/live/hooks/useHostChannel";
+import { changeQuestTask } from "@/features/live/services/liveSessionApi";
+import { useLiveSession } from "@/features/live/hooks/useLiveSession";
 
 import {
 	setQuestData,
@@ -29,6 +26,7 @@ import { toast } from "react-toastify";
 import type {
 	HostParticipantPayload,
 	LiveParticipant,
+	SessionSnapshot,
 	TimerState,
 } from "@/features/live/types";
 
@@ -74,7 +72,6 @@ function QuizReport() {
 	const [participantsActive, setparticipantsActive] = useState(0);
 	const [titleInput, setTitleInput] = useState("");
 
-	const [connected, setConnected] = useState(false);
 	const questId = `${params?.id}`;
 
 	useEffect(() => {
@@ -85,49 +82,47 @@ function QuizReport() {
 		}
 	}, [params?.id]);
 
-	useEffect(() => {
-		setConnected(true);
+	const syncParticipantsFromSnapshot = useCallback((snapshot: SessionSnapshot) => {
+		setparticipantsActive(snapshot.participant_count ?? 0);
+		setActiveUsersData(
+			(snapshot.active_participants ?? [])
+				.map(participantToActiveUser)
+				.filter((participant): participant is ActiveUser => Boolean(participant)),
+		);
 	}, []);
 
-	useEffect(() => {
-		if (!questSession?.id) return;
-
-		let cancelled = false;
-
-		const syncParticipants = async () => {
-			try {
-				const snapshot = await getSessionState("quest", questSession.id);
-				if (cancelled) return;
-
-				setparticipantsActive(snapshot.participant_count ?? 0);
-				setActiveUsersData(
-					(snapshot.active_participants ?? [])
-						.map(participantToActiveUser)
-						.filter((participant): participant is ActiveUser => Boolean(participant)),
-				);
-			} catch (error) {
-				console.error("Failed to sync active quest participants:", error);
-			}
-		};
-
-		void syncParticipants();
-
-		return () => {
-			cancelled = true;
-		};
-	}, [questSession?.id]);
-
-	useHostChannel("quest", questSession?.id, {
-		onParticipantJoined: (payload) => {
+	const {
+		channelState,
+		hostSubscriptionStatus,
+		publicSubscriptionStatus,
+		error: liveConnectionError,
+	} = useLiveSession({
+		module: "quest",
+		sessionId: questSession?.id,
+		role: "host",
+		onSnapshot: syncParticipantsFromSnapshot,
+		onHostParticipantJoined: (payload) => {
 			setparticipantsActive(payload?.participant_count ?? 0);
 			setActiveUsersData((previous) =>
 				mergeActiveUser(previous, participantToActiveUser(payload)),
 			);
 		},
-		onParticipantCountUpdated: (payload) => {
+		onHostParticipantCountUpdated: (payload) => {
 			setparticipantsActive(payload?.participant_count ?? 0);
 		},
 	});
+
+	const connected =
+		hostSubscriptionStatus === "subscribed" &&
+		publicSubscriptionStatus === "subscribed";
+	const connectionFailed =
+		hostSubscriptionStatus === "error" ||
+		publicSubscriptionStatus === "error" ||
+		Boolean(liveConnectionError);
+
+	useEffect(() => {
+		setparticipantsActive(channelState.participantCount);
+	}, [channelState.participantCount]);
 
 	useEffect(() => {
 		const dataFetch = async () => {
@@ -141,6 +136,11 @@ function QuizReport() {
 	}, [params?.id]);
 
 	const quizeStartFunction = async () => {
+		if (!connected) {
+			toast.error("Live Reverb connection is not ready yet.");
+			return;
+		}
+
 		try {
 			await updateHostLiveSession();
 			await handleChangeQuestion();
@@ -279,7 +279,9 @@ function QuizReport() {
 								}`}
 							/>
 							<span className="text-sm font-medium text-gray-700">
-								{connected
+								{connectionFailed
+									? "Live connection error"
+									: connected
 									? "Live - Ready to start"
 									: "Offline - Check connection"}
 							</span>

@@ -2,6 +2,12 @@ export type LiveModule = "quest" | "quiz";
 
 export type LiveSessionStatus = "pending" | "started" | "ended";
 
+export type LiveSubscriptionStatus =
+	| "unavailable"
+	| "connecting"
+	| "subscribed"
+	| "error";
+
 export type TimerState = {
 	status?: string;
 	remaining_seconds?: number;
@@ -51,6 +57,7 @@ export type SessionEventPayload = {
 	timer?: TimerState;
 	participant_count?: number;
 	count?: number;
+	updated_at?: string | null;
 	broadcasted_at?: string;
 	[key: string]: unknown;
 };
@@ -102,6 +109,9 @@ export type LiveChannelState = {
 	sessionStatus: LiveSessionStatus;
 	answerAggregate: AnswerAggregatePayload | null;
 	leaderboard: unknown;
+	connectionStatus: LiveSubscriptionStatus;
+	publicSubscriptionStatus: LiveSubscriptionStatus;
+	hostSubscriptionStatus: LiveSubscriptionStatus;
 	isConnected: boolean;
 	lastEvent: SessionEventPayload | null;
 };

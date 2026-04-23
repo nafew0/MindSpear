@@ -10,8 +10,8 @@ import { useDispatch, useSelector } from "react-redux";
 import {
 	nextSlide,
 	prevSlide,
+	setCurrentSlideIndex,
 	setTotalSlides,
-	userQuizCompletedLastSlider,
 	setCurrentQsentId,
 	forceEndLive,
 } from "@/features/live/store/leaderboardSlice";
@@ -20,53 +20,23 @@ import { AxiosError } from "axios";
 import { useSearchParams, useParams } from "next/navigation";
 
 import axiosInstance from "@/utils/axiosInstance";
-import {
-	emitChangeQuestion,
-	answerSubmittedToCreator,
-	connectSocket as quizconnectSocket,
-	submitCompleteQuiz,
-	userQuizCompleted,
-	userQuizCompletedAll,
-	waitForQuestionChangedQuizAll,
-	waitForQuestionChangedQuizSingle,
-	setCurrentQuiz,
-	emitQuizStart,
-	emitEndQuiz,
-} from "@/features/live/services/realtimeBridge";
-import {
-	answerSubmittedToQuestCreator,
-	connectSocket as questconnectSocket,
-	getSocket,
-	// emitJoinQuest,
-	waitForRankingScoresAnswerProcessedQuestOnce22,
-	// emitCreateQuest,
-	// waitForQuestCreatedOnce,
-	emitEndQuest,
-	emitStartQuest,
-	waitForQuestStartedOnce,
-	waitForQuestionChangedQuestSingle,
-	setCurrentQuest,
-	waitForQuestionChangedQuestAll,
-} from "@/features/live/services/realtimeBridge";
-
-// import { RootState } from "@/services/redux/store";
-import {
-	emitChangeQuestionQuest,
-	emitCompleteQuest,
-	waitForQuestCompletedAll,
-} from "@/features/live/services/realtimeBridge";
 import moment from "@/lib/dayjs";
 import { setQuestData } from "@/features/quest/store/questQuestionTimeSlice";
 import { Modal } from "@/components/ui";
-import { useHostChannel } from "@/features/live/hooks/useHostChannel";
-import { useSessionChannel } from "@/features/live/hooks/useSessionChannel";
-import { useSessionSync } from "@/features/live/hooks/useSessionSync";
+import { useLiveSession } from "@/features/live/hooks/useLiveSession";
 import {
 	aggregatePayloadToResult,
-	numberResultToScoreMap,
+	type LiveResultDatum,
 } from "@/features/live/services/aggregateResults";
-import { endLiveSession } from "@/features/live/services/liveSessionApi";
+import { buildHostLiveViewModel } from "@/features/live/services/hostLiveViewModel";
+import {
+	changeQuestTask,
+	changeQuizQuestion,
+	endLiveSession,
+} from "@/features/live/services/liveSessionApi";
 import Leaderboard from "@/components/Dashboard/Leaderboard";
+import type { SessionSnapshot, TimerState } from "@/features/live/types";
+import { toast } from "react-toastify";
 
 type Task = {
 	[x: string]: any;
@@ -99,19 +69,6 @@ type Quest = {
 	id: number;
 	title: string;
 	tasks: Task[];
-};
-
-type ResultDatum =
-	| { quest_id: number; task_type: string; id: number; number: number[] }
-	| { quest_id: number; task_type: string; id: number; text: string[] };
-
-type RawData = {
-	questId: any;
-	quizId: string;
-	questionId: number;
-	question_type: string;
-	optionSelections?: Record<string, { count: number }>;
-	textAnswers?: Record<string, string[]>;
 };
 
 /* Map quiz question types -> viewer-understood task_type */
@@ -154,52 +111,6 @@ function mapQuizTypeToTaskType(qtype: string): string {
 		default:
 			return "";
 	}
-}
-
-const TYPE_MAP: Record<string, string> = {
-	quiz_single_choice: "single_choice",
-	single_choice: "single_choice",
-	quiz_multiple_choice: "multiple_choice",
-	multiple_choice: "multiple_choice",
-	sort_answer_choice: "sorting",
-	true_false_choice: "truefalse",
-	fill_in_the_blanks_choice: "fill_in_the_blanks_choice",
-	// others (e.g., true_false_choice) will pass through unchanged
-};
-
-function transformData(data: RawData) {
-	console.log(data, "666666666");
-
-	const mappedType = TYPE_MAP[data.question_type] ?? data.question_type;
-
-	if (
-		data.question_type === "shortanswer" ||
-		data.question_type === "sort_answer_choice" ||
-		data.question_type === "wordcloud" ||
-		data.question_type === "longanswer"
-	) {
-		return {
-			quest_id: Number(data.quizId) || Number(data.questId),
-			task_type: mappedType,
-			id: data.questionId,
-			text: Object.values(data.textAnswers ?? {}).flat(),
-		};
-	}
-
-	// Build number[] dynamically from 0..maxKey, filling gaps with 0
-	const optionKeys = Object.keys(data.optionSelections ?? {}).map(Number);
-	const maxIndex = optionKeys.length ? Math.max(...optionKeys) : 0;
-
-	const numberArray = Array.from({ length: maxIndex + 1 }, (_, i) => {
-		return data.optionSelections?.[String(i)]?.count ?? 0;
-	});
-
-	return {
-		quest_id: Number(data.quizId) || Number(data.questId),
-		task_type: mappedType,
-		id: data.questionId,
-		number: numberArray,
-	};
 }
 
 /* Normalize quizeData.questions -> Quest.tasks shape */
@@ -248,9 +159,6 @@ function normalizeQuize(quizeData: any): Quest {
 function normalizeQuizeToQuest(quizeData: any): Quest {
 	const tasks: Task[] = [...quizeData.tasks]
 		.map((q, idx): Task => {
-			console.log(q, "qqqqqqqqqq");
-			console.log(mapQuizTypeToTaskType(q.task_type), "qqqqqqqqqq");
-
 			return {
 				id: q.id,
 				quest_id: quizeData.id,
@@ -277,7 +185,6 @@ function normalizeQuizeToQuest(quizeData: any): Quest {
 			};
 		})
 		.sort((a, b) => (a.serial_number ?? 0) - (b.serial_number ?? 0));
-	console.log(tasks, "qqqqqqqqqq");
 	return { id: quizeData.id, title: quizeData.title, tasks };
 }
 
@@ -297,7 +204,6 @@ function uniqueById<T extends { id: number }>(arr: T[]): T[] {
 }
 
 export default function LiveQuiz() {
-	const existing = getSocket();
 	const [endModalOpen, setEndModalOpen] = useState(false);
 	const [sessionId, setSessionId] = useState<number | null>(null);
 	const [publicChannelKey, setPublicChannelKey] = useState<string | null>(
@@ -310,16 +216,10 @@ export default function LiveQuiz() {
 	>("bar");
 
 	const [quest, setQuest] = useState<Quest | null>(null);
-	const [results, setResults] = useState<ResultDatum[]>([]);
-	const [quizresultsData, setQuizresultsData] = useState<ResultDatum[]>([]);
-	const [questresultsData, setQuestresultsData] = useState<ResultDatum[]>([]);
-
-	const [questRankinddataData, setQuestRankinddataData] = useState<any>([]);
-	const { scope, leaderboard_slider } = useSelector(
+	const [results, setResults] = useState<LiveResultDatum[]>([]);
+	const { scope } = useSelector(
 		(state: any) => state.leaderboard
 	);
-	const dddd = useSelector((state: any) => state.leaderboard);
-	console.log(dddd, "listDatalistDatalistDatalistDatalistData");
 
 	// const isLastQuestion =
 	// 	currentSlideIndex === (quest?.tasks.length ?? 1) - 1;
@@ -338,7 +238,6 @@ export default function LiveQuiz() {
 
 	const dispatch = useDispatch();
 	const {
-		lastSlideReached,
 		showLeaderboard,
 		currentSlideIndex,
 		totalSlides,
@@ -346,12 +245,6 @@ export default function LiveQuiz() {
 	// const llll = useSelector(
 	// 	(state: any) => state.leaderboard
 	// );
-
-	const handleQuizCompletion = (payload: any) => {
-		// Your existing code...
-		console.log("000000000", payload);
-		dispatch(userQuizCompletedLastSlider());
-	};
 
 	const handleNextWithConfirm = async () => {
 		if (!quest) return;
@@ -367,10 +260,6 @@ export default function LiveQuiz() {
 		handleNext(); // or handleNextSlide()
 	};
 
-	const user = useSelector((state: any) => state.auth.user) as any;
-	const userId = `${user?.id}`;
-	const userName = `${user?.full_name}`;
-
 	const toggleFullscreen = () => {
 		if (!isFullscreen)
 			document.documentElement
@@ -383,17 +272,22 @@ export default function LiveQuiz() {
 		setIsFullscreen(!!document.fullscreenElement);
 
 	const activeSessionId = sessionId ?? sessionIdFromUrl;
-	const { snapshot } = useSessionSync({
+	const {
+		channelState,
+		applySnapshot: applyLiveSnapshot,
+	} = useLiveSession({
 		module: liveModule,
 		sessionId: activeSessionId,
-		pollMs: 1500,
+		publicChannelKey: publicChannelKey ?? publicChannelKeyFromUrl,
+		role: "host",
 	});
-	const channelState = useSessionChannel(
-		liveModule,
-		publicChannelKey ?? publicChannelKeyFromUrl ?? snapshot?.public_channel_key,
-		snapshot
-	);
-	useHostChannel(liveModule, activeSessionId, {});
+
+	useEffect(() => {
+		if (channelState.sessionStatus === "ended") {
+			setEndModalOpen(false);
+			dispatch(forceEndLive());
+		}
+	}, [channelState.sessionStatus, dispatch]);
 
 	useEffect(() => {
 		const currentItemId =
@@ -428,6 +322,33 @@ export default function LiveQuiz() {
 	]);
 
 	useEffect(() => {
+		if (channelState.sessionStatus === "ended") return;
+		if (!quest) return;
+
+		const currentItemId =
+			liveModule === "quiz"
+				? channelState.currentQuestionId
+				: channelState.currentTaskId;
+		if (!currentItemId) return;
+
+		const nextIndex = quest.tasks.findIndex(
+			(task) => Number(task.id) === Number(currentItemId)
+		);
+
+		if (nextIndex >= 0 && nextIndex !== currentSlideIndex) {
+			dispatch(setCurrentSlideIndex(nextIndex));
+		}
+	}, [
+		channelState.currentQuestionId,
+		channelState.currentTaskId,
+		channelState.sessionStatus,
+		currentSlideIndex,
+		dispatch,
+		liveModule,
+		quest,
+	]);
+
+	useEffect(() => {
 		if (!channelState.answerAggregate || !quest) return;
 
 		const itemId = Number(
@@ -446,12 +367,9 @@ export default function LiveQuiz() {
 		setResults((previous) =>
 			uniqueById([
 				...previous.filter((item) => Number((item as any).id) !== result.id),
-				result as unknown as ResultDatum,
+				result,
 			])
 		);
-
-		const scoreMap = numberResultToScoreMap(result);
-		if (scoreMap) setQuestRankinddataData(scoreMap);
 	}, [channelState.answerAggregate, liveModule, quest]);
 
 	// useEffect(() => {
@@ -502,15 +420,8 @@ export default function LiveQuiz() {
 									publicChannelKeyFromUrl ??
 									null
 							);
-							console.log(
-								"SESSION ID SET:",
-								quizSession?.id
-							);
 
-							const unique = uniqueById(
-								quizresultsData as unknown as ResultDatum[]
-							);
-							setResults(unique);
+						setResults([]);
 
 							dispatch(
 								setTotalSlides(normalized.tasks.length || 0)
@@ -539,10 +450,7 @@ export default function LiveQuiz() {
 							});
 
 							setQuest(normalized);
-							const unique = uniqueById(
-								questresultsData as unknown as ResultDatum[]
-							);
-							setResults(unique);
+							setResults([]);
 							setSessionId(questData.questSession.id);
 							setPublicChannelKey(
 								questData.questSession.public_channel_key ?? null
@@ -581,111 +489,27 @@ export default function LiveQuiz() {
 
 	// derive slides (tasks) + current task
 	const tasks: Task[] = quest?.tasks ?? [];
-	console.log(quest, "questquestquestquestquest");
 
 	const currentTask: Task | null = tasks.length
 		? tasks[Math.min(currentSlideIndex, tasks.length - 1)]
 		: null;
 
 	// map result by task id for quick lookup
-	console.log(results, "resresresres");
 	const resultByTaskId = useMemo(() => {
-		const m = new Map<number, ResultDatum>();
+		const m = new Map<number, LiveResultDatum>();
 
-		for (const r of results) m.set((r as any).id, r);
+		for (const r of results) m.set(r.id, r);
 		return m;
 	}, [results]);
-	const roundInts = (obj: Record<string, number>) =>
-		Object.fromEntries(
-			Object.entries(obj).map(([k, v]) => [k, Math.round(v)])
-		);
-
-	function getScoresIfMatch(mydata: any, taskdata: any) {
-		if (!taskdata) return null;
-		if (!mydata?.questionId || !mydata?.percentageScores) return null;
-		if (`${mydata.questionId}` === `${taskdata.id}`) {
-			return roundInts(mydata.percentageScores);
-		}
-
-		return null;
-	}
 
 	// compute view model
 	const viewModel = useMemo(() => {
 		if (!currentTask) return null;
-		const res: any = resultByTaskId.get(currentTask.id);
-
-		const categories2222 = (currentTask.task_data?.questions || []).map(
-			(q) => q.text
+		return buildHostLiveViewModel(
+			currentTask,
+			resultByTaskId.get(currentTask.id) ?? null
 		);
-		const categoryColor = (currentTask.task_data?.questions || []).map(
-			(q) => q.color
-		);
-		console.log(currentTask, "resresresres 222");
-		console.log(categories2222, "resresresres 222");
-		console.log(res, "resresresres 222");
-
-		const taskType = currentTask.task_type.toLowerCase();
-		const title = currentTask.title || "Untitled";
-		const id = currentTask.id || "";
-		const quest_id = currentTask.quest_id || "";
-		const serial_number = currentTask.serial_number || "";
-		const scores = getScoresIfMatch(questRankinddataData, currentTask);
-
-		if (
-			[
-				"wordcloud",
-				"scales",
-				"sorting",
-				"ranking",
-				"truefalse",
-				"single_choice",
-				"multiple_choice",
-				"shortanswer",
-				"longanswer",
-				"sort_answer_choice",
-			].includes(taskType)
-		) {
-			const phrases = res && "text" in res ? res.text : [];
-			return {
-				currentView: `${currentTask.task_type}` as const,
-				title,
-				categories: categories2222 as string[],
-				color: categoryColor as string[],
-				data:
-					`${currentTask.task_type}` === "ranking" && scores !== null
-						? scores
-						: `${currentTask.task_type}` === "sorting" &&
-						  scores !== null
-						? scores
-						: `${currentTask.task_type}` === "scales" &&
-						  scores !== null
-						? scores
-						: res,
-				phrases,
-				id,
-				quest_id,
-				serial_number,
-			};
-		}
-
-		// Otherwise numeric charts (use res.number)
-		const categories = (currentTask.task_data?.questions || []).map(
-			(q) => q.text
-		);
-		const series =
-			res && "number" in res
-				? res?.number
-				: new Array(categories.length).fill(0);
-
-		return {
-			currentView: `${currentTask.task_type}` as const,
-			title,
-			categories,
-			data: series,
-			phrases: res?.text,
-		};
-	}, [currentTask, resultByTaskId, questRankinddataData, currentTask]);
+	}, [currentTask, resultByTaskId]);
 
 	// fullscreen listeners
 	useEffect(() => {
@@ -704,141 +528,59 @@ export default function LiveQuiz() {
 		};
 	}, []);
 
-	useEffect(() => {
-		if (mode === "quize") {
-			quizconnectSocket().then(async (s) => {
-				console.log(s);
+	const timerStateForTask = (task: Task): TimerState => {
+		const timeLimit = Number(task?.task_data?.time_limit ?? 0);
+		const duration = Number.isFinite(timeLimit) ? timeLimit : 0;
 
-				answerSubmittedToCreator((payload) => {
-					const quizresultsData2 = [transformData(payload)];
-					const unique = uniqueById(
-						quizresultsData2 as unknown as ResultDatum[]
-					);
-					setResults(unique);
-					setQuizresultsData(quizresultsData2);
-				});
-				if (lastSlideReached && scope !== "slide") {
-					submitCompleteQuiz({
-						quizId: `${quest?.id}`,
-						userid: userId,
-						quizTitle: quest?.title,
-						userName: userName,
-					});
-					await emitEndQuiz({
-						quizId: `${quest?.id}`,
-						quizTitle: quest?.title,
-					});
+		return {
+			status: "running",
+			start_time: moment().format("MMMM Do YYYY, h:mm:ss"),
+			duration_seconds: duration,
+			remaining_seconds: duration,
+		};
+	};
 
-					userQuizCompleted((payload) => {
-						console.log("000000000", payload);
-						handleQuizCompletion(payload);
-					});
-					userQuizCompletedAll((payload) => {
-						handleQuizCompletion(payload);
-						console.log("000000000", payload);
-					});
+	const applyCommittedState = (
+		liveState: SessionSnapshot,
+		task: Task,
+		index: number
+	) => {
+		applyLiveSnapshot(liveState);
+		dispatch(
+			setQuestData({
+				questId,
+				questionId: `${
+					liveModule === "quiz"
+						? liveState.current_question_id ?? task.id
+						: liveState.current_task_id ?? task.id
+				}`,
+				questiQsenStartTime:
+					typeof liveState.timer_state?.start_time === "string"
+						? liveState.timer_state.start_time
+						: moment().format("MMMM Do YYYY, h:mm:ss"),
+				questiQsenTime: `${
+					liveState.timer_state?.duration_seconds ??
+					liveState.timer_state?.remaining_seconds ??
+					task.task_data?.time_limit ??
+					""
+				}`,
+				questiQsenLateStartTime: false,
+			})
+		);
+		dispatch(setCurrentSlideIndex(index));
+	};
 
-					setCurrentQuiz(null);
-				}
-			});
-		} else {
-			questconnectSocket().then(async () => {
-				answerSubmittedToQuestCreator((payload) => {
-					console.log(
-						"✅ Answer submitted to creator: 000000000",
-						payload
-					);
-					console.log(payload, "quizresultsData2");
-					const quizresultsData2 = [transformData(payload)];
-					console.log(quizresultsData2, "quizresultsData2");
+	const changeLiveItem = async (task: Task, index: number) => {
+		if (!activeSessionId) return;
 
-					const unique = uniqueById(
-						quizresultsData2 as unknown as ResultDatum[]
-					);
-					setResults(unique);
+		const timerState = timerStateForTask(task);
+		const liveState =
+			liveModule === "quiz"
+				? await changeQuizQuestion(activeSessionId, task.id, timerState)
+				: await changeQuestTask(activeSessionId, task.id, timerState);
 
-					setQuestresultsData(quizresultsData2);
-					console.log(
-						quizresultsData2,
-						"✅ Answer submitted to creator: 000000000"
-					);
-				});
-				waitForRankingScoresAnswerProcessedQuestOnce22((payload) => {
-					setQuestRankinddataData(payload);
-					console.log(
-						"✅ Answer submitted to creator: 000000000",
-						payload
-					);
-				});
-
-				if (showLeaderboard) {
-					emitCompleteQuest({
-						questId: `${quest?.id}`,
-						userId: userId,
-						questTitle: quest?.title,
-						userName: userName,
-					});
-					await emitEndQuest({
-						questId: `${quest?.id}`,
-						questTitle: quest?.title,
-					});
-					setCurrentQuest(null);
-				}
-				waitForQuestCompletedAll(() => {
-					// sessionStorage.removeItem("userSession");
-				});
-			});
-		}
-	}, [quest?.id, userId, userName, showLeaderboard]);
-
-	useEffect(() => {
-		quizconnectSocket().then(async (s) => {
-			console.log(s);
-
-			answerSubmittedToCreator((payload) => {
-				const quizresultsData2 = [transformData(payload)];
-				const unique = uniqueById(
-					quizresultsData2 as unknown as ResultDatum[]
-				);
-				setResults(unique);
-				setQuizresultsData(quizresultsData2);
-			});
-
-			// if (showLeaderboard) {
-			// 	submitCompleteQuiz({
-			// 		quizId: quest?.id,
-			// 		userid: userId,
-			// 		quizTitle: quest?.title,
-			// 		userName: userName,
-			// 	});
-			// }
-			// console.log(|| lastSlideReached && leaderboard_slider);
-
-			if (lastSlideReached === true && leaderboard_slider === true) {
-				submitCompleteQuiz({
-					quizId: `${quest?.id}`,
-					userid: userId,
-					quizTitle: quest?.title,
-					userName: userName,
-				});
-				await emitEndQuiz({
-					quizId: `${quest?.id}`,
-					quizTitle: quest?.title,
-				});
-
-				userQuizCompleted((payload) => {
-					console.log("000000000", payload);
-				});
-				userQuizCompletedAll((payload) => {
-					console.log("000000000", payload);
-				});
-
-				setCurrentQuiz(null);
-			}
-		});
-	}, [quest?.id, lastSlideReached, leaderboard_slider]);
-
-	console.log(lastSlideReached && leaderboard_slider);
+		applyCommittedState(liveState, task, index);
+	};
 
 	const handleNext = async () => {
 		if (!quest) return;
@@ -847,421 +589,34 @@ export default function LiveQuiz() {
 			(quest.tasks?.length ?? 1) - 1
 		);
 		const nextTask = quest.tasks[nextIndex];
-		const currentTime = moment().format("MMMM Do YYYY, h:mm:ss");
+
 		if (nextTask) {
-			if (mode === "quize") {
-				console.log(
-					leaderboard_slider,
-					"leaderboard_sliderleaderboard_sliderleaderboard_slider"
-				);
-
-				const changedPromise = waitForQuestionChangedQuizSingle();
-
-				emitChangeQuestion({
-					quizId: quest?.id,
-					questionId: nextTask?.id,
-					quizTitle: "quest.title",
-					questionTitle: "nextTask?.title",
-					quizQsenStartTime: `${currentTime}`,
-					quizQsenTime: `${nextTask?.task_data?.time_limit}`,
-					quizQsenLateStartTime: false,
-				});
-
-				waitForQuestionChangedQuizAll((payload) => {
-					console.log("Question Changed:", payload);
-					dispatch(
-						setQuestData({
-							questId: `${payload?.quizId}`,
-							questionId: `${payload?.questionId}`,
-							questiQsenStartTime: `${payload?.quizQsenStartTime}`,
-							questiQsenTime: `${payload?.quizQsenTime}`,
-							questiQsenLateStartTime: false,
-						})
-					);
-
-					if (typeof window === "undefined") return;
-
-					const userJoinData: any = {
-						questId: `${payload?.quizId}`,
-						questionId: `${payload?.questionId}`,
-						questiQsenStartTime: `${payload?.quizQsenStartTime}`,
-						questiQsenTime: `${payload?.quizQsenTime}`,
-						questiQsenLateStartTime: false,
-					};
-
-					localStorage.setItem(
-						"userTimeSet",
-						JSON.stringify(userJoinData)
-					);
-				});
-
-				const changeQsen = await changedPromise;
-				console.log(changeQsen, "changeQsen");
-
-				if (!changeQsen) {
-					setCurrentQuiz({
-						quizId: quest.id,
-						userId,
-						quizTitle: quest.title,
-						userName,
-						isCreator: true,
-					});
-
-					await quizconnectSocket();
-
-					const started = await waitForQuestStartedOnce();
-
-					await emitQuizStart({
-						quizId: quest?.id,
-						userId,
-						userName,
-						quizTitle: quest.title,
-					});
-
-					const joined = await started;
-
-					if (joined) {
-						await emitChangeQuestion({
-							quizId: quest.id,
-							questionId: nextTask.id,
-							quizTitle: quest.title,
-							questionTitle: nextTask.title,
-							quizQsenStartTime: `${currentTime}`,
-							quizQsenTime: `${nextTask?.task_data?.time_limit}`,
-							quizQsenLateStartTime: false,
-						});
-					}
-				}
-			} else {
-				const changedPromise = waitForQuestionChangedQuestSingle();
-
-				await emitChangeQuestionQuest({
-					questId: quest.id,
-					questionId: nextTask?.id,
-					questTitle: "quest.title",
-					questionTitle: "nextTask?.title",
-					questiQsenStartTime: `${currentTime}`,
-					questiQsenTime: `${nextTask?.task_data?.time_limit}`,
-					questiQsenLateStartTime: false,
-				});
-				waitForQuestionChangedQuestAll((payload) => {
-					console.log("Question Changed:", payload);
-					dispatch(
-						setQuestData({
-							questId: `${payload?.questId}`,
-							questionId: `${payload?.questionId}`,
-							questiQsenStartTime: `${payload?.questiQsenStartTime}`,
-							questiQsenTime: `${payload?.questiQsenTime}`,
-							questiQsenLateStartTime: false,
-						})
-					);
-					if (typeof window === "undefined") return;
-					const userJoinData: any = {
-						questId: `${payload?.questId}`,
-						questionId: `${payload?.questionId}`,
-						questiQsenStartTime: `${payload?.questiQsenStartTime}`,
-						questiQsenTime: `${payload?.questiQsenTime}`,
-						questiQsenLateStartTime: false,
-					};
-					localStorage.setItem(
-						"userTimeSet",
-						JSON.stringify(userJoinData)
-					);
-				});
-
-				const changeQsen = await changedPromise;
-				console.log(changeQsen, "changeQsen");
-
-				if (!changeQsen) {
-					setCurrentQuest({
-						questId: quest.id,
-						userId,
-						questTitle: quest.title,
-						userName,
-						isCreator: true,
-					});
-					await questconnectSocket();
-
-					const started = await waitForQuestStartedOnce();
-					await emitStartQuest({
-						questId,
-						userId,
-						userName,
-						questTitle: quest.title,
-					});
-					const joined = await started;
-					if (joined) {
-						await emitChangeQuestionQuest({
-							questId: quest.id,
-							questionId: nextTask.id,
-							questTitle: quest.title,
-							questionTitle: nextTask.title,
-							questiQsenStartTime: `${currentTime}`,
-							questiQsenTime: `${nextTask?.task_data?.time_limit}`,
-							questiQsenLateStartTime: false,
-						});
-					}
-				}
-			}
+			await changeLiveItem(nextTask, nextIndex);
+			return;
 		}
+
 		dispatch(nextSlide());
 	};
+
 	const handleNextSlide = async () => {
 		if (!quest) return;
-		const nextIndex = Math.min(
-			currentSlideIndex + 1,
-			(quest.tasks?.length ?? 1) - 1
-		);
-		const nextTask = quest.tasks[nextIndex];
 		const currentTask = quest.tasks[currentSlideIndex];
-		dispatch(setCurrentQsentId(`${currentTask.id}`));
-
-		console.log(quest.tasks, "99999999999999999");
-		console.log(currentTask.id, "99999999999999999");
-
-		const currentTime = moment().format("MMMM Do YYYY, h:mm:ss");
-		if (nextTask) {
-			console.log(leaderboard_slider, "leaderboard_slider");
-			if (scope === "slide" && leaderboard_slider !== false) {
-				console.log(leaderboard_slider, "leaderboard_slider 2");
-
-				const changedPromise = waitForQuestionChangedQuizSingle();
-
-				emitChangeQuestion({
-					quizId: quest?.id,
-					questionId: nextTask?.id,
-					quizTitle: "quest.title",
-					questionTitle: "nextTask?.title",
-					quizQsenStartTime: `${currentTime}`,
-					quizQsenTime: `${nextTask?.task_data?.time_limit}`,
-					quizQsenLateStartTime: false,
-				});
-
-				waitForQuestionChangedQuizAll((payload) => {
-					console.log("Question Changed:", payload);
-					dispatch(
-						setQuestData({
-							questId: `${payload?.quizId}`,
-							questionId: `${payload?.questionId}`,
-							questiQsenStartTime: `${payload?.quizQsenStartTime}`,
-							questiQsenTime: `${payload?.quizQsenTime}`,
-							questiQsenLateStartTime: false,
-						})
-					);
-
-					if (typeof window === "undefined") return;
-
-					const userJoinData: any = {
-						questId: `${payload?.quizId}`,
-						questionId: `${payload?.questionId}`,
-						questiQsenStartTime: `${payload?.quizQsenStartTime}`,
-						questiQsenTime: `${payload?.quizQsenTime}`,
-						questiQsenLateStartTime: false,
-					};
-
-					localStorage.setItem(
-						"userTimeSet",
-						JSON.stringify(userJoinData)
-					);
-				});
-
-				const changeQsen = await changedPromise;
-				console.log(changeQsen, "changeQsen");
-
-				if (!changeQsen) {
-					setCurrentQuiz({
-						quizId: quest.id,
-						userId,
-						quizTitle: quest.title,
-						userName,
-						isCreator: true,
-					});
-
-					await quizconnectSocket();
-
-					const started = waitForQuestStartedOnce();
-
-					await emitQuizStart({
-						quizId: quest?.id,
-						userId,
-						userName,
-						quizTitle: quest.title,
-					});
-
-					const joined = await started;
-
-					if (joined) {
-						await emitChangeQuestion({
-							quizId: quest.id,
-							questionId: nextTask.id,
-							quizTitle: quest.title,
-							questionTitle: nextTask.title,
-							quizQsenStartTime: `${currentTime}`,
-							quizQsenTime: `${nextTask?.task_data?.time_limit}`,
-							quizQsenLateStartTime: false,
-						});
-					}
-				}
-			}
-		}
-		dispatch(nextSlide());
+		if (currentTask) dispatch(setCurrentQsentId(`${currentTask.id}`));
+		await handleNext();
 	};
 
 	const handlePrev = async () => {
 		if (!quest) return;
-		const nextIndex = Math.min(
-			currentSlideIndex - 1,
-			(quest.tasks?.length ?? 1) - 1
-		);
+		const nextIndex = Math.max(currentSlideIndex - 1, 0);
 		const nextTask = quest.tasks[nextIndex];
-		const currentTime = moment().format("MMMM Do YYYY, h:mm:ss");
+
 		if (nextTask) {
-			if (mode === "quize") {
-				emitChangeQuestion({
-					quizId: quest?.id,
-					questionId: nextTask?.id,
-					quizTitle: "quest.title",
-					questionTitle: "nextTask?.title",
-					quizQsenStartTime: `${currentTime}`,
-					quizQsenTime: `${nextTask?.task_data?.time_limit}`,
-					quizQsenLateStartTime: false,
-				});
-				// waitForQuestionChangedQuizAll
-				waitForQuestionChangedQuizAll((payload) => {
-					console.log("Question Changed:", payload);
-					dispatch(
-						setQuestData({
-							questId: `${payload?.quizId}`,
-							questionId: `${payload?.questionId}`,
-							questiQsenStartTime: `${payload?.quizQsenStartTime}`,
-							questiQsenTime: `${payload?.quizQsenTime}`,
-							questiQsenLateStartTime: false,
-						})
-					);
-					if (typeof window === "undefined") return;
-					const userJoinData: any = {
-						questId: `${payload?.quizId}`,
-						questionId: `${payload?.questionId}`,
-						questiQsenStartTime: `${payload?.quizQsenStartTime}`,
-						questiQsenTime: `${payload?.quizQsenTime}`,
-						questiQsenLateStartTime: false,
-					};
-					localStorage.setItem(
-						"userTimeSet",
-						JSON.stringify(userJoinData)
-					);
-				});
-			} else {
-				// THIS IS QUEST AREA
-				if (existing?.connected) {
-					await emitChangeQuestionQuest({
-						questId: quest.id,
-						questionId: nextTask?.id,
-						questTitle: "quest.title",
-						questionTitle: "nextTask?.title",
-
-						questiQsenStartTime: `${currentTime}`,
-						questiQsenTime: `${nextTask?.task_data?.time_limit}`,
-						questiQsenLateStartTime: false,
-					});
-					waitForQuestionChangedQuestAll((payload) => {
-						console.log("Question Changed:", payload);
-						dispatch(
-							setQuestData({
-								questId: `${payload?.questId}`,
-								questionId: `${payload?.questionId}`,
-								questiQsenStartTime: `${payload?.questiQsenStartTime}`,
-								questiQsenTime: `${payload?.questiQsenTime}`,
-								questiQsenLateStartTime: false,
-							})
-						);
-						if (typeof window === "undefined") return;
-						const userJoinData: any = {
-							questId: `${payload?.questId}`,
-							questionId: `${payload?.questionId}`,
-							questiQsenStartTime: `${payload?.questiQsenStartTime}`,
-							questiQsenTime: `${payload?.questiQsenTime}`,
-							questiQsenLateStartTime: false,
-						};
-						localStorage.setItem(
-							"userTimeSet",
-							JSON.stringify(userJoinData)
-						);
-					});
-				} else {
-					questconnectSocket().then(async () => {
-						const questTitle =
-							`${viewModel?.title}` || "Quest Title";
-						const currentTime =
-							moment().format("MMMM Do YYYY, h:mm");
-						await emitStartQuest({
-							questId,
-							userId,
-							userName,
-							questTitle,
-						});
-						const joined = await waitForQuestStartedOnce();
-						if (joined) {
-							await emitChangeQuestionQuest({
-								questId: quest.id,
-								questionId: nextTask?.id,
-								questTitle: "quest.title",
-								questionTitle: "nextTask?.title",
-
-								questiQsenStartTime: `${currentTime}`,
-								questiQsenTime: `${nextTask?.task_data?.time_limit}`,
-								questiQsenLateStartTime: false,
-							});
-							// 		waitForQuestionChangedQuestAll((payload) => {
-							// 			console.log("Question Changed:", payload);
-							// 			dispatch(
-							// 				setQuestData({
-							// 					questId: `${payload?.questId}`,
-							// questionId: `${payload?.questionId}`,
-							// questiQsenStartTime: `${payload?.questiQsenStartTime}`,
-							// questiQsenTime: `${payload?.questiQsenTime}`,
-							// questiQsenLateStartTime: false,
-							// 				})
-							// 			);
-							// 		});
-						}
-					});
-				}
-			}
+			await changeLiveItem(nextTask, nextIndex);
+			return;
 		}
+
 		dispatch(prevSlide());
 	};
-
-	const questJoin = async () => {
-		questconnectSocket().then(async () => {
-			const questTitle = `${viewModel?.title}` || "Quest Title";
-			await emitStartQuest({
-				questId,
-				userId,
-				userName,
-				questTitle,
-			});
-		});
-	};
-
-	useEffect(() => {
-		if (mode === "quests") {
-			questJoin();
-		}
-	}, []);
-
-	// setInterval(() => {
-	// 	if (existing?.connected) {
-	// 	} else {
-	// 		questJoin()
-	// 	}
-	// }, 3000);
-
-	useEffect(() => {
-		if (mode === "quize") {
-			console.log("quiz data");
-		}
-	}, []);
 	const endHostLive = async () => {
 		if (!activeSessionId) {
 			console.error("session_id missing");
@@ -1274,6 +629,7 @@ export default function LiveQuiz() {
 			dispatch(forceEndLive());
 		} catch (err) {
 			console.error("Failed to end live", err);
+			toast.error(`Failed to end ${liveModule === "quiz" ? "quiz" : "quest"} live session.`);
 		}
 	};
 
@@ -1301,16 +657,9 @@ export default function LiveQuiz() {
 				)
 			) : viewModel ? (
 				<HostLiveQuestionView
-					currentView={viewModel.currentView}
 					isFullscreen={isFullscreen}
-					data={viewModel.data}
-					categories={viewModel.categories}
-					colors={viewModel.color}
 					chartType={chartType}
-					title={viewModel.title}
-					phrases={viewModel.phrases}
-					currentTask={currentTask}
-					totalDatat={viewModel}
+					viewModel={viewModel}
 				/>
 			) : (
 				<div className="flex-1 flex items-center justify-center text-gray-500">

@@ -7,6 +7,7 @@ import { env } from "@/config/env";
 type EchoConnectionState = "initialized" | "connected" | "disconnected" | "unavailable";
 
 let echoInstance: Echo<"reverb"> | null = null;
+let echoAuthToken: string | null = null;
 
 const browserWindow = () =>
 	typeof window === "undefined" ? null : (window as Window & { Pusher?: typeof Pusher });
@@ -34,14 +35,15 @@ export function getEcho(): Echo<"reverb"> {
 		throw new Error("Echo can only be initialized in the browser.");
 	}
 
-	if (echoInstance) return echoInstance;
+	const authToken = window.localStorage.getItem("auth_token");
+	if (echoInstance && echoAuthToken === authToken) return echoInstance;
+	if (echoInstance) destroyEcho();
 
 	const win = browserWindow();
 	if (win) win.Pusher = Pusher;
 
 	const port = Number(env.reverbPort || 8080);
 	const scheme = env.reverbScheme || "http";
-	const authToken = window.localStorage.getItem("auth_token");
 	const appKey = env.reverbAppKey;
 
 	if (!appKey) {
@@ -63,6 +65,7 @@ export function getEcho(): Echo<"reverb"> {
 			headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
 		},
 	});
+	echoAuthToken = authToken;
 
 	return echoInstance;
 }
@@ -71,6 +74,7 @@ export function destroyEcho(): void {
 	if (!echoInstance) return;
 	echoInstance.disconnect();
 	echoInstance = null;
+	echoAuthToken = null;
 }
 
 export function bindEchoConnection(

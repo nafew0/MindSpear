@@ -14,8 +14,7 @@ import {
 	getParticipantToken,
 	getStoredPublicChannelKey,
 } from "@/features/live/services/liveStorage";
-import { useSessionChannel } from "@/features/live/hooks/useSessionChannel";
-import { useSessionSync } from "@/features/live/hooks/useSessionSync";
+import { useLiveSession } from "@/features/live/hooks/useLiveSession";
 import type { SessionSnapshot, TimerState } from "@/features/live/types";
 
 function QuizAttempt() {
@@ -62,18 +61,13 @@ function QuizAttempt() {
 		[dispatchLiveState]
 	);
 
-	const { snapshot } = useSessionSync({
+	const { channelState } = useLiveSession({
 		module: "quiz",
 		sessionId,
+		publicChannelKey,
 		participantToken,
-		onSync: handleSnapshot,
+		onSnapshot: handleSnapshot,
 	});
-
-	const channelState = useSessionChannel(
-		"quiz",
-		publicChannelKey ?? snapshot?.public_channel_key,
-		snapshot
-	);
 
 	useEffect(() => {
 		dispatchLiveState(
@@ -111,7 +105,11 @@ function QuizAttempt() {
 
 	return (
 		<div>
-			<QuizPlayComponent tasks={tasks} />
+			<QuizPlayComponent
+				tasks={tasks}
+				sessionStatus={channelState.sessionStatus}
+				currentItemId={channelState.currentQuestionId}
+			/>
 		</div>
 	);
 }

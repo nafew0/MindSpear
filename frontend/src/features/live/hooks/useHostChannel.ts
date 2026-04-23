@@ -34,6 +34,12 @@ export function useHostChannel(
 		const channel = echo.private(channelName);
 
 		channel
+			.error((error: unknown) => {
+				console.error(`Live ${module} host channel subscription failed:`, {
+					channel: channelName,
+					error,
+				});
+			})
 			.listen(".answer.submitted", (payload: HostAnswerPayload) => {
 				publishLiveEvent(
 					"legacy",

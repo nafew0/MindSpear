@@ -10,13 +10,6 @@ import React, {
 	useCallback,
 } from "react";
 import clsx from "clsx";
-import {
-	connectSocket,
-	emitRankShortAndScaleSubmitTask,
-	emitsubmitTaskWithRanking,
-	getSocket,
-	waitForAnswerProcessedQuestOnce,
-} from "@/features/live/services/realtimeBridge";
 import { useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { upsertAnswer } from "@/features/live/store/leaderboardAnswersSlice";
@@ -363,28 +356,12 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 
 	// Submit
 	const dataSubmit = async () => {
-		reqSoketData();
-		saveAnswer();
-		const submitStatusCheck = await waitForAnswerProcessedQuestOnce();
-		if (!submitStatusCheck) {
-			connectSocket().then(() => {
-				reqSoketData();
-				saveAnswer();
-				if (typeof window !== "undefined") {
-					localStorage.setItem("currentId", `${task?.id}`);
-				}
-			});
+		await saveAnswer();
+		if (task?.id) setTaskExpired(task.id);
+		setwatingData(false);
+		if (typeof window !== "undefined") {
+			localStorage.setItem("currentId", `${task?.id}`);
 		}
-
-		// const existing = getSocket();
-		// if (existing?.connected) {
-		// 	reqSoketData();
-		// 	await saveAnswer();
-		// } else {
-		// 	await connectSocket();
-		// 	reqSoketData();
-		// 	await saveAnswer();
-		// }
 	};
 
 	const saveAnswer = async () => {
@@ -407,26 +384,6 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 		} catch (error) {
 			console.error("Error saving answer:", error);
 		}
-	};
-
-	const reqSoketData = () => {
-		const rankIndexList = ranked.map((_, i) => i + 1);
-		emitRankShortAndScaleSubmitTask({
-			userId: `${userId}`,
-			questionId: `${task?.id}`,
-			userName: `${userId}`,
-			questionTitle: `${task?.title}`,
-			questionType: `${task?.task_type === "ranking"
-				? "option_ranking"
-				: "option_shorting"
-				}`,
-			selectedOption: ranked,
-			optionType: `${task?.task_type === "ranking"
-				? "option_ranking"
-				: "option_shorting"
-				}`,
-		});
-		setwatingData(false);
 	};
 
 	const sensors = useSensors(

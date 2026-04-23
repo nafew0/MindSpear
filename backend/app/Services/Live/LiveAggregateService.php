@@ -8,22 +8,12 @@ use App\Models\Quest\QuestTask;
 use App\Models\Quest\QuestTaskCompletion;
 use App\Models\Quiz\QuizSession;
 use App\Models\Quiz\UserQuizAnswer;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class LiveAggregateService
 {
-    private const DEBOUNCE_MILLISECONDS = 1000;
-    private const DEBOUNCE_SECONDS = 1;
-
     public function recordAnswer(string $module, int $sessionId, int $itemId): void
     {
-        Cache::increment($this->counterKey($module, $sessionId, $itemId));
-
-        if (! Cache::add($this->debounceKey($module, $sessionId, $itemId), true, self::DEBOUNCE_SECONDS)) {
-            return;
-        }
-
         if (DB::transactionLevel() > 0) {
             DB::afterCommit(fn () => $this->dispatchSnapshot($module, $sessionId, $itemId));
 
@@ -93,8 +83,7 @@ class LiveAggregateService
 
     private function dispatchSnapshot(string $module, int $sessionId, int $itemId): void
     {
-        BroadcastLiveAggregateSnapshot::dispatch($module, $sessionId, $itemId)
-            ->delay(now()->addMilliseconds(self::DEBOUNCE_MILLISECONDS));
+        BroadcastLiveAggregateSnapshot::dispatch($module, $sessionId, $itemId);
     }
 
     private function quizSnapshot(int $sessionId, int $questionId): array
@@ -325,13 +314,4 @@ class LiveAggregateService
         return 'submitted';
     }
 
-    private function counterKey(string $module, int $sessionId, int $itemId): string
-    {
-        return "live:{$module}:{$sessionId}:{$itemId}:answers";
-    }
-
-    private function debounceKey(string $module, int $sessionId, int $itemId): string
-    {
-        return "live:{$module}:{$sessionId}:{$itemId}:aggregate-broadcast";
-    }
 }

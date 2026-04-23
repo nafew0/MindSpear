@@ -75,13 +75,21 @@ class LiveSessionController extends ApiBaseController
                 'timer_state' => $validated['timer_state'] ?? null,
             ]);
 
-            $payload = [
-                'session_id' => $session->id,
-                'task_id' => $task->id,
-                'timer_state' => $session->timer_state,
-            ];
+            $session->refresh();
 
-            $this->liveSessions->broadcastPublic(LiveSessionService::MODULE_QUEST, $session, 'task.changed', $payload);
+            $payload = array_merge(
+                $this->liveSessions->state(LiveSessionService::MODULE_QUEST, $session),
+                [
+                    'task_id' => $task->id,
+                ],
+            );
+
+            $this->liveSessions->broadcastPublic(
+                LiveSessionService::MODULE_QUEST,
+                $session,
+                'task.changed',
+                $payload,
+            );
         });
 
         return $this->okResponse([
@@ -142,13 +150,21 @@ class LiveSessionController extends ApiBaseController
                 'timer_state' => $validated['timer_state'] ?? null,
             ]);
 
-            $payload = [
-                'session_id' => $session->id,
-                'question_id' => $question->id,
-                'timer_state' => $session->timer_state,
-            ];
+            $session->refresh();
 
-            $this->liveSessions->broadcastPublic(LiveSessionService::MODULE_QUIZ, $session, 'question.changed', $payload);
+            $payload = array_merge(
+                $this->liveSessions->state(LiveSessionService::MODULE_QUIZ, $session),
+                [
+                    'question_id' => $question->id,
+                ],
+            );
+
+            $this->liveSessions->broadcastPublic(
+                LiveSessionService::MODULE_QUIZ,
+                $session,
+                'question.changed',
+                $payload,
+            );
         });
 
         return $this->okResponse([

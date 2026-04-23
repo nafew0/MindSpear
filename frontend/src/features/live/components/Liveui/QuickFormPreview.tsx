@@ -1,5 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable react/jsx-no-undef */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 "use client";
@@ -10,12 +8,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { FaChevronDown } from "react-icons/fa";
 import { useSearchParams } from "next/navigation";
 
-import {
-	connectSocket,
-	emitsubmitTaskForQuickForm,
-	// getSocket,
-	waitForAnswerProcessedQuestOnce,
-} from "@/features/live/services/realtimeBridge";
 import { AxiosError } from "axios";
 
 import SharedQuestTimer from "@/components/SharedQuestTimer";
@@ -198,15 +190,13 @@ const QuickFormPreview: React.FC<Props> = ({ task }) => {
 	console.log(chalangeData);
 
 	const attempId = searchParams.get("aid");
-	const joinuname = searchParams.get("uname");
-	const userId = searchParams.get("ujid");
 	const joinid = searchParams.get("jid");
 	const [watingData, setwatingData] = useState(true);
 
 	useEffect(() => {
 		setQuestions((task?.questions as QuestionBlock[]) ?? []);
 		setForm({});
-	}, [task?.id]);
+	}, [task?.id, task?.questions]);
 
 	useEffect(() => {
 		if (typeof window !== "undefined" && !navigator.onLine) {
@@ -379,37 +369,8 @@ const QuickFormPreview: React.FC<Props> = ({ task }) => {
 	// 	//console.log("SUBMIT payload:", payload);
 	// };
 	const handleSubmit = async () => {
-		// const existing = getSocket();
 		const payload = buildSubmission(orderedQuestions, form);
 		await saveAnswer(payload);
-		reqSoketData(payload);
-		const submitStatusCheck = await waitForAnswerProcessedQuestOnce();
-		if (!submitStatusCheck) {
-			connectSocket().then(() => {
-				reqSoketData(payload);
-			});
-		}
-
-		// if (existing?.connected) {
-		// 	reqSoketData(payload);
-		// 	await saveAnswer(payload);
-		// } else {
-		// 	await connectSocket();
-		// 	reqSoketData(payload);
-		// 	await saveAnswer(payload);
-		// }
-	};
-
-	const reqSoketData = (payload: any) => {
-		emitsubmitTaskForQuickForm({
-			userId: `${userId}`,
-			questionId: `${task?.id}`,
-			userName: `${joinuname}`,
-			questionTitle: `${task?.title}`,
-			questionType: "quick_form",
-			quickFormData: payload,
-			optionType: "quick_form",
-		});
 		setwatingData(false);
 	};
 

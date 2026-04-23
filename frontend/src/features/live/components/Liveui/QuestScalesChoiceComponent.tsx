@@ -1,15 +1,7 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable @typescript-eslint/no-unused-expressions */
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 // import clsx from "clsx";
-import {
-	connectSocket,
-	emitRankShortAndScaleSubmitTask,
-	// getSocket,
-	waitForAnswerProcessedQuestOnce,
-} from "@/features/live/services/realtimeBridge";
 import { useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { upsertAnswer } from "@/features/live/store/leaderboardAnswersSlice";
@@ -59,7 +51,6 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 
 	const searchParams = useSearchParams();
 	const joinid = searchParams.get("jid");
-	const userId = searchParams.get("ujid");
 	const attempId = searchParams.get("aid");
 
 	const [watingData, setwatingData] = useState(true);
@@ -215,25 +206,12 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 	const dataNew: any = task;
 
 	const dataSubmit = async () => {
-		reqSoketData();
-		saveAnswer();
-		const submitStatusCheck = await waitForAnswerProcessedQuestOnce();
-		if (!submitStatusCheck) {
-			connectSocket().then(() => {
-				reqSoketData();
-				saveAnswer();
-				if (typeof window !== "undefined") {
-					localStorage.setItem("currentId", `${task?.id}`);
-				}
-			});
+		await saveAnswer();
+		if (task?.id) setTaskExpired(task.id);
+		setwatingData(false);
+		if (typeof window !== "undefined") {
+			localStorage.setItem("currentId", `${task?.id}`);
 		}
-
-		// const existing = getSocket();
-		// const go = () => {
-		// 	reqSoketData();
-		// 	saveAnswer();
-		// };
-		// existing?.connected ? go() : connectSocket().then(go);
 	};
 
 	const saveAnswer = async () => {
@@ -254,19 +232,6 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 		} catch (error) {
 			console.error("Error saving answer:", error);
 		}
-	};
-
-	const reqSoketData = () => {
-		emitRankShortAndScaleSubmitTask({
-			userId: `${userId}`,
-			questionId: dataNew?.id,
-			userName: `${userId}`,
-			questionTitle: `${task?.title}`,
-			questionType: `option_scaling`,
-			selectedOption: selectedValues,
-			optionType: "option_scaling",
-		});
-		setwatingData(false);
 	};
 
 	const handleExpire = () => {
@@ -332,7 +297,7 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 		} else {
 			setwatingData(true);
 		}
-	}, [dataNew?.id]);
+	}, [dataNew?.id, task?.id]);
 
 	const handleTimeUpdate = (
 		remaining: number,
