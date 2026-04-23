@@ -1,4 +1,5 @@
 "use client";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 // import clsx from "clsx";
@@ -11,9 +12,7 @@ import { AxiosError } from "axios";
 import ScaleRow, { ScaleOption } from "./Scales/ScaleRow";
 import SharedQuestTimer from "@/components/SharedQuestTimer";
 import { IoMdHappy } from "react-icons/io";
-
 type TaskQuestion = ScaleOption;
-
 type TaskItem = {
 	id?: number | string;
 	quiz_id?: number | string;
@@ -37,64 +36,51 @@ type TaskItem = {
 		maxNumber?: number;
 	};
 };
-
 type Props = {
 	task?: TaskItem;
 	value?: string | null; // kept for legacy API (unused for scales)
 	onChange?: (val: string) => void; // legacy
 };
-
 const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
-	console.log(task, "tasktasktask");
-
 	const dispatch = useDispatch();
-
 	const searchParams = useSearchParams();
 	const joinid = searchParams.get("jid");
 	const attempId = searchParams.get("aid");
-
 	const [watingData, setwatingData] = useState(true);
-	const [chalangeData, setchalangeData] = useState<any>({});
-	const [currentTimeGet, setcurrentTimeGet] = useState<number>(0);
-	console.log(chalangeData);
-
+	const [, setchalangeData] = useState<any>({});
+	const [, setcurrentTimeGet] = useState<number>(0);
 	useEffect(() => {
 		if (typeof window !== "undefined" && !navigator.onLine) {
 			console.warn("Offline — skipping API call");
 			return;
 		}
-
 		const dataFetch = async () => {
 			try {
 				const response = await axiosInstance.get(
-					`/quest-attempts-url/show-by-link/${joinid}`
+					`/quest-attempts-url/show-by-link/${joinid}`,
 				);
 				setchalangeData(response?.data?.data?.quest);
 			} catch (error) {
-				const axiosError = error as AxiosError<{ message?: string }>;
+				const axiosError = error as AxiosError<{
+					message?: string;
+				}>;
 				console.error("Unexpected error:", axiosError.message);
 			}
 		};
 		dataFetch();
 	}, [joinid]);
-
 	useEffect(() => {
 		if (!task?.id) return;
-
 		const key = `timeExpired_${task.id}`;
 		const raw = localStorage.getItem(key);
-		console.log(raw, "rawrawrawrawrawraw");
-
 		if (raw === null) {
 			return;
 		}
-
 		try {
 			const parsed = JSON.parse(raw);
 			const expired =
 				parsed?.status === "completed" &&
 				String(parsed?.taskId) === String(task.id);
-
 			setwatingData(!expired ? true : false);
 		} catch {
 			const expired = raw === "completed";
@@ -105,7 +91,7 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 	// derive options and min/max
 	const optionObjs = useMemo<ScaleOption[]>(
 		() => task?.questions ?? [],
-		[task?.questions]
+		[task?.questions],
 	);
 
 	// priority: task.minNumber/maxNumber -> task.task_data.minNumber/maxNumber -> defaults
@@ -114,22 +100,16 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 		const nested = (task as any)?.task_data?.minNumber;
 		return Number(direct ?? nested ?? 1);
 	}, [task]);
-
 	const maxNumber = useMemo(() => {
 		const direct = (task as any)?.maxNumber;
 		const nested = (task as any)?.task_data?.maxNumber;
 		return Number(direct ?? nested ?? 5);
 	}, [task]);
-
-	console.log(minNumber, maxNumber, "wiueyriwye iruyweiry");
-
 	// values aligned with options (0 => skipped)
 	const [selectedValues, setSelectedValues] = useState<number[]>(
-		optionObjs.map(() => 0)
+		optionObjs.map(() => 0),
 	);
-
 	const startRef = useRef<number>(Date.now());
-
 	useEffect(() => {
 		// reset when the question/task changes
 		startRef.current = Date.now();
@@ -159,16 +139,14 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 	const syncReduxScales = (values: number[]) => {
 		const elapsedSec = Math.max(
 			0,
-			Math.round((Date.now() - startRef.current) / 1000)
+			Math.round((Date.now() - startRef.current) / 1000),
 		);
-
 		const answered = optionObjs.map((q, i) => ({
 			id: q.id,
 			text: q.text ?? q.label ?? "",
 			color: q.color ?? null,
 			value: values[i] ?? 0,
 		}));
-
 		dispatch(
 			upsertAnswer({
 				id: (task?.id as number | string) ?? "scales",
@@ -181,10 +159,9 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 				source_content_url: (task as any)?.source_content_url ?? null,
 				questions: answered, // detailed per-option entries
 				// selected_values: values,     // array like [3,1,0,...] (if your slice supports it)
-			})
+			}),
 		);
 	};
-
 	const handleScaleChange = (index: number, nextValue: number) => {
 		setSelectedValues((prev) => {
 			const copy = [...prev];
@@ -193,7 +170,6 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 			return copy;
 		});
 	};
-
 	const handleSkip = (index: number) => {
 		setSelectedValues((prev) => {
 			const copy = [...prev];
@@ -202,9 +178,7 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 			return copy;
 		});
 	};
-
 	const dataNew: any = task;
-
 	const dataSubmit = async () => {
 		await saveAnswer();
 		if (task?.id) setTaskExpired(task.id);
@@ -213,7 +187,6 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 			localStorage.setItem("currentId", `${task?.id}`);
 		}
 	};
-
 	const saveAnswer = async () => {
 		try {
 			const currentTime = moment().format("YYYY-MM-DD HH:mm:ss");
@@ -227,19 +200,14 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 			};
 			await axiosInstance.post(
 				`/quest-attempts/${attempId}/answer`,
-				payload
+				payload,
 			);
 		} catch (error) {
 			console.error("Error saving answer:", error);
 		}
 	};
-
 	const handleExpire = () => {
 		if (!task?.id) return;
-		const key = `timeExpired_${task.id}`;
-		const raw = localStorage.getItem(key);
-		console.log(raw, "rawrawrawrawrawrawrawraw");
-
 		const saved = setTaskExpired(task.id);
 		const ok =
 			saved?.status === "completed" &&
@@ -248,7 +216,6 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 			setwatingData(false);
 		}
 	};
-
 	const setTaskExpired = (taskId: string | number) => {
 		const key = `timeExpired_${taskId}`;
 		const payload = {
@@ -261,7 +228,6 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 		setwatingData(false);
 		return payload;
 	};
-
 	useEffect(() => {
 		const onStorage = (e: StorageEvent) => {
 			if (e.key === `timeExpired_${task?.id}`) {
@@ -280,7 +246,6 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 		window.addEventListener("storage", onStorage);
 		return () => window.removeEventListener("storage", onStorage);
 	}, [task?.id]);
-
 	useEffect(() => {
 		if (!task?.id) return;
 		const key = `timeExpired_${task.id}`;
@@ -298,20 +263,10 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 			setwatingData(true);
 		}
 	}, [dataNew?.id, task?.id]);
-
-	const handleTimeUpdate = (
-		remaining: number,
-		elapsed: number,
-		total: number
-	) => {
-		console.log(total, "total");
-		console.log(elapsed, "total");
-		console.log(remaining, "total");
+	const handleTimeUpdate = (remaining: number) => {
 		setcurrentTimeGet(remaining);
 	};
-
 	const selectionText = `Selected values: [${selectedValues.join(", ")}]`;
-
 	return (
 		<div className="min-h-screen overflow-auto flex flex-col justify-center items-center px-4">
 			{watingData ? (
@@ -374,5 +329,4 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 		</div>
 	);
 };
-
 export default QuestScalesChoiceComponent;

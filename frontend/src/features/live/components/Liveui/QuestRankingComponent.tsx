@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, {
 	useEffect,
@@ -19,7 +20,6 @@ import moment from "@/lib/dayjs";
 import { AxiosError } from "axios";
 import QuizTimer, { getCurrentTime } from "@/components/GlobalTimer";
 import { TimerCacheManager } from "@/utils/timerCacheUtils";
-
 import {
 	DndContext,
 	useDraggable,
@@ -33,14 +33,12 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import SharedQuestTimer from "@/components/SharedQuestTimer";
 import { IoMdHappy } from "react-icons/io";
-
 type TaskQuestion = {
 	id: number | string;
 	text?: string;
 	label?: string;
 	color?: string;
 };
-
 type TaskItem = {
 	id?: number | string;
 	quiz_id?: number | string;
@@ -53,7 +51,6 @@ type TaskItem = {
 	time_limit_seconds?: number | string;
 	source_content_url?: string | null;
 };
-
 type Props = {
 	task?: TaskItem;
 	value?: string | null;
@@ -80,20 +77,22 @@ function DraggableOption({
 	const { attributes, listeners, setNodeRef, transform, isDragging } =
 		useDraggable({
 			id,
-			data: { from, optIdx },
+			data: {
+				from,
+				optIdx,
+			},
 		});
 	const style: React.CSSProperties = {
 		transform: transform ? CSS.Translate.toString(transform) : undefined,
 		opacity: isDragging ? 0.75 : 1,
 	};
-
 	return (
 		<div
 			ref={setNodeRef}
 			style={style}
 			className={clsx(
 				"select-none cursor-grab active:cursor-grabbing",
-				className
+				className,
 			)}
 			{...attributes}
 			{...listeners}
@@ -116,50 +115,47 @@ function Droppable({
 	children: React.ReactNode;
 	className?: string;
 }) {
-	const { setNodeRef, isOver } = useDroppable({ id });
+	const { setNodeRef, isOver } = useDroppable({
+		id,
+	});
 	return (
 		<div
 			ref={setNodeRef}
 			className={clsx(
 				className,
-				isOver ? "ring-2 ring-orange-400 ring-offset-2" : ""
+				isOver ? "ring-2 ring-orange-400 ring-offset-2" : "",
 			)}
 		>
 			{children}
 		</div>
 	);
 }
-
 const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 	const dispatch = useDispatch();
 	const answers = useSelector((state: RootState) => state.answers);
-	console.log(answers, "answersanswersanswersanswers");
-	console.log(task, "task");
-
 	const dataNew: any = task;
 	const searchParams = useSearchParams();
 	const joinid = searchParams.get("jid");
 	const userId = searchParams.get("ujid");
 	const attempId = searchParams.get("aid");
-
 	const [watingData, setwatingData] = useState(true);
 	const [chalangeData, setchalangeData] = useState<any>({});
 	const [currentTimeGet, setcurrentTimeGet] = useState<number>(0);
-
 	useEffect(() => {
 		if (typeof window !== "undefined" && !navigator.onLine) {
 			console.warn("Offline — skipping API call");
 			return;
 		}
-
 		const dataFetch = async () => {
 			try {
 				const response = await axiosInstance.get(
-					`/quest-attempts-url/show-by-link/${joinid}`
+					`/quest-attempts-url/show-by-link/${joinid}`,
 				);
 				setchalangeData(response?.data?.data?.quest);
 			} catch (error) {
-				const axiosError = error as AxiosError<{ message?: string }>;
+				const axiosError = error as AxiosError<{
+					message?: string;
+				}>;
 				console.error("Unexpected error:", axiosError.message);
 			}
 		};
@@ -170,7 +166,7 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 	const optionNodes = task?.questions ?? [];
 	const options = useMemo(
 		() => optionNodes.map((q) => q.text ?? q.label ?? "").filter(Boolean),
-		[optionNodes]
+		[optionNodes],
 	);
 
 	// Ranking state = array of original option indices
@@ -183,7 +179,7 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 	// Available = all indices not present in ranked
 	const available = useMemo(
 		() => options.map((_, i) => i).filter((i) => !ranked.includes(i)),
-		[options, ranked]
+		[options, ranked],
 	);
 
 	// Persist to Redux whenever ranking changes
@@ -199,7 +195,6 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 						rank: i + 1,
 					};
 				}) ?? [];
-
 			dispatch(
 				upsertAnswer({
 					id: (task?.id as number | string) ?? "ranking",
@@ -214,12 +209,11 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 					source_content_url:
 						(task as any)?.source_content_url ?? null,
 					questions: selectedAnswer,
-				})
+				}),
 			);
 		},
-		[dispatch, optionNodes, options, task]
+		[dispatch, optionNodes, options, task],
 	);
-
 	const insertAt = (arr: number[], value: number, index: number) => {
 		const next = [...arr];
 		next.splice(index, 0, value);
@@ -270,18 +264,10 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 	useEffect(() => {
 		startRef.current = Date.now();
 	}, [task?.id]);
-
 	const handleExpire = () => {
 		if (!task?.id) return;
-
-		console.log(
-			"Time is up! Current time:",
-			getCurrentTime().toISOString()
-		);
 		const key = `timeExpired_${task.id}`;
 		const raw = localStorage.getItem(key);
-		console.log(raw, "rawrawrawrawrawrawrawraw");
-
 		const saved = setTaskExpired(task.id);
 		const ok =
 			saved?.status === "completed" &&
@@ -290,7 +276,6 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 			setwatingData(false);
 		}
 	};
-
 	const setTaskExpired = (taskId: string | number) => {
 		const key = `timeExpired_${taskId}`;
 		const payload = {
@@ -303,7 +288,6 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 		setwatingData(false);
 		return payload;
 	};
-
 	useEffect(() => {
 		const onStorage = (e: StorageEvent) => {
 			if (e.key === `timeExpired_${task?.id}`) {
@@ -328,14 +312,10 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 	const handleTimeUpdate = (
 		remaining: number,
 		elapsed: number,
-		total: number
+		total: number,
 	) => {
-		console.log(total, "total");
-		console.log(elapsed, "total");
-		console.log(remaining, "total");
 		setcurrentTimeGet(remaining);
 	};
-
 	useEffect(() => {
 		if (!task?.id) return;
 		const key = `timeExpired_${task.id}`;
@@ -363,11 +343,9 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 			localStorage.setItem("currentId", `${task?.id}`);
 		}
 	};
-
 	const saveAnswer = async () => {
 		try {
 			const currentTime = moment().format("YYYY-MM-DD HH:mm:ss");
-
 			const rankIndexList = ranked.map((_, i) => i + 1);
 			const payload = {
 				task_id: task?.id,
@@ -379,47 +357,41 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 			};
 			await axiosInstance.post(
 				`/quest-attempts/${attempId}/answer`,
-				payload
+				payload,
 			);
 		} catch (error) {
 			console.error("Error saving answer:", error);
 		}
 	};
-
 	const sensors = useSensors(
-		useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+		useSensor(PointerSensor, {
+			activationConstraint: {
+				distance: 6,
+			},
+		}),
 	);
-
 	const OPTIONS_ZONE_ID = "options-zone";
 	const RANKING_ZONE_ID = "ranking-zone";
 	const rankItemId = (pos: number) => `rank-item-${pos}`;
 	const optItemId = (optIdx: number) => `opt-item-${optIdx}`;
-
-	const onDragOver = (_evt: any) => { };
-
+	const onDragOver = (_evt: any) => {};
 	const onDragEnd = (evt: DragEndEvent) => {
 		const { active, over } = evt;
 		if (!over) return;
-
 		const optIdx: number | undefined = active.data?.current?.optIdx;
 		if (optIdx === undefined) return;
-
 		const overId = String(over.id);
-
 		if (overId === OPTIONS_ZONE_ID || overId.startsWith("opt-item-")) {
 			removeFromRanking(optIdx);
 			return;
 		}
-
 		if (overId === RANKING_ZONE_ID) {
 			if (!ranked.includes(optIdx)) addToRanking(optIdx);
 			return;
 		}
-
 		if (overId.startsWith("rank-item-")) {
 			const targetPos = parseInt(overId.replace("rank-item-", ""), 10);
 			const currentPos = ranked.indexOf(optIdx);
-
 			if (currentPos === -1) {
 				const next = insertAt(ranked, optIdx, targetPos);
 				setRanked(next);
@@ -432,7 +404,6 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 			return;
 		}
 	};
-
 	const htmlToText = (html?: string) => {
 		if (!html) return "";
 		const stripped = html.replace(/<[^>]*>/g, " ");
@@ -450,7 +421,6 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 			.replace(/\s+/g, " ")
 			.trim();
 	};
-
 	return (
 		<div className=" overflow-auto flex flex-col justify-center items-center px-4">
 			{watingData ? (
@@ -539,7 +509,7 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 															<div className="text-gray-800">
 																{
 																	options[
-																	optIdx
+																		optIdx
 																	]
 																}
 															</div>
@@ -557,7 +527,7 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 															"px-2 py-1 rounded-md border text-sm",
 															pos === 0
 																? "opacity-40 cursor-not-allowed"
-																: "hover:border-orange-400"
+																: "hover:border-orange-400",
 														)}
 														disabled={pos === 0}
 														title="Move up"
@@ -572,9 +542,9 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 															"px-2 py-1 rounded-md border text-sm",
 															pos ===
 																ranked.length -
-																1
+																	1
 																? "opacity-40 cursor-not-allowed"
-																: "hover:border-orange-400"
+																: "hover:border-orange-400",
 														)}
 														disabled={
 															pos ===
@@ -621,5 +591,4 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 		</div>
 	);
 };
-
 export default QuestChoiceComponent;

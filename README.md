@@ -28,6 +28,195 @@ Design choices baked in:
 
 ---
 
+## Local Update + Run
+
+Run each long-running service in its own terminal.
+
+### 1. Pull latest code
+
+Use after `git push` / `git pull`.
+
+```bash
+cd /home/bdren/Projects/MindSpear
+git pull
+```
+
+### 2. Install updated dependencies
+
+Use after pulling when backend/frontend packages changed.
+
+```bash
+cd /home/bdren/Projects/MindSpear/backend
+composer install
+
+cd /home/bdren/Projects/MindSpear/frontend
+npm install
+```
+
+### 3. Clear Laravel cache
+
+Use after backend code changes, `.env` changes, config changes, route changes, or weird stale behavior.
+
+```bash
+cd /home/bdren/Projects/MindSpear/backend
+php artisan optimize:clear
+```
+
+### 4. Start all 5 local services
+
+#### Redis
+
+```bash
+cd /home/bdren/Projects/MindSpear/backend
+redis-server --bind 127.0.0.1 --port 6379
+```
+
+#### Backend API
+
+```bash
+cd /home/bdren/Projects/MindSpear/backend
+php artisan serve --host=127.0.0.1 --port=8000
+```
+
+#### Queue Worker
+
+```bash
+cd /home/bdren/Projects/MindSpear/backend
+php artisan queue:work redis --tries=3
+```
+
+#### Reverb
+
+```bash
+cd /home/bdren/Projects/MindSpear/backend
+php artisan reverb:start --host=0.0.0.0 --port=8080
+```
+
+#### Frontend
+
+```bash
+cd /home/bdren/Projects/MindSpear/frontend
+npm run dev
+```
+
+### 5. Verify ports
+
+Use after starting services.
+
+```bash
+redis-cli -h 127.0.0.1 -p 6379 ping
+ss -ltnp | grep -E ':6379|:8000|:8080|:2000'
+```
+
+### 6. Stop one service
+
+Use when a port is stuck or you only need to restart one process.
+
+```bash
+# Backend API
+pkill -f "php artisan serve"
+
+# Queue Worker
+pkill -f "php artisan queue:work"
+
+# Reverb
+pkill -f "php artisan reverb:start"
+
+# Frontend
+pkill -f "next dev"
+
+# Redis
+redis-cli -h 127.0.0.1 -p 6379 shutdown
+```
+
+### 7. Stop everything
+
+Use before a clean restart.
+
+```bash
+pkill -f "php artisan serve"
+pkill -f "php artisan queue:work"
+pkill -f "php artisan reverb:start"
+pkill -f "next dev"
+redis-cli -h 127.0.0.1 -p 6379 shutdown
+```
+
+### 8. Restart after pulling updates
+
+Use after backend/live/socket changes.
+
+```bash
+cd /home/bdren/Projects/MindSpear/backend
+php artisan optimize:clear
+pkill -f "php artisan serve"
+pkill -f "php artisan queue:work"
+pkill -f "php artisan reverb:start"
+```
+
+Then start again:
+
+```bash
+cd /home/bdren/Projects/MindSpear/backend
+php artisan serve --host=127.0.0.1 --port=8000
+
+cd /home/bdren/Projects/MindSpear/backend
+php artisan queue:work redis --tries=3
+
+cd /home/bdren/Projects/MindSpear/backend
+php artisan reverb:start --host=0.0.0.0 --port=8080
+```
+
+Restart frontend only when env/package changes:
+
+```bash
+pkill -f "next dev"
+cd /home/bdren/Projects/MindSpear/frontend
+npm run dev
+```
+
+### 9. Full clean restart
+
+Use when things feel out of sync.
+
+```bash
+cd /home/bdren/Projects/MindSpear
+git pull
+
+cd /home/bdren/Projects/MindSpear/backend
+composer install
+php artisan optimize:clear
+pkill -f "php artisan serve"
+pkill -f "php artisan queue:work"
+pkill -f "php artisan reverb:start"
+
+cd /home/bdren/Projects/MindSpear/frontend
+npm install
+pkill -f "next dev"
+
+redis-cli -h 127.0.0.1 -p 6379 shutdown
+```
+
+Then start:
+
+```bash
+cd /home/bdren/Projects/MindSpear/backend
+redis-server --bind 127.0.0.1 --port 6379
+
+cd /home/bdren/Projects/MindSpear/backend
+php artisan serve --host=127.0.0.1 --port=8000
+
+cd /home/bdren/Projects/MindSpear/backend
+php artisan queue:work redis --tries=3
+
+cd /home/bdren/Projects/MindSpear/backend
+php artisan reverb:start --host=0.0.0.0 --port=8080
+
+cd /home/bdren/Projects/MindSpear/frontend
+npm run dev
+```
+
+---
+
 ## Quick Start (sequential — fresh Ubuntu 24.04)
 
 Run top-to-bottom. DNS for `mindspear.app`, `www.mindspear.app`, `api.mindspear.app`, `ws.mindspear.app` must already resolve to this server. Everything tagged `REPLACE_*` is listed in [§11 Replace Before Go-Live](#11-replace-before-go-live).

@@ -20,48 +20,37 @@ import {
 interface QuizResponse {
 	quest: any;
 }
-
 function QuestAttemptForm() {
 	const searchParams = useSearchParams();
 	// const dispatch = useDispatch();
 	// const { currentStatus, statusAfter2Sec, isStable } = useSocketStatusComparison();
 	// console.log(currentStatus, statusAfter2Sec, isStable);
 	const router = useRouter();
-	const qid = searchParams.get("qid");
 	const joinid = searchParams.get("jid");
 	const [currentUserName, setCurrentUserName] = useState("");
 	const [quizData, setQuizData] = useState<QuizResponse | null>(null);
-
 	const [quizErrorMessage, setQuizErrorMessage] = useState<
 		string | undefined
 	>();
 	const [quizErrorStatus, setQuizErrorStatus] = useState<boolean>(false);
-
-	console.log(quizData, "quizDataquizDataquizData");
-
 	useEffect(() => {
 		clearLegacyLiveStorage();
-	}, []);
-
+	}, [joinid]);
 	useEffect(() => {
 		if (typeof window !== "undefined" && !navigator.onLine) {
 			console.warn("Offline — skipping API call");
 			return;
 		}
-
 		const dataFetch = async () => {
 			try {
 				const response = await axiosInstance.get<{
 					data: QuizResponse;
 				}>(`/quest-attempts-url/show-by-link/${joinid}`);
 				setQuizData(response?.data?.data);
-				console.log(
-					response?.data?.data,
-					"response?.data.dataresponse?.data.data"
-				);
 			} catch (error) {
-				const axiosError = error as AxiosError<{ message?: string }>;
-
+				const axiosError = error as AxiosError<{
+					message?: string;
+				}>;
 				if (axiosError.response) {
 					const msg =
 						axiosError.response.data?.message ||
@@ -72,7 +61,7 @@ function QuestAttemptForm() {
 				} else {
 					console.error("Unexpected error:", axiosError.message);
 					setQuizErrorMessage(
-						"Unexpected error occurred. Please try again."
+						"Unexpected error occurred. Please try again.",
 					);
 					setQuizErrorStatus(true);
 				}
@@ -80,30 +69,23 @@ function QuestAttemptForm() {
 			}
 		};
 		dataFetch();
-	}, []);
-
+	}, [joinid]);
 	const open = moment.utc(quizData?.quest?.start_datetime);
 	const close = moment.utc(quizData?.quest?.end_datetime);
-
 	const duration = moment.duration(close.diff(open));
-
 	const days = Math.floor(duration.asDays());
 	const hours = duration.hours();
 	const minutes = duration.minutes();
-
 	const timeParts = [];
-
 	if (days > 0) timeParts.push(`${days} day${days > 1 ? "s" : ""}`);
 	if (hours > 0) timeParts.push(`${hours} hour${hours > 1 ? "s" : ""}`);
 	if (minutes > 0)
 		timeParts.push(`${minutes} minute${minutes > 1 ? "s" : ""}`);
-
 	const clearQuestionDataFromStorage = () => {
 		if (typeof window !== "undefined") {
 			localStorage.removeItem("quiz_currentQuestion");
 			localStorage.removeItem("quiz_questions");
 			localStorage.removeItem("quiz_questionsId");
-
 			const keys = Object.keys(localStorage);
 			keys.forEach((key) => {
 				if (key.startsWith("attempt-")) {
@@ -112,7 +94,6 @@ function QuestAttemptForm() {
 			});
 		}
 	};
-
 	useEffect(() => {
 		clearQuestionDataFromStorage();
 	}, []);
@@ -124,7 +105,6 @@ function QuestAttemptForm() {
 	// }, 3000);
 
 	const userId = Math.floor(Math.random() * 10000).toString();
-
 	const dataSubmit = async () => {
 		try {
 			const formattedDate = quizData?.quest?.start_datetime
@@ -138,24 +118,24 @@ function QuestAttemptForm() {
 			};
 			const response = await axiosInstance.post(
 				`/quest-attempts-url/join-by-link/${joinid}`,
-				obj
+				obj,
 			);
 			const responseData = response?.data?.data as any;
 			const attemptId = responseData?.attempt?.id;
 			const sessionId = responseData?.attempt?.quest_session_id;
 			const publicChannelKey = responseData?.public_channel_key;
 			const participantToken = responseData?.participant_token;
-
 			if (
 				!attemptId ||
 				!sessionId ||
 				!publicChannelKey ||
 				!participantToken
 			) {
-				toast.error("Unable to join this live quest. Missing session metadata.");
+				toast.error(
+					"Unable to join this live quest. Missing session metadata.",
+				);
 				return;
 			}
-
 			storeParticipantTokenBundle({
 				module: "quest",
 				sessionId: Number(sessionId),
@@ -163,23 +143,20 @@ function QuestAttemptForm() {
 				participantToken,
 				publicChannelKey,
 			});
-
 			router.push(
-				`/attempt/quest-live/play/${responseData?.quest?.join_code}?jid=${responseData?.quest?.join_link}&qid=${responseData?.quest?.id}&aid=${attemptId}&sid=${sessionId}&pck=${publicChannelKey}&ujid=${userId}&title=${quizData?.quest?.title}&uname=${currentUserName}`
+				`/attempt/quest-live/play/${responseData?.quest?.join_code}?jid=${responseData?.quest?.join_link}&qid=${responseData?.quest?.id}&aid=${attemptId}&sid=${sessionId}&pck=${publicChannelKey}&ujid=${userId}&title=${quizData?.quest?.title}&uname=${currentUserName}`,
 			);
 		} catch (error) {
-			const axiosError = error as AxiosError<{ message?: string }>;
-
+			const axiosError = error as AxiosError<{
+				message?: string;
+			}>;
 			if (axiosError.response) {
 				console.error(
 					"Error verifying token:",
-					axiosError.response.data
+					axiosError.response.data,
 				);
 				toast.error(
-					`Error: ${
-						axiosError.response.data?.message ||
-						"Verification failed."
-					}`
+					`Error: ${axiosError.response.data?.message || "Verification failed."}`,
 				);
 			} else {
 				console.error("Unexpected error:", axiosError.message);
@@ -204,7 +181,6 @@ function QuestAttemptForm() {
 			</div>
 		);
 	}
-
 	if (quizErrorStatus) {
 		return (
 			<div className="container mx-auto p-4 max-w-3xl text-center">
@@ -217,13 +193,11 @@ function QuestAttemptForm() {
 			</div>
 		);
 	}
-
 	const createTime =
 		quizData?.quest?.start_datetime !== null ||
 		quizData?.quest?.start_datetime !== undefined
 			? quizData?.quest?.start_datetime
 			: new Date();
-
 	return (
 		<div className="quiz_play_bg ">
 			<div className="flex flex-col justify-center items-center h-screen w-full">
@@ -288,5 +262,4 @@ function QuestAttemptForm() {
 		</div>
 	);
 }
-
 export default QuestAttemptForm;

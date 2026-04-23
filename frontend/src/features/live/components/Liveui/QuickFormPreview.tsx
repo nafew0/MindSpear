@@ -1,21 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 "use client";
+
 import { QuestionBlock } from "@/features/quest/components/Quest/QuickFormComponents/quest";
 import axiosInstance from "@/utils/axiosInstance";
 // import moment from "@/lib/dayjs";
 import React, { useEffect, useMemo, useState } from "react";
 import { FaChevronDown } from "react-icons/fa";
 import { useSearchParams } from "next/navigation";
-
 import { AxiosError } from "axios";
-
 import SharedQuestTimer from "@/components/SharedQuestTimer";
 import { IoMdHappy } from "react-icons/io";
 // import moment from "@/lib/dayjs";
 
 const CheckboxPreview: React.FC<{
-	options: { id: string; text: string }[];
+	options: {
+		id: string;
+		text: string;
+	}[];
 	selected: string[];
 	onToggle: (optId: string, checked: boolean) => void;
 }> = ({ options, selected, onToggle }) => (
@@ -40,9 +42,11 @@ const CheckboxPreview: React.FC<{
 		})}
 	</div>
 );
-
 const RadioPreview: React.FC<{
-	options: { id: string; text: string }[];
+	options: {
+		id: string;
+		text: string;
+	}[];
 	name: string;
 	selected?: string;
 	onSelect: (optId: string) => void;
@@ -68,9 +72,11 @@ const RadioPreview: React.FC<{
 		})}
 	</div>
 );
-
 const DropdownPreview: React.FC<{
-	options: { id: string; text: string }[];
+	options: {
+		id: string;
+		text: string;
+	}[];
 	selected?: string;
 	onSelect: (optId: string) => void;
 }> = ({ options, selected, onSelect }) => (
@@ -90,7 +96,6 @@ const DropdownPreview: React.FC<{
 		<FaChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" />
 	</div>
 );
-
 const ShortAnswerPreview: React.FC<{
 	value?: string;
 	onChange: (v: string) => void;
@@ -103,19 +108,16 @@ const ShortAnswerPreview: React.FC<{
 		className="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
 	/>
 );
-
 const parseSN = (sn?: string | number) => {
 	const n = Number(sn);
 	return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER; // non-numeric last
 };
-
 type TaskItem = {
 	id?: number;
 	title?: string;
 	description?: string | null;
 	questions?: QuestionBlock[];
 };
-
 type Props = {
 	task?: TaskItem;
 	onSubmit?: (payload: any) => void; // <-- submit callback
@@ -124,17 +126,20 @@ type Props = {
 /* ---------------- helpers ---------------- */
 
 const optIndex1 = (
-	opts: { id: string | number }[] | undefined,
-	pickedId: string
+	opts:
+		| {
+				id: string | number;
+		  }[]
+		| undefined,
+	pickedId: string,
 ) => {
 	const list = opts ?? [];
 	const i = list.findIndex((o) => String(o.id) === pickedId);
 	return i >= 0 ? i + 1 : undefined;
 };
-
 const buildSubmission = (
 	qs: QuestionBlock[],
-	form: Record<string, string | string[]>
+	form: Record<string, string | string[]>,
 ) => {
 	return qs.map((q) => {
 		const qid = String(q.id);
@@ -148,26 +153,33 @@ const buildSubmission = (
 			})),
 			serial_number: String(q.serial_number ?? ""),
 		};
-
 		const value = form[qid];
-
 		switch (q.type) {
 			case "checkbox": {
 				const arr = Array.isArray(value) ? (value as string[]) : [];
 				const indices = arr
 					.map((picked) => optIndex1(q.options, picked))
 					.filter((x): x is number => typeof x === "number");
-				return { ...base, selected_options: indices };
+				return {
+					...base,
+					selected_options: indices,
+				};
 			}
 			case "radio":
 			case "dropdown": {
 				const picked = typeof value === "string" ? value : "";
 				const idx1 = picked ? optIndex1(q.options, picked) : undefined;
-				return { ...base, selected_option: idx1 };
+				return {
+					...base,
+					selected_option: idx1,
+				};
 			}
 			case "short-answer": {
 				const text = typeof value === "string" ? value : "";
-				return { ...base, text };
+				return {
+					...base,
+					text,
+				};
 			}
 			default:
 				return base;
@@ -177,74 +189,60 @@ const buildSubmission = (
 /* ------------------------------------------ */
 
 const QuickFormPreview: React.FC<Props> = ({ task }) => {
-	console.log(task, "tasktask");
 	const dataNew: any = task;
 	const searchParams = useSearchParams();
 	const [questions, setQuestions] = useState<QuestionBlock[]>(
-		(task?.questions as QuestionBlock[]) ?? []
+		(task?.questions as QuestionBlock[]) ?? [],
 	);
-
 	const [form, setForm] = useState<Record<string, string | string[]>>({});
-	const [chalangeData, setchalangeData] = useState<any>({});
-	const [currentTimeGet, setcurrentTimeGet] = useState<any>(0);
-	console.log(chalangeData);
-
+	const [, setchalangeData] = useState<any>({});
+	const [, setcurrentTimeGet] = useState<any>(0);
 	const attempId = searchParams.get("aid");
 	const joinid = searchParams.get("jid");
 	const [watingData, setwatingData] = useState(true);
-
 	useEffect(() => {
 		setQuestions((task?.questions as QuestionBlock[]) ?? []);
 		setForm({});
 	}, [task?.id, task?.questions]);
-
 	useEffect(() => {
 		if (typeof window !== "undefined" && !navigator.onLine) {
 			console.warn("Offline — skipping API call");
 			return;
 		}
-
 		const dataFetch = async () => {
 			try {
 				const response = await axiosInstance.get(
-					`/quest-attempts-url/show-by-link/${joinid}`
+					`/quest-attempts-url/show-by-link/${joinid}`,
 				);
 				setchalangeData(response?.data?.data?.quest);
 			} catch (error) {
-				const axiosError = error as AxiosError<{ message?: string }>;
+				const axiosError = error as AxiosError<{
+					message?: string;
+				}>;
 				console.error("Unexpected error:", axiosError.message);
 			}
 		};
 		dataFetch();
 	}, [joinid]);
-
 	useEffect(() => {
 		if (!task?.id) return;
-
 		const key = `timeExpired_${task.id}`;
 		const raw = localStorage.getItem(key);
-		console.log(raw, "rawrawrawrawrawraw");
-
 		if (raw === null) {
 			return;
 		}
-
 		try {
 			const parsed = JSON.parse(raw);
 			const expired =
 				parsed?.status === "completed" &&
 				String(parsed?.taskId) === String(task.id);
-
 			setwatingData(!expired ? true : false);
 		} catch {
 			const expired = raw === "completed";
 			setwatingData(!expired);
 		}
 	}, [task?.id]);
-
 	const handleExpire = () => {
-		console.log(task?.id, "task?.idtask?.idtask?.id");
-
 		if (!task?.id) return;
 		const saved = setTaskExpired(task.id);
 		const ok =
@@ -254,14 +252,16 @@ const QuickFormPreview: React.FC<Props> = ({ task }) => {
 			setwatingData(false);
 		}
 	};
-
 	const setTaskExpired = (taskId: string | number) => {
 		const key = `timeExpired_${taskId}`;
-		const payload = { status: "completed", taskId, ts: Date.now() };
+		const payload = {
+			status: "completed",
+			taskId,
+			ts: Date.now(),
+		};
 		localStorage.setItem(key, JSON.stringify(payload));
 		return payload;
 	};
-
 	useEffect(() => {
 		const onStorage = (e: StorageEvent) => {
 			if (e.key === `timeExpired_${task?.id}`) {
@@ -280,10 +280,12 @@ const QuickFormPreview: React.FC<Props> = ({ task }) => {
 		window.addEventListener("storage", onStorage);
 		return () => window.removeEventListener("storage", onStorage);
 	}, [task?.id]);
-
 	const orderedQuestions = useMemo(() => {
 		return questions
-			.map((q, idx) => ({ q, idx }))
+			.map((q, idx) => ({
+				q,
+				idx,
+			}))
 			.sort((a, b) => {
 				const diff =
 					parseSN(a.q.serial_number) - parseSN(b.q.serial_number);
@@ -291,15 +293,14 @@ const QuickFormPreview: React.FC<Props> = ({ task }) => {
 			})
 			.map(({ q }) => q);
 	}, [questions]);
-
 	const update = (qid: string, val: string | string[]) => {
-		const next = { ...form, [qid]: val };
+		const next = {
+			...form,
+			[qid]: val,
+		};
 		setForm(next);
 	};
-
 	const renderPreview = (q: QuestionBlock) => {
-		console.log(q.options, "q.options");
-
 		const qid = String(q.id);
 		const opts = (q.options ?? [])
 			.filter((o) => o.text !== null && o.text.trim() !== "")
@@ -307,7 +308,6 @@ const QuickFormPreview: React.FC<Props> = ({ task }) => {
 				id: String(o.id),
 				text: o.text,
 			}));
-
 		switch (q.type) {
 			case "checkbox": {
 				const selected = Array.isArray(form[qid])
@@ -373,7 +373,6 @@ const QuickFormPreview: React.FC<Props> = ({ task }) => {
 		await saveAnswer(payload);
 		setwatingData(false);
 	};
-
 	const saveAnswer = async (data: any) => {
 		try {
 			// const currentTime = moment().format("YYYY-MM-DD HH:mm:ss");
@@ -386,13 +385,12 @@ const QuickFormPreview: React.FC<Props> = ({ task }) => {
 			};
 			await axiosInstance.post(
 				`/quest-attempts/${attempId}/answer`,
-				payload
+				payload,
 			);
 		} catch (error) {
 			console.error("Error saving answer:", error);
 		}
 	};
-
 	const htmlToText = (html?: string) => {
 		if (!html) return "";
 		const stripped = html.replace(/<[^>]*>/g, " ");
@@ -410,19 +408,9 @@ const QuickFormPreview: React.FC<Props> = ({ task }) => {
 			.replace(/\s+/g, " ")
 			.trim();
 	};
-
-	const handleTimeUpdate = (
-		remaining: number,
-		elapsed: number,
-		total: number
-	) => {
-		console.log(total, "total");
-		console.log(elapsed, "total");
-		console.log(remaining, "total");
+	const handleTimeUpdate = (remaining: number) => {
 		setcurrentTimeGet(remaining);
 	};
-	console.log(currentTimeGet);
-
 	return (
 		<>
 			{/* watingData */}
@@ -483,5 +471,4 @@ const QuickFormPreview: React.FC<Props> = ({ task }) => {
 		</>
 	);
 };
-
 export default QuickFormPreview;

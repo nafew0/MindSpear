@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 "use client";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -11,13 +12,11 @@ import { AxiosError } from "axios";
 import { TimerCacheManager } from "@/utils/timerCacheUtils";
 import SharedQuestTimer from "@/components/SharedQuestTimer";
 import { IoMdHappy } from "react-icons/io";
-
 type TaskQuestion = {
 	id: number | string;
 	text?: string;
 	label?: string;
 };
-
 type TaskItem = {
 	id?: number;
 	title?: string;
@@ -25,13 +24,11 @@ type TaskItem = {
 	description?: string | null;
 	questions?: TaskQuestion[];
 };
-
 type Props = {
 	task?: TaskItem;
 	value?: string | null;
 	onChange?: (val: string) => void;
 };
-
 const QuestShortAnswerComponent: React.FC<Props> = ({
 	task,
 	value,
@@ -44,48 +41,35 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 	const [error, setError] = useState("");
 	const searchParams = useSearchParams();
 	const [watingData, setwatingData] = useState(true);
-	const [currentTimeGet, setcurrentTimeGet] = useState<number>(0);
-	const [chalangeData, setchalangeData] = useState<any>({});
-	console.log(chalangeData);
-
-	const handleTimeUpdate = (
-		remaining: number,
-		elapsed: number,
-		total: number
-	) => {
-		console.log(total, "total");
-		console.log(elapsed, "total");
-		console.log(remaining, "total");
+	const [, setcurrentTimeGet] = useState<number>(0);
+	const [, setchalangeData] = useState<any>({});
+	const handleTimeUpdate = (remaining: number) => {
 		setcurrentTimeGet(remaining);
 	};
 	const maxWords = 5;
-	console.log(task, "task");
-
 	const joinid = searchParams.get("jid");
 	const attempId = searchParams.get("aid");
-
 	const startRef = useRef<number>(Date.now());
-
 	useEffect(() => {
 		if (typeof window !== "undefined" && !navigator.onLine) {
 			console.warn("Offline — skipping API call");
 			return;
 		}
-
 		const dataFetch = async () => {
 			try {
 				const response = await axiosInstance.get(
-					`/quest-attempts-url/show-by-link/${joinid}`
+					`/quest-attempts-url/show-by-link/${joinid}`,
 				);
 				setchalangeData(response?.data?.data?.quest);
 			} catch (error) {
-				const axiosError = error as AxiosError<{ message?: string }>;
+				const axiosError = error as AxiosError<{
+					message?: string;
+				}>;
 				console.error("Unexpected error:", axiosError.message);
 			}
 		};
 		dataFetch();
 	}, [joinid]);
-
 	useEffect(() => {
 		setAnswer("");
 		setAnswersList([]);
@@ -93,7 +77,6 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 		setError("");
 		startRef.current = Date.now();
 	}, [task?.id]);
-
 	useEffect(() => {
 		if (value !== undefined && value !== null) {
 			setAnswer(value);
@@ -101,7 +84,6 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 			setError("");
 		}
 	}, [value]);
-
 	const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
 		setAnswer(e.target.value);
 		setError("");
@@ -116,10 +98,7 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 	const wordCount = answer.trim()
 		? answer.trim().split(/\s+/).filter(Boolean).length
 		: 0;
-
 	const dataNew: any = task;
-	console.log(dataNew, "dataNewdataNewdataNew");
-
 	// ✅ Debounced live upsert while the user types (also sets selected_time)
 	useEffect(() => {
 		const t = setTimeout(() => {
@@ -127,9 +106,8 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 			const trimmed = answer.trim();
 			const elapsedSec = Math.max(
 				0,
-				Math.round((Date.now() - startRef.current) / 1000)
+				Math.round((Date.now() - startRef.current) / 1000),
 			);
-
 			dispatch(
 				upsertAnswer({
 					id: (task?.id as number | string) ?? 0,
@@ -143,16 +121,20 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 					selected_time: elapsedSec,
 					source_content_url:
 						(task as any)?.source_content_url ?? null,
-					questions: trimmed ? [{ id: 0, text: trimmed }] : [],
-				})
+					questions: trimmed
+						? [
+								{
+									id: 0,
+									text: trimmed,
+								},
+							]
+						: [],
+				}),
 			);
 		}, 300); // 300ms debounce
 
 		return () => clearTimeout(t);
 	}, [answer, answersList, task?.id, dispatch]);
-
-	console.log(answer, "answeransweransweransweranswer");
-
 	const saveAnswer = async (nextList: any) => {
 		try {
 			const currentTime = moment().format("YYYY-MM-DD HH:mm:ss");
@@ -168,13 +150,12 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 			};
 			await axiosInstance.post(
 				`/quest-attempts/${attempId}/answer`,
-				payload
+				payload,
 			);
 		} catch (error) {
 			console.error("Error saving answer:", error);
 		}
 	};
-
 	const handleSubmit = async () => {
 		const trimmed = answer.trim();
 		if (!trimmed) {
@@ -189,7 +170,7 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 		// (Optional) Upsert again on submit to be absolutely sure
 		const elapsedSec = Math.max(
 			0,
-			Math.round((Date.now() - startRef.current) / 1000)
+			Math.round((Date.now() - startRef.current) / 1000),
 		);
 		await saveAnswer(nextList);
 		dispatch(
@@ -204,23 +185,21 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 					null,
 				selected_time: elapsedSec,
 				source_content_url: (task as any)?.source_content_url ?? null,
-				questions: [{ id: 0, text: trimmed }],
-			})
+				questions: [
+					{
+						id: 0,
+						text: trimmed,
+					},
+				],
+			}),
 		);
-
 		setError("");
 		setSubmitted(true);
 		setwatingData(false);
 		onChange?.(trimmed);
 	};
-
 	const handleExpire = () => {
 		if (!task?.id) return;
-
-		const key = `timeExpired_${task.id}`;
-		const raw = localStorage.getItem(key);
-		console.log(raw, "rawrawrawrawrawrawrawraw");
-
 		const saved = setTaskExpired(task.id);
 		const ok =
 			saved?.status === "completed" &&
@@ -246,12 +225,10 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 			setwatingData(true);
 		}
 	}, [dataNew?.id]);
-
 	const onExpireWrapped = useCallback(() => {
 		if (dataNew?.id != null) TimerCacheManager.markCompleted(dataNew.id);
 		if (typeof handleExpire === "function") handleExpire();
 	}, [dataNew?.id, handleExpire]);
-
 	useEffect(() => {
 		const onStorage = (e: StorageEvent) => {
 			if (e.key === `timeExpired_${task?.id}`) {
@@ -270,7 +247,6 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 		window.addEventListener("storage", onStorage);
 		return () => window.removeEventListener("storage", onStorage);
 	}, [task?.id]);
-
 	const setTaskExpired = (taskId: string | number) => {
 		const key = `timeExpired_${taskId}`;
 		const payload = {
@@ -283,7 +259,6 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 		setwatingData(false);
 		return payload;
 	};
-
 	const htmlToText = (html?: string) => {
 		if (!html) return "";
 		const stripped = html.replace(/<[^>]*>/g, " ");
@@ -301,16 +276,12 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 			.replace(/\s+/g, " ")
 			.trim();
 	};
-
-	console.log(task, "tasktasktasktask");
-
 	const rowNumber =
 		task?.task_type === "shortanswer"
 			? 3
 			: task?.task_type === "longanswer"
 				? 5
 				: 1;
-
 	return (
 		<div className="flex flex-col justify-center items-center px-4">
 			{watingData ? (
@@ -398,5 +369,4 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 		</div>
 	);
 };
-
 export default QuestShortAnswerComponent;

@@ -1,4 +1,5 @@
 "use client";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -9,14 +10,12 @@ import axiosInstance from "@/utils/axiosInstance";
 import { GlobalCountdown } from "@/components/GlobalTimeManage";
 import { AxiosError } from "axios";
 import { IoMdHappy } from "react-icons/io";
-
 type TaskQuestion = {
 	id: number | string;
 	text?: string;
 	label?: string;
 	color?: string;
 };
-
 type TaskItem = {
 	id?: number | string;
 	quiz_id?: number | string;
@@ -29,30 +28,24 @@ type TaskItem = {
 	time_limit_seconds?: number | string;
 	source_content_url?: string | null;
 };
-
 type Props = {
 	task?: TaskItem;
 	value?: string | null;
 	onChange?: (val: string) => void;
 };
-
 const ShortAnswerComponent: React.FC<Props> = ({ task, value, onChange }) => {
 	const dispatch = useDispatch();
 	const [answer, setAnswer] = useState(value ?? "");
 	const [answersList, setAnswersList] = useState<string[]>([]);
-
 	const [submitted, setSubmitted] = useState(false);
 	const [error, setError] = useState("");
 	const searchParams = useSearchParams();
 	const attempId = searchParams.get("aid");
 	const joinid = searchParams.get("jid");
-
 	const [watingData, setwatingData] = useState(true);
 	const [chalangeData, setchalangeData] = useState<any>({});
 	const [currentTimeGet, setcurrentTimeGet] = useState<any>(0);
-
 	const maxWords = 5;
-
 	const startRef = useRef<number>(Date.now());
 	useEffect(() => {
 		setAnswer("");
@@ -61,7 +54,6 @@ const ShortAnswerComponent: React.FC<Props> = ({ task, value, onChange }) => {
 		setError("");
 		startRef.current = Date.now();
 	}, [task?.id]);
-
 	useEffect(() => {
 		if (value !== undefined && value !== null) {
 			setAnswer(value);
@@ -69,28 +61,26 @@ const ShortAnswerComponent: React.FC<Props> = ({ task, value, onChange }) => {
 			setError("");
 		}
 	}, [value]);
-
 	const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
 		setAnswer(e.target.value);
 		setError("");
 		setSubmitted(false);
 	};
-
 	const wordCount = answer.trim()
 		? answer.trim().split(/\s+/).filter(Boolean).length
 		: 0;
-
 	const dataNew: any = task;
-
 	useEffect(() => {
 		const dataFetch = async () => {
 			try {
 				const response = await axiosInstance.get(
-					`/quiz-attempts-url/show/${joinid}`
+					`/quiz-attempts-url/show/${joinid}`,
 				);
 				setchalangeData(response?.data?.data?.quiz);
 			} catch (error) {
-				const axiosError = error as AxiosError<{ message?: string }>;
+				const axiosError = error as AxiosError<{
+					message?: string;
+				}>;
 				console.error("Unexpected error:", axiosError.message);
 			}
 		};
@@ -104,9 +94,8 @@ const ShortAnswerComponent: React.FC<Props> = ({ task, value, onChange }) => {
 			const trimmed = answer.trim();
 			const elapsedSec = Math.max(
 				0,
-				Math.round((Date.now() - startRef.current) / 1000)
+				Math.round((Date.now() - startRef.current) / 1000),
 			);
-
 			dispatch(
 				upsertAnswer({
 					id: (task?.id as number | string) ?? 0,
@@ -120,14 +109,20 @@ const ShortAnswerComponent: React.FC<Props> = ({ task, value, onChange }) => {
 					selected_time: elapsedSec,
 					source_content_url:
 						(task as any)?.source_content_url ?? null,
-					questions: trimmed ? [{ id: 0, text: trimmed }] : [],
-				})
+					questions: trimmed
+						? [
+								{
+									id: 0,
+									text: trimmed,
+								},
+							]
+						: [],
+				}),
 			);
 		}, 300); // 300ms debounce
 
 		return () => clearTimeout(t);
 	}, [answer, task, dispatch]);
-
 	const saveAnswer = async (nextList: any) => {
 		try {
 			const currentTime = moment().format("YYYY-MM-DD HH:mm:ss");
@@ -143,27 +138,25 @@ const ShortAnswerComponent: React.FC<Props> = ({ task, value, onChange }) => {
 			};
 			await axiosInstance.post(
 				`/quiz-attempts/${attempId}/answer`,
-				payload
+				payload,
 			);
 		} catch (error) {
 			console.error("Error saving answer:", error);
 		}
 	};
-
 	const handleSubmit = async () => {
 		const trimmed = answer.trim();
 		if (!trimmed) {
 			setError("Please write your answer.");
 			return;
 		}
-
 		const nextList = [...answersList, trimmed];
 		setAnswersList(nextList);
 		setAnswer("");
 		// (Optional) Upsert again on submit to be absolutely sure
 		const elapsedSec = Math.max(
 			0,
-			Math.round((Date.now() - startRef.current) / 1000)
+			Math.round((Date.now() - startRef.current) / 1000),
 		);
 		await saveAnswer(nextList);
 		dispatch(
@@ -178,25 +171,25 @@ const ShortAnswerComponent: React.FC<Props> = ({ task, value, onChange }) => {
 					null,
 				selected_time: elapsedSec,
 				source_content_url: (task as any)?.source_content_url ?? null,
-				questions: [{ id: 0, text: trimmed }],
-			})
+				questions: [
+					{
+						id: 0,
+						text: trimmed,
+					},
+				],
+			}),
 		);
-
 		setError("");
 		setSubmitted(true);
 		setwatingData(false);
 		onChange?.(trimmed);
 	};
-
 	const handleTimeUpdate = (s: any) => {
 		setcurrentTimeGet(s);
-		console.log(s, "loging");
 	};
-
 	const handleExpire = () => {
 		//console.log("Expired -> submit response for quest");
 	};
-
 	return (
 		<div className="flex flex-col justify-center items-center px-4">
 			{watingData ? (
@@ -273,5 +266,4 @@ const ShortAnswerComponent: React.FC<Props> = ({ task, value, onChange }) => {
 		</div>
 	);
 };
-
 export default ShortAnswerComponent;

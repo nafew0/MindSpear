@@ -9,19 +9,16 @@ import moment from "@/lib/dayjs";
 import { useSearchParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { HiUserGroup } from "react-icons/hi";
-
 import {
 	clearLegacyLiveStorage,
 	storeParticipantTokenBundle,
 } from "@/features/live/services/liveStorage";
 import { toast } from "react-toastify";
-
 interface QuizOption {
 	color: string[];
 	choices: (string | null)[];
 	correct_answer: number;
 }
-
 interface Question {
 	id: number;
 	quiz_id: number;
@@ -39,7 +36,6 @@ interface Question {
 	created_at: string;
 	updated_at: string;
 }
-
 interface User {
 	id: number;
 	first_name: string;
@@ -62,7 +58,6 @@ interface User {
 	full_name: string;
 	institution: string | null;
 }
-
 interface Quiz {
 	id: number;
 	title: string;
@@ -88,11 +83,9 @@ interface Quiz {
 	questions: Question[];
 	user: User;
 }
-
 interface QuizResponse {
 	quiz: Quiz;
 }
-
 function QuizAttemptForm() {
 	const searchParams = useSearchParams();
 	// const pathname = usePathname();
@@ -100,23 +93,16 @@ function QuizAttemptForm() {
 	const router = useRouter();
 	// const id = params?.id;
 	const joinid = searchParams.get("jid");
-	const sessionId = searchParams.get("sid");
-	const qid = searchParams.get("qid");
-	console.log(sessionId);
-
 	const [currentUserName, setCurrentUserName] = useState("");
 	const [quizData, setQuizData] = useState<QuizResponse | null>(null);
-
 	const [quizErrorMessage, setQuizErrorMessage] = useState<
 		string | undefined
 	>();
 	const [quizErrorStatus, setQuizErrorStatus] = useState<boolean>(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-
 	useEffect(() => {
 		clearLegacyLiveStorage();
-	}, []);
-
+	}, [joinid]);
 	useEffect(() => {
 		const dataFetch = async () => {
 			try {
@@ -124,13 +110,10 @@ function QuizAttemptForm() {
 					data: QuizResponse;
 				}>(`/quiz-attempts-url/show/${joinid}`);
 				setQuizData(response?.data.data);
-				console.log(
-					response?.data.data,
-					"response?.data.dataresponse?.data.data"
-				);
 			} catch (error) {
-				const axiosError = error as AxiosError<{ message?: string }>;
-
+				const axiosError = error as AxiosError<{
+					message?: string;
+				}>;
 				if (axiosError.response) {
 					const msg =
 						axiosError.response.data?.message ||
@@ -141,7 +124,7 @@ function QuizAttemptForm() {
 				} else {
 					console.error("Unexpected error:", axiosError.message);
 					setQuizErrorMessage(
-						"Unexpected error occurred. Please try again."
+						"Unexpected error occurred. Please try again.",
 					);
 					setQuizErrorStatus(true);
 				}
@@ -149,29 +132,20 @@ function QuizAttemptForm() {
 			}
 		};
 		dataFetch();
-	}, []);
-
-	console.log(quizData?.quiz, "quizData");
+	}, [joinid]);
 	const open = moment.utc(quizData?.quiz?.open_datetime);
 	const close = moment.utc(quizData?.quiz?.close_datetime);
-
 	const duration = moment.duration(close.diff(open));
-
 	const days = Math.floor(duration.asDays());
 	const hours = duration.hours();
 	const minutes = duration.minutes();
-
 	const timeParts = [];
-
 	if (days > 0) timeParts.push(`${days} day${days > 1 ? "s" : ""}`);
 	if (hours > 0) timeParts.push(`${hours} hour${hours > 1 ? "s" : ""}`);
 	if (minutes > 0)
 		timeParts.push(`${minutes} minute${minutes > 1 ? "s" : ""}`);
-
 	const result = timeParts.join(", ") || "0 minute";
-
 	const userId = Math.floor(Math.random() * 10000).toString();
-
 	const dataSubmit = async () => {
 		setIsSubmitting(true);
 		try {
@@ -186,24 +160,24 @@ function QuizAttemptForm() {
 			};
 			const response = await axiosInstance.post(
 				`/quiz-attempts-url/join/${joinid}`,
-				obj
+				obj,
 			);
 			const responseData = response?.data?.data as any;
 			const attemptId = responseData?.attempt?.id;
 			const sessionId = responseData?.session?.id;
 			const publicChannelKey = responseData?.public_channel_key;
 			const participantToken = responseData?.participant_token;
-
 			if (
 				!attemptId ||
 				!sessionId ||
 				!publicChannelKey ||
 				!participantToken
 			) {
-				toast.error("Unable to join this live quiz. Missing session metadata.");
+				toast.error(
+					"Unable to join this live quiz. Missing session metadata.",
+				);
 				return;
 			}
-
 			storeParticipantTokenBundle({
 				module: "quiz",
 				sessionId: Number(sessionId),
@@ -211,9 +185,8 @@ function QuizAttemptForm() {
 				participantToken,
 				publicChannelKey,
 			});
-
 			router.push(
-				`/attempt/quize/play/${responseData?.session?.join_code}?jid=${responseData?.session?.join_link}&qid=${responseData?.quiz?.id}&aid=${attemptId}&sid=${sessionId}&pck=${publicChannelKey}&ujid=${userId}&title=${quizData?.quiz?.title}&uname=${currentUserName}`
+				`/attempt/quize/play/${responseData?.session?.join_code}?jid=${responseData?.session?.join_link}&qid=${responseData?.quiz?.id}&aid=${attemptId}&sid=${sessionId}&pck=${publicChannelKey}&ujid=${userId}&title=${quizData?.quiz?.title}&uname=${currentUserName}`,
 			);
 
 			// console.log(response, "response?.data.dataresponse?.data.data");
@@ -231,18 +204,17 @@ function QuizAttemptForm() {
 			// 	console.error("Failed to create quiz:", e);
 			// }
 		} catch (error) {
-			const axiosError = error as AxiosError<{ message?: string }>;
+			const axiosError = error as AxiosError<{
+				message?: string;
+			}>;
 			setIsSubmitting(false);
 			if (axiosError.response) {
 				console.error(
 					"Error verifying token:",
-					axiosError.response.data
+					axiosError.response.data,
 				);
 				toast.error(
-					`Error: ${
-						axiosError.response.data?.message ||
-						"Verification failed."
-					}`
+					`Error: ${axiosError.response.data?.message || "Verification failed."}`,
 				);
 			} else {
 				console.error("Unexpected error:", axiosError.message);
@@ -253,7 +225,6 @@ function QuizAttemptForm() {
 
 		// currentUserName
 	};
-
 	if (quizErrorStatus) {
 		return (
 			<div className="container mx-auto p-4 max-w-3xl text-center">
@@ -268,9 +239,8 @@ function QuizAttemptForm() {
 	}
 	if (quizData === null) return;
 	const qsenList = quizData.quiz.questions.filter(
-		(question) => question.options !== null
+		(question) => question.options !== null,
 	);
-
 	return (
 		<div className="quiz_play_bg ">
 			<div className="flex flex-col justify-center items-center h-screen w-full">
@@ -337,5 +307,4 @@ function QuizAttemptForm() {
 		</div>
 	);
 }
-
 export default QuizAttemptForm;

@@ -1,25 +1,22 @@
 "use client";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
-
 import { useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { upsertAnswer } from "@/features/live/store/leaderboardAnswersSlice";
 import { useDispatch, useSelector } from "react-redux";
-
 import moment from "@/lib/dayjs";
 import SharedQuestTimer from "@/components/SharedQuestTimer";
 import { AxiosError } from "axios";
 import { IoMdHappy } from "react-icons/io";
-
 type TaskQuestion = {
 	id: number | string;
 	text?: string;
 	label?: string;
 	color?: string;
 };
-
 type TaskItem = {
 	id?: number | string;
 	quiz_id?: number | string;
@@ -32,73 +29,58 @@ type TaskItem = {
 	time_limit_seconds?: number | any;
 	source_content_url?: string | null;
 };
-
 type Props = {
 	task?: TaskItem;
 	value?: string | null;
 	onChange?: (val: string) => void;
 };
-
 const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 	const dispatch = useDispatch();
 	// const answers = useSelector((state: RootState) => state.answers);
 	const searchParams = useSearchParams();
 	const joinid = searchParams.get("jid");
 	const attempId = searchParams.get("aid");
-
 	const [watingData, setwatingData] = useState(true);
-	const [chalangeData, setchalangeData] = useState<any>({});
-	const [currentTimeGet, setcurrentTimeGet] = useState<any>(0);
-
+	const [, setchalangeData] = useState<any>({});
+	const [, setcurrentTimeGet] = useState<any>(0);
 	const questTimeData = useSelector((state: any) => state.questTime);
-	console.log(questTimeData, "questTimeDataquestTimeDataquestTimeData");
-
 	useEffect(() => {
 		const dataFetch = async () => {
 			try {
 				const response = await axiosInstance.get(
-					`/quiz-attempts-url/show/${joinid}`
+					`/quiz-attempts-url/show/${joinid}`,
 				);
 				setchalangeData(response?.data?.data?.quiz);
 			} catch (error) {
-				const axiosError = error as AxiosError<{ message?: string }>;
+				const axiosError = error as AxiosError<{
+					message?: string;
+				}>;
 				console.error("Unexpected error:", axiosError.message);
 			}
 		};
 		dataFetch();
 	}, [joinid]);
-
-	console.log(
-		task?.id,
-		chalangeData,
-		"task?.idtask?.idtask?.idtask?.idtask?.id"
-	);
-
 	const isMulti =
 		(task?.task_type || task?.question_type) === "multiple_choice";
-
 	const options = useMemo(
 		() =>
 			task?.questions
 				?.map((q) => q.text ?? q.label ?? "")
 				.filter(Boolean) ?? [],
-		[task?.questions]
+		[task?.questions],
 	);
-
 	const [selectedOption, setSelectedOption] = useState<string | "">(
-		(value as string) ?? ""
+		(value as string) ?? "",
 	);
 	const [selectedIndex, setSelectedIndex] = useState<number>(
 		Math.max(
 			0,
-			options.findIndex((o) => o === (value as string))
-		)
+			options.findIndex((o) => o === (value as string)),
+		),
 	);
-
 	const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
 	const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
 	const startRef = useRef<number>(Date.now());
-
 	useEffect(() => {
 		startRef.current = Date.now();
 		setSelectedOption((value as string) ?? "");
@@ -114,13 +96,11 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 			setSelectedIndex(options.findIndex((o) => o === (value as string)));
 		}
 	}, [value, options, isMulti]);
-
 	const handleSelect = (option: string, index: number) => {
 		const elapsedSec = Math.max(
 			0,
-			Math.round((Date.now() - startRef.current) / 1000)
+			Math.round((Date.now() - startRef.current) / 1000),
 		);
-
 		if (isMulti) {
 			// toggle in/out
 			setSelectedIndices((prev) => {
@@ -134,15 +114,14 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 				const selectedAnswer =
 					next.length > 0
 						? next
-							.map((i) => task?.questions?.[i])
-							.filter(Boolean)
-							.map((q) => ({
-								id: q!.id,
-								text: q!.text ?? q!.label ?? "",
-								color: q!.color ?? null,
-							}))
+								.map((i) => task?.questions?.[i])
+								.filter(Boolean)
+								.map((q) => ({
+									id: q!.id,
+									text: q!.text ?? q!.label ?? "",
+									color: q!.color ?? null,
+								}))
 						: [];
-
 				dispatch(
 					upsertAnswer({
 						id: (task?.id as number | string) ?? index,
@@ -157,7 +136,7 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 						source_content_url:
 							(task as any)?.source_content_url ?? null,
 						questions: selectedAnswer, // array of selected options
-					})
+					}),
 				);
 				return next;
 			});
@@ -166,18 +145,21 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 			setSelectedOption(option);
 			setSelectedIndex(index);
 			onChange?.(option);
-
 			const picked = task?.questions?.[index];
 			const selectedAnswer = picked
 				? [
-					{
-						id: picked.id,
-						text: picked.text ?? picked.label ?? "",
-						color: picked.color ?? null,
-					},
-				]
-				: [{ id: index, text: option }];
-
+						{
+							id: picked.id,
+							text: picked.text ?? picked.label ?? "",
+							color: picked.color ?? null,
+						},
+					]
+				: [
+						{
+							id: index,
+							text: option,
+						},
+					];
 			dispatch(
 				upsertAnswer({
 					id: (task?.id as number | string) ?? index,
@@ -190,7 +172,7 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 					source_content_url:
 						(task as any)?.source_content_url ?? null,
 					questions: selectedAnswer,
-				})
+				}),
 			);
 		}
 	};
@@ -240,41 +222,33 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 		if (!task?.id) return;
 		const key = `timeExpired_${task.id}`;
 		const userStatus: any = localStorage.getItem(key);
-		console.log(userStatus, "dataNew?.id");
 		if (userStatus !== null) {
-			console.log(dataNew?.id, "dataNew?.id");
 			const savedState = JSON.parse(userStatus);
-			console.log(savedState, "dataNew?.id 0");
 			if (
 				savedState?.status === "completed" ||
 				(savedState?.submitStatus === "completed" &&
 					task.id === savedState?.taskId)
 			) {
-				console.log(dataNew?.id, "dataNew?.id 1");
 				setwatingData(false);
 			}
 		} else {
-			console.log(dataNew?.id, "dataNew?.id 3");
 			setwatingData(true);
 		}
 	}, [dataNew?.id, task?.id]);
-
 	const dataSubmit = async () => {
 		await saveAnswer();
 		if (task?.id) setTaskExpired(task.id);
 		setwatingData(false);
-
 		if (typeof window !== "undefined") {
 			localStorage.setItem("currentId", `${task?.id}`);
 		}
 	};
-
 	const saveAnswer = async () => {
 		try {
 			const currentTime = moment().format("YYYY-MM-DD HH:mm:ss");
 			const diffSeconds = moment(currentTime).diff(
 				moment(quizStartTimeTime),
-				"seconds"
+				"seconds",
 			);
 			const payload = {
 				question_id: task?.id,
@@ -287,31 +261,23 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 			};
 			await axiosInstance.post(
 				`/quiz-attempts/${attempId}/answer`,
-				payload
+				payload,
 			);
 		} catch (error) {
 			console.error("Error saving answer:", error);
 		}
 	};
-
-	console.log(currentTimeGet, "rawrawrawrawrawrawrawraw");
 	const handleExpire = () => {
 		if (!questTimeData?.questionId) return;
-
-		const key = `timeExpired_${questTimeData.questionId}`;
-		const raw = localStorage.getItem(key);
-		console.log(raw, "rawrawrawrawrawrawrawraw");
-
 		const saved = setTaskExpired(questTimeData.questionId);
 		const ok =
 			saved?.status === "completed" &&
 			String(saved?.taskId ?? questTimeData.questionId) ===
-			String(questTimeData.questionId);
+				String(questTimeData.questionId);
 		if (ok) {
 			setwatingData(false);
 		}
 	};
-
 	const setTaskExpired = (questionId: string | number) => {
 		const key = `timeExpired_${questionId}`;
 		const payload = {
@@ -324,7 +290,6 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 		setwatingData(false);
 		return payload;
 	};
-
 	useEffect(() => {
 		const onStorage = (e: StorageEvent) => {
 			if (e.key === `timeExpired_${questTimeData?.questionId}`) {
@@ -334,7 +299,7 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 					const ok =
 						parsed?.status === "completed" &&
 						String(parsed?.taskId ?? questTimeData?.questionId) ===
-						String(questTimeData?.questionId);
+							String(questTimeData?.questionId);
 					setwatingData(!!ok);
 				} catch {
 					setwatingData(e.newValue === "completed");
@@ -356,9 +321,8 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 	const quizStartTimeTime = moment(
 		cleanDate,
 		"MMMM D YYYY, h:mm:ss",
-		true
+		true,
 	).format("YYYY-MM-DD HH:mm:ss");
-
 	const htmlToText = (html?: string) => {
 		if (!html) return "";
 		const stripped = html.replace(/<[^>]*>/g, " ");
@@ -376,14 +340,11 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 			.replace(/\s+/g, " ")
 			.trim();
 	};
-
 	const isChosen = (option: string, i: number) =>
 		isMulti ? selectedIndices.includes(i) : selectedOption === option;
-
 	const hasSelection = isMulti
 		? selectedIndices.length > 0
 		: Boolean(selectedOption);
-
 	const selectionText = isMulti
 		? selectedOptions.length
 			? `You selected: ${selectedOptions.join(", ")}`
@@ -391,18 +352,9 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 		: selectedOption
 			? `You selected: ${selectedOption}`
 			: "No selection yet";
-
-	const handleTimeUpdate = (
-		remaining: number,
-		elapsed: number,
-		total: number
-	) => {
-		console.log(total, "total");
-		console.log(elapsed, "total");
-		console.log(remaining, "total");
+	const handleTimeUpdate = (remaining: number) => {
 		setcurrentTimeGet(remaining);
 	};
-
 	return (
 		<div className="min-h-screen overflow-auto flex flex-col justify-center items-center px-4">
 			{watingData ? (
@@ -412,8 +364,8 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 						{htmlToText(task?.title)}
 					</h2>
 					{/* <h2 className="text-2xl font-semibold text-gray-900 text-center">
-						{task?.task_type || "Select an option"}
-					</h2> */}
+      {task?.task_type || "Select an option"}
+      </h2> */}
 
 					<div className="flex justify-center items-center text-white!">
 						<SharedQuestTimer
@@ -433,7 +385,7 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 									"w-full flex justify-between items-center px-4 py-4 rounded-2xl border transition-all",
 									isChosen(option, i)
 										? "bg-orange-50 border-primary text-primary"
-										: "bg-white border-gray-200 text-gray-800 hover:border-orange-400"
+										: "bg-white border-gray-200 text-gray-800 hover:border-orange-400",
 								)}
 							>
 								<span className="text-base">{option}</span>
@@ -442,7 +394,7 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 										"w-5 h-5 rounded-md border flex items-center justify-center",
 										isChosen(option, i)
 											? "bg-primary border-primary text-white"
-											: "border-gray-400"
+											: "border-gray-400",
 									)}
 								>
 									{isChosen(option, i) && (
@@ -483,5 +435,4 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 		</div>
 	);
 };
-
 export default ChoiceComponent;
