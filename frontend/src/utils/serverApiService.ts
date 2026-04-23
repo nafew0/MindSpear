@@ -83,19 +83,11 @@ serverAxiosInstance.interceptors.request.use(
 
 		if (typeof window !== "undefined") {
 			const token = localStorage.getItem("auth_token");
-			const csrfToken = document.cookie
-				.split("; ")
-				.find((row) => row.startsWith("XSRF-TOKEN="))
-				?.split("=")[1];
 
 			customConfig.headers = new AxiosHeaders(customConfig.headers || {});
 
 			if (token) {
 				customConfig.headers.set("Authorization", `Bearer ${token}`);
-			}
-
-			if (csrfToken) {
-				customConfig.headers.set("X-XSRF-TOKEN", csrfToken);
 			}
 		}
 

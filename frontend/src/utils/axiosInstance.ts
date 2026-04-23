@@ -31,9 +31,7 @@ type ApiRequestConfig = AxiosRequestConfig & {
 const axiosInstance: AxiosInstance = axios.create({
 	baseURL: apiConfig.baseURL,
 	headers: apiConfig.jsonHeaders,
-	// withCredentials: true,
 	timeout: apiConfig.timeoutMs,
-	// withCredentials: true,
 });
 
 const liveParticipantModuleForUrl = (url?: string): "quest" | "quiz" | null => {
@@ -95,16 +93,6 @@ axiosInstance.interceptors.request.use(
 				);
 			}
 
-			const csrfToken = document.cookie
-				.split("; ")
-				.find((row) => row.startsWith("XSRF-TOKEN="))
-				?.split("=")[1];
-
-			if (csrfToken) {
-				customConfig.headers =
-					customConfig.headers || new AxiosHeaders();
-				customConfig.headers.set("X-XSRF-TOKEN", csrfToken);
-			}
 		}
 		return customConfig;
 	},

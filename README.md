@@ -57,13 +57,44 @@ Use instead of `pm2 reload mindspear-frontend --update-env` when:
 - frontend env/runtime is acting strange
 
 ```bash
+unset PM2_HOME
+export PM2_HOME=/root/.pm2
+
+for u in $(systemctl list-unit-files --type=service | awk 'tolower($1) ~ /^pm2/ {print $1}'); do
+  sudo systemctl stop "$u" || true
+  sudo systemctl disable "$u" || true
+  sudo systemctl mask "$u" || true
+done
+
+pkill -f "PM2 .*God Daemon" || true
+pkill -f "PM2 Agent" || true
+
+rm -f /root/.pm2/dump.pm2 /root/.pm2/dump.pm2.bak
+rm -rf /root/.pm2/pids/*
+fuser -k 2000/tcp || true
+
+ss -ltnp | grep ':2000' || true
+ps -ef | grep -E 'PM2|next start|next/dist/bin/next|node.*2000' | grep -v grep || true
+
 cd /var/www/mindspear/frontend
 node -v   # should be v20.x
 npm ci
 npm run build
-pm2 delete mindspear-frontend || true
+
+node_modules/.bin/next start -p 2000
+# in another terminal: curl -I http://127.0.0.1:2000
+# then Ctrl+C here
+
+export PM2_HOME=/root/.pm2
 pm2 start ecosystem.config.js
+pm2 status mindspear-frontend
+curl -I http://127.0.0.1:2000
 pm2 save
+
+for u in $(systemctl list-unit-files --type=service | awk 'tolower($1) ~ /^pm2/ {print $1}'); do
+  sudo systemctl unmask "$u" || true
+  sudo systemctl enable "$u" || true
+done
 ```
 
 ### Backend cache + restart
@@ -693,7 +724,8 @@ APP_FALLBACK_LOCALE=en
 
 FRONTEND_URL=https://mindspear.app
 CORS_ALLOWED_ORIGINS=https://mindspear.app
-SANCTUM_STATEFUL_DOMAINS=mindspear.app
+# Leave blank for the current token-based SPA auth flow.
+SANCTUM_STATEFUL_DOMAINS=
 SESSION_DOMAIN=.mindspear.app
 SESSION_SECURE_COOKIE=true
 SESSION_SAME_SITE=lax
