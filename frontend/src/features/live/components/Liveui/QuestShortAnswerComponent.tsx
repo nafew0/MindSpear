@@ -41,10 +41,10 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 	const [error, setError] = useState("");
 	const searchParams = useSearchParams();
 	const [watingData, setwatingData] = useState(true);
-	const [, setcurrentTimeGet] = useState<number>(0);
+	const currentTimeGetRef = useRef<number>(0);
 	const [, setchalangeData] = useState<any>({});
 	const handleTimeUpdate = (remaining: number) => {
-		setcurrentTimeGet(remaining);
+		currentTimeGetRef.current = remaining;
 	};
 	const maxWords = 5;
 	const joinid = searchParams.get("jid");
@@ -146,7 +146,7 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 					start_time: currentTime,
 					selected_option: nextList,
 				},
-				time_taken_seconds: currentTimeGet,
+				time_taken_seconds: currentTimeGetRef.current,
 			};
 			await axiosInstance.post(
 				`/quest-attempts/${attempId}/answer`,

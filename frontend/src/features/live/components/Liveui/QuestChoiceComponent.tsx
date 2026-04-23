@@ -53,7 +53,7 @@ const QuestChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 	const attempId = searchParams.get("aid");
 	const [watingData, setwatingData] = useState(true);
 	const [, setchalangeData] = useState<any>({});
-	const [, setcurrentTimeGet] = useState<any>(0);
+	const currentTimeGetRef = useRef<number>(0);
 	const questTimeData = useSelector((state: any) => state.questTime);
 	useEffect(() => {
 		if (typeof window !== "undefined" && !navigator.onLine) {
@@ -228,7 +228,7 @@ const QuestChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 					// send array for multi, single index for others
 					selected_option: isMulti ? selectedIndices : selectedIndex,
 				},
-				time_taken_seconds: currentTimeGet,
+				time_taken_seconds: currentTimeGetRef.current,
 			};
 			await axiosInstance.post(
 				`/quest-attempts/${attempId}/answer`,
@@ -316,7 +316,7 @@ const QuestChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 			? `You selected: ${selectedOption}`
 			: "No selection yet";
 	const handleTimeUpdate = (remaining: number) => {
-		setcurrentTimeGet(remaining);
+		currentTimeGetRef.current = remaining;
 	};
 	return (
 		<div className=" overflow-hidden flex flex-col justify-center items-center px-4">

@@ -48,7 +48,7 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 	const attempId = searchParams.get("aid");
 	const [watingData, setwatingData] = useState(true);
 	const [, setchalangeData] = useState<any>({});
-	const [, setcurrentTimeGet] = useState<number>(0);
+	const currentTimeGetRef = useRef<number>(0);
 	useEffect(() => {
 		if (typeof window !== "undefined" && !navigator.onLine) {
 			console.warn("Offline — skipping API call");
@@ -196,7 +196,7 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 					start_time: currentTime,
 					selected_option: selectedValues, // array of numbers
 				},
-				time_taken_seconds: currentTimeGet,
+				time_taken_seconds: currentTimeGetRef.current,
 			};
 			await axiosInstance.post(
 				`/quest-attempts/${attempId}/answer`,
@@ -264,7 +264,7 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 		}
 	}, [dataNew?.id, task?.id]);
 	const handleTimeUpdate = (remaining: number) => {
-		setcurrentTimeGet(remaining);
+		currentTimeGetRef.current = remaining;
 	};
 	const selectionText = `Selected values: [${selectedValues.join(", ")}]`;
 	return (

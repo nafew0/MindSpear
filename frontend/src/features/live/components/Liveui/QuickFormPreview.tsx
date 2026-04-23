@@ -5,7 +5,7 @@
 import { QuestionBlock } from "@/features/quest/components/Quest/QuickFormComponents/quest";
 import axiosInstance from "@/utils/axiosInstance";
 // import moment from "@/lib/dayjs";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FaChevronDown } from "react-icons/fa";
 import { useSearchParams } from "next/navigation";
 import { AxiosError } from "axios";
@@ -196,7 +196,7 @@ const QuickFormPreview: React.FC<Props> = ({ task }) => {
 	);
 	const [form, setForm] = useState<Record<string, string | string[]>>({});
 	const [, setchalangeData] = useState<any>({});
-	const [, setcurrentTimeGet] = useState<any>(0);
+	const currentTimeGetRef = useRef<number>(0);
 	const attempId = searchParams.get("aid");
 	const joinid = searchParams.get("jid");
 	const [watingData, setwatingData] = useState(true);
@@ -381,7 +381,7 @@ const QuickFormPreview: React.FC<Props> = ({ task }) => {
 				completion_data: {
 					...data,
 				},
-				time_taken_seconds: currentTimeGet,
+				time_taken_seconds: currentTimeGetRef.current,
 			};
 			await axiosInstance.post(
 				`/quest-attempts/${attempId}/answer`,
@@ -409,7 +409,7 @@ const QuickFormPreview: React.FC<Props> = ({ task }) => {
 			.trim();
 	};
 	const handleTimeUpdate = (remaining: number) => {
-		setcurrentTimeGet(remaining);
+		currentTimeGetRef.current = remaining;
 	};
 	return (
 		<>
