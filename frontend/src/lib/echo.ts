@@ -42,8 +42,8 @@ export function getEcho(): Echo<"reverb"> {
 	const win = browserWindow();
 	if (win) win.Pusher = Pusher;
 
-	const port = Number(env.reverbPort || 8080);
 	const scheme = env.reverbScheme || "http";
+	const port = Number(env.reverbPort || (scheme === "https" ? 443 : 80));
 	const appKey = env.reverbAppKey;
 
 	if (!appKey) {
@@ -54,12 +54,14 @@ export function getEcho(): Echo<"reverb"> {
 
 	echoInstance = new Echo({
 		broadcaster: "reverb",
+		Pusher,
 		key: appKey,
 		wsHost: env.reverbHost || window.location.hostname,
 		wsPort: port,
 		wssPort: port,
 		forceTLS: scheme === "https",
-		enabledTransports: scheme === "https" ? ["wss"] : ["ws"],
+		enabledTransports: ["ws", "wss"],
+		disableStats: true,
 		authEndpoint: getBroadcastAuthEndpoint(),
 		auth: {
 			headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
