@@ -278,11 +278,6 @@ function QuizReport() {
 			return;
 		}
 
-		if (!connected) {
-			toast.error("Live Reverb connection is not ready yet.");
-			return;
-		}
-
 		try {
 			await updateHostLiveSession();
 			await handleChangeQuestion();
@@ -444,15 +439,15 @@ function QuizReport() {
 									onChange={handleTitleChange}
 									placeholder="Session title..."
 									className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-primary disabled:bg-gray-100"
-									disabled={!connected || !hasActiveSession}
+									disabled={!hasActiveSession}
 								/>
 
 								<button
 									onClick={quizeStartFunction}
-									disabled={!connected || !hasActiveSession}
+									disabled={!hasActiveSession}
 									className="w-full bg-primary disabled:bg-gray-400 text-white py-3 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
 								>
-									{connected && hasActiveSession ? (
+									{hasActiveSession ? (
 										<>
 											<CirclePlay size={18} />
 											Start Session

@@ -63,9 +63,10 @@ auth.json
 .claude/settings.local.json
 backend/.env.production
 
-# Root-level docs — keep only README.md; everything else is internal/planning
+# Root-level docs — keep deployment guides; everything else is internal/planning
 /*.md
 !/README.md
+!/READMEv2.md
 
 # Stray build / runtime artifacts not needed in production
 a.out
