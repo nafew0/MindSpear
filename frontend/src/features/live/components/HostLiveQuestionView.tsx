@@ -278,7 +278,7 @@ export default function HostLiveQuestionView({
 			? "/images/icons/quick-form.svg"
 			: viewModel.currentView === "scales"
 			? "/images/icons/scales.svg"
-			: "https://admin.dev.mindspear.app/storage/2025/09/22/profile_pictures_1/HD99ziKO3iGXvi25iolLRhnYYUFoxJun5GSYU0AG.svg";
+			: "/images/placeholder.jpg";
 
 	const shouldShowWaiting =
 		viewModel.isResponseDriven && !viewModel.hasResponses;

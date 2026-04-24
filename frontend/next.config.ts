@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
 	reactStrictMode: true,
 	images: {
-		domains: ["mindspear.app", "admin.mindspear.app", "admin.dev.mindspear.app", "lh3.googleusercontent.com"],
+		domains: ["mindspear.app", "lh3.googleusercontent.com"],
 	},
 	webpack(config, { isServer }) {
 		// Apply the node-loader for .node files
