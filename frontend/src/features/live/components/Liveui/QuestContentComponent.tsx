@@ -2,18 +2,19 @@
 
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { useSelector } from "react-redux";
-// import { RootState } from "@/services/redux/store";
 
 import { AxiosError } from "axios";
-// import { GlobalCountdown } from "@/components/GlobalTimeManage";
-// import QuizTimer, { getCurrentTime } from "@/components/GlobalTimer";
 import { TimerCacheManager } from "@/utils/timerCacheUtils";
 import SharedQuestTimer from "@/components/SharedQuestTimer";
-import { IoMdHappy } from "react-icons/io";
+import {
+	ParticipantStage,
+	ParticipantTimerPanel,
+	WaitingStage,
+} from "./participant-ui";
 type TaskQuestion = {
 	id: number | string;
 	text?: string;
@@ -37,7 +38,7 @@ type Props = {
 	value?: string | null; // kept for backward compat on single-select
 	onChange?: (val: string) => void;
 };
-const QuestContentComponent: React.FC<Props> = ({ task, value }) => {
+const QuestContentComponent: React.FC<Props> = ({ task }) => {
 	//   const answers = useSelector((state: RootState) => state.answers);
 	const searchParams = useSearchParams();
 	const joinid = searchParams.get("jid");
@@ -64,22 +65,6 @@ const QuestContentComponent: React.FC<Props> = ({ task, value }) => {
 		};
 		dataFetch();
 	}, [joinid]);
-	const isMulti =
-		(task?.task_type || task?.question_type) === "multiple_choice";
-
-	// ---------- Selection State ----------
-	// single-select legacy
-	const [selectedOption, setSelectedOption] = useState<string | "">(
-		(value as string) ?? "",
-	);
-	const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
-	const startRef = useRef<number>(Date.now());
-	useEffect(() => {
-		startRef.current = Date.now();
-		setSelectedOption((value as string) ?? "");
-		setSelectedOptions([]);
-	}, [task?.id]);
-
 	const dataNew: any = task;
 	useEffect(() => {
 		if (!task?.id) return;
@@ -163,30 +148,12 @@ const QuestContentComponent: React.FC<Props> = ({ task, value }) => {
 			.replace(/\s+/g, " ")
 			.trim();
 	};
-	const selectionText = isMulti
-		? selectedOptions.length
-			? `You selected: ${selectedOptions.join(", ")}`
-			: "No selection yet"
-		: selectedOption
-			? `You selected: ${selectedOption}`
-			: "No selection yet";
 	const handleTimeUpdate = () => {};
 	return (
-		<div className="">
+		<>
 			{watingData ? (
-				<div
-					className="min-h-screen overflow-auto flex flex-col justify-center items-center px-4"
-					style={{
-						backgroundImage: `url('${task?.image_url.path}')`,
-						backgroundSize: "cover",
-						backgroundPosition: "center",
-					}}
-				>
-					<div className="max-w-xl w-full space-y-6">
-						<h2 className="text-2xl font-semibold text-gray-900 text-center">
-							{htmlToText(task?.title)}
-						</h2>
-
+				<ParticipantStage size="wide">
+					<div className="flex min-h-0 flex-1 flex-col">
 						<button
 							className="hidden"
 							onClick={() => onExpireWrapped()}
@@ -195,42 +162,52 @@ const QuestContentComponent: React.FC<Props> = ({ task, value }) => {
 							All QuizTimer Clear{" "}
 						</button>
 
-						<div className="flex justify-center items-center text-white!">
-							<SharedQuestTimer
-								attemptId={`attempt-${dataNew?.id}`}
-								onTimeUpdate={handleTimeUpdate}
-								onExpire={handleExpire}
-							/>
-							{/* <QuizTimer
-        data={timerData}
-        onTimeUpdate={handleTimeUpdate}
-        onExpire={handleExpire}
-        persistKey={`attempt-${dataNew?.id}`}
-        /> */}
-						</div>
+						<div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+							<div className="grid gap-4 lg:grid-cols-[1fr_18rem] lg:items-start">
+								<div className="rounded-lg border border-slate-200 bg-gradient-to-br from-white to-primary/10 p-4">
+									<p className="text-xs font-black uppercase tracking-wide text-primary">
+										Content slide
+									</p>
+									<h2 className="mt-2 break-words text-2xl font-black leading-tight text-slate-950 sm:text-3xl">
+										{htmlToText(task?.title)}
+									</h2>
+								</div>
 
-						<div className="text-center text-sm text-gray-500">
-							{selectionText}
-						</div>
-						<div className="bg-white p-3 shadow-3 rounded-[10px]">
+								<ParticipantTimerPanel>
+									<SharedQuestTimer
+										attemptId={`attempt-${dataNew?.id}`}
+										onTimeUpdate={handleTimeUpdate}
+										onExpire={handleExpire}
+									/>
+								</ParticipantTimerPanel>
+							</div>
+
 							<div
-								dangerouslySetInnerHTML={{
-									__html: task?.contant_title,
-								}}
-								className="prose max-w-none"
-							/>
+								className="mt-5 overflow-hidden rounded-lg border border-slate-200 bg-slate-950"
+								style={
+									task?.image_url?.path
+										? {
+												backgroundImage: `linear-gradient(rgba(15,23,42,.72), rgba(15,23,42,.72)), url('${task.image_url.path}')`,
+												backgroundSize: "cover",
+												backgroundPosition: "center",
+											}
+										: undefined
+								}
+							>
+								<div
+									dangerouslySetInnerHTML={{
+										__html: task?.contant_title,
+									}}
+									className="prose max-w-none p-5 text-white prose-headings:text-white prose-p:text-white/90 prose-strong:text-white"
+								/>
+							</div>
 						</div>
 					</div>
-				</div>
+				</ParticipantStage>
 			) : (
-				<div className="flex justify-center items-center">
-					<h3 className="md:text-[30px] font-bold text-[18px] flex flex-col justify-center items-center pt-30">
-						<IoMdHappy className="mb-[30px] text-[100px]" />
-						Please wait for the presenter to change slides.
-					</h3>
-				</div>
+				<WaitingStage mode="host" />
 			)}
-		</div>
+		</>
 	);
 };
 export default QuestContentComponent;

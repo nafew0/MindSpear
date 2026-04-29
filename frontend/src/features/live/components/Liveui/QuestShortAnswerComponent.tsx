@@ -11,7 +11,12 @@ import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
 import { TimerCacheManager } from "@/utils/timerCacheUtils";
 import SharedQuestTimer from "@/components/SharedQuestTimer";
-import { IoMdHappy } from "react-icons/io";
+import {
+	ParticipantStage,
+	ParticipantTimerPanel,
+	StickySubmitBar,
+	WaitingStage,
+} from "./participant-ui";
 type TaskQuestion = {
 	id: number | string;
 	text?: string;
@@ -283,90 +288,88 @@ const QuestShortAnswerComponent: React.FC<Props> = ({
 				? 5
 				: 1;
 	return (
-		<div className="flex flex-col justify-center items-center px-4">
+		<>
 			{watingData ? (
-				<div className="max-w-xl w-full space-y-6">
-					<h2 className="text-2xl font-semibold text-gray-900 text-center">
-						{htmlToText(task?.title)}
-					</h2>
-					<button
-						className="hidden"
-						onClick={() => onExpireWrapped()}
-					>
-						{" "}
-						All QuizTimer Clear{" "}
-					</button>
+				<ParticipantStage size="narrow">
+					<div className="flex min-h-0 flex-1 flex-col">
+						<button className="hidden" onClick={() => onExpireWrapped()}>
+							All QuizTimer Clear
+						</button>
 
-					<div className="flex justify-center items-center">
-						<SharedQuestTimer
-							attemptId={`attempt-${dataNew?.id}`}
-							onTimeUpdate={handleTimeUpdate}
-							onExpire={handleExpire}
-						/>
-					</div>
+						<div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+							<div className="space-y-4">
+								<div className="rounded-lg border border-slate-200 bg-gradient-to-br from-white to-primary/10 p-4">
+									<p className="text-xs font-black uppercase tracking-wide text-primary">
+										Type your answer
+									</p>
+									<h2 className="mt-2 break-words text-2xl font-black leading-tight text-slate-950 sm:text-3xl">
+										{htmlToText(task?.title)}
+									</h2>
+								</div>
 
-					<div className="bg-white p-6 rounded-xl shadow-sm border space-y-4">
-						<textarea
-							value={answer}
-							onChange={handleChange}
-							placeholder="Type your answer here..."
-							rows={rowNumber}
-							className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-						/>
+								<ParticipantTimerPanel>
+									<SharedQuestTimer
+										attemptId={`attempt-${dataNew?.id}`}
+										onTimeUpdate={handleTimeUpdate}
+										onExpire={handleExpire}
+									/>
+								</ParticipantTimerPanel>
 
-						<div className=" justify-between text-sm text-gray-500 hidden">
-							<span>
-								{wordCount}/{maxWords} words
-							</span>
-							{error && (
-								<span className="text-red-500">{error}</span>
-							)}
-						</div>
+								<div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+									<textarea
+										value={answer}
+										onChange={handleChange}
+										placeholder="Type your answer here..."
+										rows={rowNumber}
+										className="min-h-32 w-full resize-none rounded-lg border border-slate-300 bg-slate-50 p-4 text-base font-semibold text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/15"
+									/>
 
-						<div className="grid grid-cols-1 md:grid-cols-3  gap-4">
-							{task?.questions
-								?.filter((q: any) => q?.text !== "Option 1")
-								.map((item: any, i) => (
-									<div
-										onClick={() => {
-											setAnswer(item?.text);
-											setSubmitted(false);
-										}}
-										className="border px-3 cursor-pointer hover:bg-primary hover:text-white 
-  border-[#2222] py-2 text-sm bg-[#eeeeee] rounded-xl shadow-sm flex items-center justify-center"
-										key={i}
-									>
-										{item?.text}
+									<div className="mt-3 hidden justify-between text-sm font-semibold text-slate-500">
+										<span>
+											{wordCount}/{maxWords} words
+										</span>
+										{error && <span className="text-accent">{error}</span>}
 									</div>
-								))}
+
+									<div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+										{task?.questions
+											?.filter((q: any) => q?.text !== "Option 1")
+											.map((item: any, i) => (
+												<button
+													type="button"
+													onClick={() => {
+														setAnswer(item?.text);
+														setSubmitted(false);
+													}}
+													className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/10"
+													key={i}
+												>
+													{item?.text}
+												</button>
+											))}
+									</div>
+
+									{submitted && (
+										<p className="mt-3 rounded-md bg-primary/10 px-3 py-2 text-sm font-bold text-primary">
+											Answer submitted successfully!
+										</p>
+									)}
+								</div>
+							</div>
 						</div>
 
-						{submitted && (
-							<p className="text-sm text-green-600">
-								Answer submitted successfully!
-							</p>
-						)}
-
-						<div className="text-center">
-							<button
-								onClick={handleSubmit}
-								disabled={!answer.trim()}
-								className="bg-primary text-white px-6 py-2 rounded-lg disabled:opacity-50"
-							>
-								Submit
-							</button>
-						</div>
+						<StickySubmitBar
+							onSubmit={handleSubmit}
+							disabled={!answer.trim()}
+							selectedText={answer.trim() ? "Answer ready" : undefined}
+							helperText="Type your answer to unlock submit."
+						/>
 					</div>
-				</div>
+				</ParticipantStage>
 			) : (
-				<div className="flex justify-center items-center">
-					<h3 className="md:text-[30px] font-bold text-[18px] flex flex-col justify-center items-center pt-30">
-						<IoMdHappy className="mb-[30px] text-[100px]" />
-						Please wait for the presenter to change slides.
-					</h3>
-				</div>
+				<WaitingStage mode="host" />
 			)}
-		</div>
+		</>
 	);
 };
 export default QuestShortAnswerComponent;

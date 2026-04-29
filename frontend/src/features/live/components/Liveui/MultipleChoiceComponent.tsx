@@ -35,8 +35,8 @@ const MultipleChoiceComponent: React.FC = () => {
 							className={clsx(
 								"w-full flex justify-between items-center px-4 py-4 rounded-2xl border transition-all",
 								isSelected(option)
-									? "bg-orange-50 border-pimary text-primary"
-									: "bg-white border-gray-200 text-gray-800 hover:border-orange-400"
+									? "bg-primary/10 border-primary text-primary"
+									: "bg-white border-gray-200 text-gray-800 hover:border-primary/40"
 							)}
 						>
 							<span className="text-base">{option}</span>

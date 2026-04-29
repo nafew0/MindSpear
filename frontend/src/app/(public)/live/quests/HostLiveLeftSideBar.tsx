@@ -1,187 +1,52 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
-import { IoCopyOutline } from "react-icons/io5";
-import { SiAnswer } from "react-icons/si";
-import { LuLayoutList } from "react-icons/lu";
+
+import React from "react";
+import { BarChart3, Donut, PieChart } from "lucide-react";
 import { Tooltip } from "antd";
-import { MdOutlineBarChart } from "react-icons/md";
-import { FaChartPie } from "react-icons/fa";
-
-import { MdDonutSmall } from "react-icons/md";
 import { cn } from "@/lib/utils";
-import { Modal } from "@/components/ui";
-
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/stores/store";
-import { setScope } from "@/features/live/store/leaderboardSlice";
 
 interface HostLiveLeftSideBarProps {
 	onChartTypeChange: (type: "bar" | "donut" | "dots" | "pie") => void;
+	activeChartType: "bar" | "donut" | "dots" | "pie";
 }
 
-function HostLiveLeftSideBar({ onChartTypeChange }: HostLiveLeftSideBarProps) {
-	const [chatBarStatus, setChatBarStatus] = useState(false);
-	const [isModalStatus, setIsModalStatus] = useState(false);
-	const popupRef = useRef<HTMLDivElement>(null);
-	const dispatch = useDispatch();
-	const { scope } = useSelector((state: RootState) => state.leaderboard);
-	// console.log(scope, "scopescope");
+const chartOptions = [
+	{ label: "Bars", value: "bar", icon: BarChart3 },
+	{ label: "Donut", value: "donut", icon: Donut },
+	{ label: "Pie", value: "pie", icon: PieChart },
+] as const;
 
-	const options = [
-		{ label: "Leader board for the entire presentation.", value: "entire" },
-		{ label: "Leader board for this slide.", value: "slide" },
-	];
-
-	const handleSelection = (value: "entire" | "slide") => {
-
-		dispatch(setScope(value));
-	};
-
-	useEffect(() => {
-		const handleClickOutside = (event: MouseEvent) => {
-			if (
-				popupRef.current &&
-				!popupRef.current.contains(event.target as Node)
-			) {
-				setChatBarStatus(false);
-			}
-		};
-
-		if (chatBarStatus) {
-			document.addEventListener("mousedown", handleClickOutside);
-		} else {
-			document.removeEventListener("mousedown", handleClickOutside);
-		}
-
-		return () => {
-			document.removeEventListener("mousedown", handleClickOutside);
-		};
-	}, [chatBarStatus]);
-
+function HostLiveLeftSideBar({
+	onChartTypeChange,
+	activeChartType,
+}: HostLiveLeftSideBarProps) {
 	return (
-		<div>
-			<div className="bg-[#f2f1f0] p-3 rounded-full hidden">
-				<Tooltip className="hidden" placement="right" title={"Show History"}>
-					<IoCopyOutline className="mt-[10px] mb-[20px] cursor-pointer text-[#333]" />
-				</Tooltip>
+		<nav className="flex flex-col gap-2 rounded-2xl border border-white/80 bg-white/[.92] p-2 shadow-[0_18px_60px_rgba(15,23,42,.14)] backdrop-blur">
+			{chartOptions.map((option) => {
+				const Icon = option.icon;
+				const isActive = activeChartType === option.value;
 
-				<div className="hidden">
-					<Tooltip placement="right" title={"Result"} >
-						<SiAnswer
-							onClick={() => setIsModalStatus(true)}
-							className="my-[20px] cursor-pointer text-[#333]"
-						/>
+				return (
+					<Tooltip key={option.value} placement="right" title={option.label}>
+						<button
+							type="button"
+							onClick={() => {
+								onChartTypeChange(option.value);
+							}}
+							className={cn(
+								"grid h-12 w-12 place-items-center rounded-xl border text-slate-600 transition hover:-translate-y-0.5",
+								isActive
+									? "border-primary bg-primary text-white shadow-lg shadow-primary/25"
+									: "border-slate-200 bg-slate-50 hover:border-primary/40 hover:bg-primary/10 hover:text-primary",
+							)}
+							aria-label={`${option.label} chart`}
+						>
+							<Icon className="h-5 w-5" />
+						</button>
 					</Tooltip>
-
-					<Modal
-						title="Result Setting"
-						open={isModalStatus}
-						onClose={() => setIsModalStatus(false)}
-					>
-						<p className="pb-[10px]">
-							{" "}
-							This will reset results (votes, reactions and
-							responses). Your previous results are saved and
-							accessed from the home screen by clicking on the
-							three dots on the right column of the presentation.{" "}
-						</p>
-						<div className="flex flex-col gap-4 p-4 bg-white rounded-lg shadow-md">
-							<div className="w-full gap-3 flex justify-between mt-4">
-								{options.map((option) => (
-									<button
-										key={option.value}
-										onClick={() =>
-											handleSelection(
-												option.value as
-												| "entire"
-												| "slide"
-											)
-										}
-										className={`w-full p-3 rounded-md flex items-center justify-between font-semibold
-              ${option.value === scope
-												? "border-2 border-blue-500 bg-blue-50"
-												: "border border-gray-300 bg-white"
-											}`}
-									>
-										{option.label}
-										<input
-											type="radio"
-											name="leaderboard"
-											value={option.value}
-											checked={option.value === scope}
-											readOnly
-											className="ml-2"
-										/>
-									</button>
-								))}
-							</div>
-						</div>
-					</Modal>
-				</div>
-
-				<div className="!relative mt-2">
-					<Tooltip
-						placement="right"
-						title={"Chart View"}
-						open={!chatBarStatus ? undefined : false}
-
-					>
-						<LuLayoutList
-							onClick={() => setChatBarStatus((prev) => !prev)}
-							className="mb-[10px] cursor-pointer text-[#333]"
-						/>
-					</Tooltip>
-
-					<div
-						ref={popupRef}
-						className={cn(
-							chatBarStatus ? "flex" : "hidden",
-							"gap-3 absolute top-[-20px] left-10 bg-[#f2f1f0] px-4 py-2 rounded-[5px] shadow-md"
-						)}
-					>
-						<div
-							className="flex flex-col justify-center items-center text-[#333] border border-[#2222] p-3 rounded-[10px] hover:bg-[#e2e1e0]"
-							onClick={() => {
-								onChartTypeChange("bar");
-								setChatBarStatus(false);
-							}}
-						>
-							<MdOutlineBarChart className="cursor-pointer" />
-							<span className="text-[12px] font-bold">
-								{" "}
-								Bars{" "}
-							</span>
-						</div>
-
-
-						<div
-							className="flex flex-col justify-center items-center text-[#333] border border-[#2222] p-3 rounded-[10px] hover:bg-[#e2e1e0]"
-							onClick={() => {
-								onChartTypeChange("donut");
-								setChatBarStatus(false);
-							}}
-						>
-							<MdDonutSmall className="cursor-pointer" />
-							<span className="text-[12px] font-bold">
-								{" "}
-								Donut{" "}
-							</span>
-						</div>
-
-						<div
-							className="flex flex-col justify-center items-center text-[#333] border border-[#2222] p-3 rounded-[10px] hover:bg-[#e2e1e0]"
-							onClick={() => {
-								onChartTypeChange("pie");
-								setChatBarStatus(false);
-							}}
-						>
-							<FaChartPie className="cursor-pointer" />
-							<span className="text-[12px] font-bold"> Pie </span>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
+				);
+			})}
+		</nav>
 	);
 }
 

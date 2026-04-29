@@ -21,6 +21,7 @@ const config: Config = {
 				white: "#FFFFFF",
 				primary: appTheme.colors.primary,
 				secondary: appTheme.colors.secondary,
+				accent: appTheme.colors.accent,
 				success: appTheme.colors.success,
 				danger: appTheme.colors.danger,
 				warning: appTheme.colors.warning,

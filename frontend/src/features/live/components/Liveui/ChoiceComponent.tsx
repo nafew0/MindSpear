@@ -2,7 +2,6 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import clsx from "clsx";
 import { useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { upsertAnswer } from "@/features/live/store/leaderboardAnswersSlice";
@@ -10,7 +9,13 @@ import { useDispatch, useSelector } from "react-redux";
 import moment from "@/lib/dayjs";
 import SharedQuestTimer from "@/components/SharedQuestTimer";
 import { AxiosError } from "axios";
-import { IoMdHappy } from "react-icons/io";
+import {
+	AnswerOptionButton,
+	ParticipantStage,
+	ParticipantTimerPanel,
+	StickySubmitBar,
+	WaitingStage,
+} from "./participant-ui";
 type TaskQuestion = {
 	id: number | string;
 	text?: string;
@@ -356,83 +361,61 @@ const ChoiceComponent: React.FC<Props> = ({ task, value, onChange }) => {
 		setcurrentTimeGet(remaining);
 	};
 	return (
-		<div className="min-h-screen overflow-auto flex flex-col justify-center items-center px-4">
+		<>
 			{watingData ? (
-				<div className="max-w-xl w-full space-y-6">
-					<h2 className="text-2xl font-semibold text-gray-900 text-center">
-						{/* {task?.title || "Select an option"} */}
-						{htmlToText(task?.title)}
-					</h2>
-					{/* <h2 className="text-2xl font-semibold text-gray-900 text-center">
-      {task?.task_type || "Select an option"}
-      </h2> */}
+				<ParticipantStage size="wide">
+					<div className="flex min-h-0 flex-1 flex-col">
+						<div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+							<div className="grid gap-4 lg:grid-cols-[1fr_18rem] lg:items-start">
+								<div className="rounded-lg border border-slate-200 bg-gradient-to-br from-white to-primary/10 p-4">
+									<p className="text-xs font-black uppercase tracking-wide text-primary">
+										{isMulti ? "Pick your answers" : "Pick one answer"}
+									</p>
+									<h2 className="mt-2 break-words text-2xl font-black leading-tight text-slate-950 sm:text-3xl">
+										{htmlToText(task?.title)}
+									</h2>
+								</div>
+								<ParticipantTimerPanel>
+									<SharedQuestTimer
+										attemptId={`attempt-${dataNew?.id}`}
+										onTimeUpdate={handleTimeUpdate}
+										onExpire={handleExpire}
+									/>
+								</ParticipantTimerPanel>
+							</div>
 
-					<div className="flex justify-center items-center text-white!">
-						<SharedQuestTimer
-							attemptId={`attempt-${dataNew?.id}`}
-							onTimeUpdate={handleTimeUpdate}
-							onExpire={handleExpire}
+							<div className="mt-5 grid gap-3 sm:grid-cols-2">
+								{options.map((option, i) => (
+									<AnswerOptionButton
+										key={`${option}-${i}`}
+										index={i}
+										multi={isMulti}
+										selected={isChosen(option, i)}
+										onClick={() => handleSelect(option, i)}
+									>
+										{option}
+									</AnswerOptionButton>
+								))}
+								{options.length === 0 && (
+									<div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-sm font-semibold text-slate-500 sm:col-span-2">
+										No options provided for this question.
+									</div>
+								)}
+							</div>
+						</div>
+
+						<StickySubmitBar
+							onSubmit={dataSubmit}
+							disabled={!hasSelection}
+							selectedText={hasSelection ? selectionText : undefined}
+							helperText="Choose an answer to unlock submit."
 						/>
 					</div>
-
-					<div className="space-y-4">
-						{options.map((option, i) => (
-							<button
-								key={i}
-								type="button"
-								onClick={() => handleSelect(option, i)}
-								className={clsx(
-									"w-full flex justify-between items-center px-4 py-4 rounded-2xl border transition-all",
-									isChosen(option, i)
-										? "bg-orange-50 border-primary text-primary"
-										: "bg-white border-gray-200 text-gray-800 hover:border-orange-400",
-								)}
-							>
-								<span className="text-base">{option}</span>
-								<span
-									className={clsx(
-										"w-5 h-5 rounded-md border flex items-center justify-center",
-										isChosen(option, i)
-											? "bg-primary border-primary text-white"
-											: "border-gray-400",
-									)}
-								>
-									{isChosen(option, i) && (
-										<div className="w-2.5 h-2.5 rounded-[3px] bg-white" />
-									)}
-								</span>
-							</button>
-						))}
-						{options.length === 0 && (
-							<div className="text-sm text-gray-500 text-center border rounded-xl p-4">
-								No options provided for this question.
-							</div>
-						)}
-					</div>
-
-					<div className="text-center text-sm text-gray-500">
-						{selectionText}
-					</div>
-
-					<div className="flex items-center justify-center py-2">
-						<button
-							onClick={dataSubmit}
-							className="bg-primary px-4 py-2 rounded-lg text-white disabled:opacity-50"
-							disabled={!hasSelection}
-						>
-							Submit
-						</button>
-					</div>
-				</div>
+				</ParticipantStage>
 			) : (
-				<div className="flex justify-center items-center">
-					<h3 className="md:text-[30px] font-bold text-[18px] flex flex-col justify-center items-center pt-30">
-						<IoMdHappy className="mb-[30px] text-[100px]" />
-						Please wait for the presenter to change slides.
-					</h3>
-				</div>
+				<WaitingStage mode="host" />
 			)}
-		</div>
+		</>
 	);
 };
 export default ChoiceComponent;

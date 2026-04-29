@@ -9,6 +9,7 @@ import React, {
 	useState,
 	useCallback,
 } from "react";
+import { useSelector } from "react-redux";
 import TimeShow from "./TimeShow";
 
 type UserTimeSet = {
@@ -31,8 +32,6 @@ function readUserTimeSet(lsKey = "userTimeSet"): UserTimeSet | null {
 	if (typeof window === "undefined") return null;
 	try {
 		const raw = localStorage.getItem(lsKey);
-    console.log(raw, "rawrawrawrawrawraw");
-    
 		if (!raw) return null;
 		return JSON.parse(raw) as UserTimeSet;
 	} catch {
@@ -89,28 +88,35 @@ export default function SharedQuestTimer({
 	lsKey = "userTimeSet",
 	onTimeUpdate,
 	onExpire,
-}:
-SharedQuestTimerProps) {
+}: SharedQuestTimerProps) {
+	const reduxUserSet = useSelector(
+		(state: any) => state.questTime,
+	) as UserTimeSet | null;
 	const [userSet, setUserSet] = useState<UserTimeSet | null>(null);
-useEffect(() => {
-  if (typeof window === "undefined") return;
-  setUserSet(readUserTimeSet(lsKey));
+	const fallbackUserSet = useMemo(() => {
+		if (!reduxUserSet?.questionId || !reduxUserSet?.questiQsenTime) {
+			return null;
+		}
+		return reduxUserSet;
+	}, [reduxUserSet]);
 
-  let lastRaw = localStorage.getItem(lsKey) ?? "__EMPTY__";
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+		setUserSet(readUserTimeSet(lsKey) ?? fallbackUserSet);
 
-  const tick = () => {
-    const raw = localStorage.getItem(lsKey) ?? "__EMPTY__";
-    if (raw !== lastRaw) {
-      lastRaw = raw;
-      setUserSet(readUserTimeSet(lsKey)); 
-    }
-  };
+		let lastRaw = localStorage.getItem(lsKey) ?? "__EMPTY__";
 
-  const id = setInterval(tick, 300);
-  return () => clearInterval(id);
-}, [lsKey]);
+		const tick = () => {
+			const raw = localStorage.getItem(lsKey) ?? "__EMPTY__";
+			if (raw !== lastRaw) {
+				lastRaw = raw;
+				setUserSet(readUserTimeSet(lsKey) ?? fallbackUserSet);
+			}
+		};
 
-
+		const id = setInterval(tick, 300);
+		return () => clearInterval(id);
+	}, [fallbackUserSet, lsKey]);
 
 	const ready = Boolean(
 		attemptId &&
@@ -118,7 +124,6 @@ useEffect(() => {
 			userSet?.questiQsenTime &&
 			userSet?.questionId
 	);
-
 
 	const intendedInitial = useMemo(() => {
 		const intended = toIntSeconds(userSet?.questiQsenTime, 60);

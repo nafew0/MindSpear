@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import axiosInstance from '@/utils/axiosInstance';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/stores/store';
+import { Copy, Hash, Link2, QrCode } from 'lucide-react';
 
 
 interface pNumber {
@@ -22,7 +23,6 @@ const Summary: React.FC<pNumber> = ({
 	const params = useParams();
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const [response, setresponse] = useState<any | null>(null);
-	console.log(response?.quiz, "response?.quiz");
 	const [copiedCode, setCopiedCode] = useState(false);
 	const [copiedUrl, setCopiedUrl] = useState(false);
 	const [origin, setOrigin] = useState('');
@@ -48,17 +48,13 @@ const Summary: React.FC<pNumber> = ({
 		dataFetch();
 	}, [params?.id]);
 
-	console.log(questSession, "questSessionquestSessionquestSessionquestSessionquestSessionquestSession");
-
-
 	const joinCode = response?.join_code;
 	const liveurlname = urlnamelive !== undefined && urlnamelive !== null ? urlnamelive : ""
 	const fullUrl = `${origin}/attempt/${liveurlname}${joinCode}?jid=${response?.join_link}&qid=${response?.id}&secid=${questSession?.id}`;
 
 
 	const handleCopy = (text: string, type: 'code' | 'url') => {
-		console.log(type, "Invite more participants!");
-
+		if (!text) return;
 		navigator.clipboard.writeText(text).then(() => {
 			if (type === 'code') {
 				setCopiedCode(true);
@@ -73,67 +69,93 @@ const Summary: React.FC<pNumber> = ({
 
 
 	return (
-		<div>
-			<div className='grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch '>
-				<div className="md:col-span-7 bg-white">
-					<div className="flex flex-col items-center justify-center gap-6 h-full p-6">
-						<div className="flex flex-col justify-center">
-							<h3 className="text-[1.5rem] font-bold text-[#333333]">
-								Invite more participants!
-							</h3>
-							<p>
-								Invite by sharing the URL or Quest  Id. Participants can join this MindSpear up until the deadline.
-							</p>
-						</div>
-						<div className="">
-							<RadialBarCharts key={participantsNumber} participantsNumber={participantsNumber} />
-						</div>
+		<div className='grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_420px]'>
+			<div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5 sm:p-6">
+				<div className="grid gap-6 md:grid-cols-[1fr_260px] md:items-center">
+					<div>
+						<p className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-primary">
+							<Link2 className="h-4 w-4" />
+							Invite participants
+						</p>
+						<h3 className="text-2xl font-black text-slate-950 sm:text-3xl">
+							Share the link or Quest ID to fill the room.
+						</h3>
+						<p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-600">
+							Participants can join this MindSpear until the session ends. The live
+							queue updates automatically as they arrive.
+						</p>
+					</div>
+					<div className="mx-auto w-full max-w-[240px]">
+						<RadialBarCharts key={participantsNumber} participantsNumber={participantsNumber} />
 					</div>
 				</div>
+			</div>
 
-				<div className='md:col-span-5 bg-[#fff] '>
-
-					<div className='flex mt-[10px]'>
-						<div className='w-full border border-[#2222] rounded-[10px]'>
-							<QRCodeGenerator url={fullUrl} />
-						</div>
-					</div>
-
-					<div className='w-full border border-[#2222] rounded-[10px] flex justify-between mt-[10px] p-[20px]'>
-						<div className=''>
-							<h5 className=' text-[#7d7d7d]'> Join Code </h5>
-							<p className='font-bold text-[#333]'>  {joinCode} </p>
-						</div>
-						<div className='flex justify-center items-center'>
-							<button
-								className="px-6 py-1 text-[14px] font-bold bg-[#ff9f48] text-white rounded hover:bg-[#556fb6]"
-								onClick={() => handleCopy(joinCode, 'code')}
-							>
-								{copiedCode ? 'Copied!' : 'Copy'}
-							</button>
-						</div>
-					</div>
-
-					<div className='w-full border border-[#2222] rounded-[10px] flex justify-between mt-[10px] p-[20px]'>
-						<div className=''>
-							<h5 className=' text-[#7d7d7d]'> Join Link </h5>
-							<p className='font-bold text-[#333]'> {fullUrl.length > 30 ? fullUrl.slice(0, 30) + '...' : fullUrl} </p>
-						</div>
-						<div className='flex justify-center items-center'>
-							<button
-								className="px-6 py-1 text-[14px] font-bold bg-[#ff9f48] text-white rounded hover:bg-[#556fb6]"
-								onClick={() => handleCopy(fullUrl, 'url')}
-							>
-								{copiedUrl ? 'Copied!' : 'Copy'}
-							</button>
-						</div>
-					</div>
-
-
+			<div className='rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm'>
+				<div className='mb-4 flex items-center gap-2 text-sm font-black text-slate-700'>
+					<QrCode className="h-5 w-5 text-secondary" />
+					Join Details
 				</div>
+
+				<div className='overflow-hidden rounded-2xl border border-slate-200 bg-slate-50'>
+					<QRCodeGenerator url={fullUrl} />
+				</div>
+
+				<CopyRow
+					icon={<Hash className="h-4 w-4" />}
+					label="Join Code"
+					value={joinCode || ""}
+					copied={copiedCode}
+					onCopy={() => handleCopy(joinCode, 'code')}
+				/>
+
+				<CopyRow
+					icon={<Link2 className="h-4 w-4" />}
+					label="Join Link"
+					value={fullUrl}
+					copied={copiedUrl}
+					onCopy={() => handleCopy(fullUrl, 'url')}
+				/>
 			</div>
 		</div>
 	)
 }
 
 export default Summary
+
+function CopyRow({
+	icon,
+	label,
+	value,
+	copied,
+	onCopy,
+}: {
+	icon: React.ReactNode;
+	label: string;
+	value: string;
+	copied: boolean;
+	onCopy: () => void;
+}) {
+	return (
+		<div className='mt-3 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4'>
+			<div className='min-w-0'>
+				<h5 className='flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-500'>
+					<span className="text-primary">{icon}</span>
+					{label}
+				</h5>
+				<p className='truncate font-black text-slate-950'>
+					{value || "Unavailable"}
+				</p>
+			</div>
+			<button
+				type="button"
+				className="inline-flex shrink-0 items-center gap-2 rounded bg-primary px-5 py-2 text-sm font-bold text-white transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+				onClick={onCopy}
+				disabled={!value}
+			>
+				<Copy className="h-4 w-4" />
+				{copied ? 'Copied' : 'Copy'}
+			</button>
+		</div>
+	);
+}

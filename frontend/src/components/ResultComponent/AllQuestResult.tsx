@@ -6,8 +6,8 @@ import React, { useState, useEffect } from "react";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
 import AllResultView from "@/components/ResultComponent/AllResultView";
-import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
+import { useParams } from "next/navigation";
 
 export type Submission = {
 	id: number;
@@ -58,9 +58,15 @@ type TaskData = {
 
 type Question = { id: number; text: string; color?: string };
 
+type AllQuestResultProps = {
+	attemId?: number | string;
+	className?: string;
+};
+
 // API Call Component
-export default function AllQuestResult({ attemId }: any) {
+export default function AllQuestResult({ attemId, className }: AllQuestResultProps) {
 	const params = useParams();
+	const resolvedAttemptId = attemId ?? params?.sid;
 	const [resultList, setResultList] = useState<any>([]);
 	const [loading, setLoading] = useState<boolean>(false);
 	const transformResponseData = (apiResponse: any) => {
@@ -109,10 +115,6 @@ export default function AllQuestResult({ attemId }: any) {
 						const selectedOptions: any =
 							Array(questionCount).fill(0);
 
-						console.log(
-							task?.optionsCount,
-							"selectedOptionsselectedOptionsselectedOptions"
-						);
 						Object.keys(task?.optionsCount).forEach((key) => {
 							const index = Number(key); // ← no "- 1" so it's index-wise
 							if (
@@ -125,10 +127,6 @@ export default function AllQuestResult({ attemId }: any) {
 								selectedOptions[index] = count;
 							}
 						});
-						console.log(
-							selectedOptions,
-							"selectedOptionsselectedOptionsselectedOptions"
-						);
 						completion.completion_data.selected_option =
 							selectedOptions;
 					}
@@ -180,7 +178,7 @@ export default function AllQuestResult({ attemId }: any) {
 			setLoading(true);
 			try {
 				const response = await axiosInstance.get(
-					`/quest-leaderboard/session-details-combined-score/${attemId}`
+					`/quest-leaderboard/session-details-combined-score/${resolvedAttemptId}`
 				);
 				const transformedData = transformResponseData(
 					response?.data?.data
@@ -205,8 +203,8 @@ export default function AllQuestResult({ attemId }: any) {
 			}
 		};
 
-		dataFetch();
-	}, [attemId]);
+		if (resolvedAttemptId) dataFetch();
+	}, [resolvedAttemptId]);
 
-	return <AllResultView resultList={resultList} loading={loading} />;
+	return <AllResultView resultList={resultList} loading={loading} className={className} />;
 }

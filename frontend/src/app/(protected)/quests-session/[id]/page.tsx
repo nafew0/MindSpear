@@ -17,6 +17,10 @@ import {
 	changeQuestTask,
 	getHostLiveSession,
 } from "@/features/live/services/liveSessionApi";
+import {
+	isQuestHostMusicArmed,
+	startQuestHostMusic,
+} from "@/features/live/services/questHostAudio";
 import { useLiveSession } from "@/features/live/hooks/useLiveSession";
 import { setQuestSession } from "@/features/quest/store/questSessionSlice";
 
@@ -25,9 +29,20 @@ import {
 	// clearQuestData,
 } from "@/features/quest/store/questQuestionTimeSlice";
 
-import { CirclePlay, Users } from "lucide-react";
+import {
+	CirclePlay,
+	ClipboardList,
+	Radio,
+	UserRoundPlus,
+	Users,
+} from "lucide-react";
 import moment from "@/lib/dayjs";
 import { toast } from "react-toastify";
+import {
+	QuestHostConnectionPill,
+	QuestHostLiveShell,
+	QuestHostMetricCard,
+} from "@/features/live/components/quest-host-ui";
 import type {
 	HostLiveSessionBootstrap,
 	HostParticipantPayload,
@@ -195,6 +210,17 @@ function QuizReport() {
 		},
 	});
 
+	useEffect(() => {
+		if (isQuestHostMusicArmed()) void startQuestHostMusic();
+
+		const resumeMusic = () => {
+			if (isQuestHostMusicArmed()) void startQuestHostMusic();
+		};
+
+		window.addEventListener("pointerdown", resumeMusic, { once: true });
+		return () => window.removeEventListener("pointerdown", resumeMusic);
+	}, []);
+
 	const connected =
 		hostSubscriptionStatus === "subscribed" &&
 		publicSubscriptionStatus === "subscribed";
@@ -235,6 +261,7 @@ function QuizReport() {
 	}, [params?.id]);
 
 	const quizeStartFunction = async () => {
+		void startQuestHostMusic();
 		if (!hasActiveSession) {
 			toast.error("No active live quest session was found.");
 			return;
@@ -368,117 +395,146 @@ function QuizReport() {
 	};
 
 	return (
-		<div className="h-min-screen overflow-auto scrollbar-hidden">
-			<div className="grid grid-cols-1 md:grid-cols-12 gap-5 ">
-				<div className="md:col-span-7 p-6 bg-white rounded-lg border">
-					{/* Status Bar */}
-					<div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg">
-						<div className="flex items-center gap-2">
-							<div
-								className={`w-4 h-4 rounded-full ${
-									connected
-										? "bg-green-500 animate-pulse"
-										: "bg-red-500"
-								}`}
-							/>
-							<span className="text-sm font-medium text-gray-700">
-								{connectionLabel}
+		<QuestHostLiveShell>
+			<main className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-5 px-3 py-4 sm:px-5 lg:px-8">
+				<section className="grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(360px,.75fr)]">
+					<div className="overflow-hidden rounded-[28px] border border-white/10 bg-[#0b0f19] text-white shadow-[0_26px_80px_rgba(15,23,42,.18)] backdrop-blur">
+						<div className="relative p-6 sm:p-8 lg:p-10">
+							<div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px)] bg-[size:40px_40px]" />
+							<div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_18%,rgba(247,153,69,.22),transparent_28%),radial-gradient(circle_at_85%_82%,rgba(188,94,179,.22),transparent_30%),radial-gradient(circle_at_60%_10%,rgba(237,58,118,.14),transparent_24%)]" />
+							<div className="relative">
+								<div className="mb-6 flex flex-wrap items-center gap-3">
+									<QuestHostConnectionPill
+										connected={connected}
+										label={connectionLabel}
+									/>
+									<span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-white/80">
+										<Users className="h-4 w-4 text-primary" />
+										{participantsActive} joined
+									</span>
+								</div>
+
+								<div className="max-w-3xl">
+									<h1 className="text-3xl font-black leading-tight sm:text-5xl">
+										Prepare the room, then launch the live quest.
+									</h1>
+									<p className="mt-4 max-w-2xl text-base font-medium text-white/72">
+										Participants can join while you confirm the session title.
+										When ready, start the first question and the host stage will open.
+									</p>
+								</div>
+
+								<div className="mt-8 grid gap-4 md:grid-cols-[1fr_auto]">
+									<input
+										type="text"
+										value={titleInput}
+										onChange={handleTitleChange}
+										placeholder="Session title..."
+										className="min-h-14 w-full rounded border border-white/15 bg-white/10 px-5 text-base font-bold text-white outline-none transition placeholder:text-white/40 focus:border-primary focus:bg-white/14 focus:ring-4 focus:ring-primary/20 disabled:bg-white/5"
+										disabled={!hasActiveSession}
+									/>
+
+									<button
+										onClick={quizeStartFunction}
+										disabled={!hasActiveSession}
+										className="group relative inline-flex min-h-14 items-center justify-center gap-3 overflow-hidden rounded bg-gradient-to-r from-primary via-secondary to-accent px-7 text-base font-bold text-white shadow-lg shadow-primary/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30 disabled:cursor-not-allowed disabled:opacity-55"
+									>
+										<span className="absolute inset-y-0 -left-1/3 w-1/3 skew-x-[-18deg] bg-white/25 transition duration-700 group-hover:left-[120%]" />
+										<CirclePlay size={20} />
+										{hasActiveSession ? "Start Session" : "Waiting..."}
+									</button>
+								</div>
+								{bootstrapError && (
+									<p className="mt-4 rounded-xl bg-accent/10 px-4 py-3 text-sm font-semibold text-accent">
+										{bootstrapError}
+									</p>
+								)}
+							</div>
+						</div>
+					</div>
+
+					<aside className="rounded-[28px] border border-white/80 bg-white/95 p-5 shadow-[0_26px_80px_rgba(15,23,42,.12)] backdrop-blur">
+						<div className="mb-5 flex items-center justify-between gap-3">
+							<div>
+								<p className="text-xs font-black uppercase tracking-wide text-slate-500">
+									Ready queue
+								</p>
+								<h2 className="text-2xl font-black text-slate-950">
+									Active Participants
+								</h2>
+							</div>
+							<span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-black text-primary">
+								{participantsActive} Online
 							</span>
 						</div>
-						<span className="text-sm text-gray-600">
-							{participantsActive} joined
-						</span>
-					</div>
 
-					{/* Quick Start */}
-					<div className="space-y-4">
-						<input
-							type="text"
-							value={titleInput}
-							onChange={handleTitleChange}
-							placeholder="Session title..."
-							className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-primary disabled:bg-gray-100"
-							disabled={!hasActiveSession}
-						/>
-
-						<button
-							onClick={quizeStartFunction}
-							disabled={!hasActiveSession}
-							className="w-full bg-primary disabled:bg-gray-400 text-white py-3 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
-						>
-							{hasActiveSession ? (
-								<>
-									<CirclePlay size={18} />
-									Start Session
-								</>
-							) : (
-								"Waiting for Live Session..."
-							)}
-						</button>
-						{bootstrapError && (
-							<p className="text-sm text-red-600">{bootstrapError}</p>
-						)}
-					</div>
-				</div>
-				<div className="md:col-span-5 p-4 bg-white rounded-lg border h-auto">
-					<div className="flex items-center justify-between mb-4">
-						<h4 className="text-lg font-semibold text-gray-800">
-							Active Participants
-						</h4>
-						<span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-							{participantsActive} Online
-						</span>
-					</div>
-
-					<div className="space-y-3 max-h-48 overflow-y-auto scrollbar-thin">
-						{activeUsersData?.map((item, index) => (
-							<div
-								key={index}
-								className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border"
-							>
-								<div className="w-10 h-10 bg-gradient-to-r from-primary to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
-									{item?.userName?.charAt(0).toUpperCase()}
-								</div>
-								<div className="flex-1 min-w-0">
-									<p className="font-medium text-gray-900 truncate">
-										{item.userName.toUpperCase()}
-									</p>
-									<p className="text-xs text-gray-500 truncate">
-										ID: {item.userId}
-									</p>
-								</div>
+						<div className="max-h-[360px] space-y-3 overflow-y-auto pr-1 [scrollbar-width:none] [-ms-overflow-style:none]">
+							{activeUsersData?.map((item, index) => (
 								<div
-									className="w-2 h-2 bg-green-500 rounded-full animate-pulse"
-									title="Online"
-								></div>
-							</div>
-						))}
-
-						{(!activeUsersData || activeUsersData.length === 0) && (
-							<div className="text-center py-6 text-gray-500">
-								<div className="w-12 h-12 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
-									<Users
-										className="text-gray-500"
-										size={14}
-									/>
+									key={item.userId || index}
+									className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3"
+								>
+									<div className="grid h-11 w-11 place-items-center rounded-2xl bg-primary text-sm font-black text-white shadow-sm">
+										{item?.userName?.charAt(0).toUpperCase()}
+									</div>
+									<div className="min-w-0 flex-1">
+										<p className="truncate font-black text-slate-950">
+											{item.userName}
+										</p>
+										<p className="truncate text-xs font-semibold text-slate-500">
+											ID: {item.userId}
+										</p>
+									</div>
+									<span className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_0_5px_rgba(247,153,69,.14)]" />
 								</div>
-								<p>No active participants</p>
-								<p className="text-sm">
-									Waiting for users to join...
-								</p>
-							</div>
-						)}
-					</div>
-				</div>
+							))}
 
-				<div className="md:col-span-12 p-4 bg-[#fff] rounded-[8px] border shadow-3">
+							{(!activeUsersData || activeUsersData.length === 0) && (
+								<div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center text-slate-500">
+									<div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary">
+										<UserRoundPlus className="h-7 w-7" />
+									</div>
+									<p className="font-black text-slate-800">
+										No active participants
+									</p>
+									<p className="mt-1 text-sm font-medium">
+										Share the join code below and the queue will fill here.
+									</p>
+								</div>
+							)}
+						</div>
+					</aside>
+				</section>
+
+				<section className="grid gap-4 sm:grid-cols-3">
+					<QuestHostMetricCard
+						label="Participants"
+						value={participantsActive}
+						icon={<Users />}
+						tone="success"
+					/>
+					<QuestHostMetricCard
+						label="Quest Tasks"
+						value={response?.tasks?.length ?? 0}
+						icon={<ClipboardList />}
+						tone="primary"
+					/>
+					<QuestHostMetricCard
+						label="Session"
+						value={hasActiveSession ? "Ready" : "Waiting"}
+						icon={<Radio />}
+						tone={hasActiveSession ? "secondary" : "slate"}
+					/>
+				</section>
+
+				<section className="rounded-[28px] border border-white/80 bg-white/95 p-4 shadow-[0_26px_80px_rgba(15,23,42,.1)] backdrop-blur">
 					<Summary
 						participantsNumber={participantsActive}
 						urlnamelive="quest-live/"
 					/>
-				</div>
-			</div>
-		</div>
+				</section>
+			</main>
+		</QuestHostLiveShell>
 	);
 }
 

@@ -11,7 +11,12 @@ import moment from "@/lib/dayjs";
 import { AxiosError } from "axios";
 import ScaleRow, { ScaleOption } from "./Scales/ScaleRow";
 import SharedQuestTimer from "@/components/SharedQuestTimer";
-import { IoMdHappy } from "react-icons/io";
+import {
+	ParticipantStage,
+	ParticipantTimerPanel,
+	StickySubmitBar,
+	WaitingStage,
+} from "./participant-ui";
 type TaskQuestion = ScaleOption;
 type TaskItem = {
 	id?: number | string;
@@ -268,65 +273,67 @@ const QuestScalesChoiceComponent: React.FC<Props> = ({ task }) => {
 	};
 	const selectionText = `Selected values: [${selectedValues.join(", ")}]`;
 	return (
-		<div className="min-h-screen overflow-auto flex flex-col justify-center items-center px-4">
+		<>
 			{watingData ? (
-				<div className="max-w-xl w-full space-y-6">
-					<h2 className="text-2xl font-semibold text-gray-900 text-center">
-						{htmlToText(task?.title)} scales
-					</h2>
+				<ParticipantStage size="wide">
+					<div className="flex min-h-0 flex-1 flex-col">
+						<div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+							<div className="grid gap-4 lg:grid-cols-[1fr_18rem] lg:items-start">
+								<div className="rounded-lg border border-slate-200 bg-gradient-to-br from-white to-secondary/10 p-4">
+									<p className="text-xs font-black uppercase tracking-wide text-primary">
+										Rate each item
+									</p>
+									<h2 className="mt-2 break-words text-2xl font-black leading-tight text-slate-950 sm:text-3xl">
+										{htmlToText(task?.title)}
+									</h2>
+								</div>
 
-					<div className="flex justify-center items-center">
-						<SharedQuestTimer
-							attemptId={`attempt-${dataNew?.id}`}
-							onTimeUpdate={handleTimeUpdate}
-							onExpire={handleExpire}
+								<ParticipantTimerPanel>
+									<SharedQuestTimer
+										attemptId={`attempt-${dataNew?.id}`}
+										onTimeUpdate={handleTimeUpdate}
+										onExpire={handleExpire}
+									/>
+								</ParticipantTimerPanel>
+							</div>
+
+							<div className="mt-5 space-y-4">
+								{optionObjs.length > 0 ? (
+									optionObjs.map((opt, i) => (
+										<div
+											key={opt.id ?? i}
+											className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+										>
+											<ScaleRow
+												option={opt}
+												index={i}
+												min={minNumber}
+												max={maxNumber}
+												value={selectedValues[i] ?? 0}
+												onChange={handleScaleChange}
+												onSkip={handleSkip}
+											/>
+										</div>
+									))
+								) : (
+									<div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-sm font-semibold text-slate-500">
+										No options provided for this question.
+									</div>
+								)}
+							</div>
+						</div>
+
+						<StickySubmitBar
+							onSubmit={dataSubmit}
+							selectedText={selectionText}
+							helperText="Rate the items, then submit."
 						/>
 					</div>
-
-					{/* SCALES LIST */}
-					<div className="space-y-4">
-						{optionObjs.length > 0 ? (
-							optionObjs.map((opt, i) => (
-								<ScaleRow
-									key={opt.id ?? i}
-									option={opt}
-									index={i}
-									min={minNumber}
-									max={maxNumber}
-									value={selectedValues[i] ?? 0}
-									onChange={handleScaleChange}
-									onSkip={handleSkip}
-								/>
-							))
-						) : (
-							<div className="text-sm text-gray-500 text-center border rounded-xl p-4">
-								No options provided for this question.
-							</div>
-						)}
-					</div>
-
-					<div className="text-center text-sm text-gray-500">
-						{selectionText}
-					</div>
-
-					<div className="flex items-center justify-center py-2">
-						<button
-							onClick={dataSubmit}
-							className="bg-primary px-4 py-2 rounded-lg text-white"
-						>
-							Submit
-						</button>
-					</div>
-				</div>
+				</ParticipantStage>
 			) : (
-				<div className="flex justify-center items-center">
-					<h3 className="md:text-[30px] font-bold text-[18px] flex flex-col justify-center items-center pt-30">
-						<IoMdHappy className="mb-[30px] text-[100px]" />
-						Please wait for the presenter to change slides.
-					</h3>
-				</div>
+				<WaitingStage mode="host" />
 			)}
-		</div>
+		</>
 	);
 };
 export default QuestScalesChoiceComponent;

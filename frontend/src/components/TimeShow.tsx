@@ -20,6 +20,7 @@ type QuizTimerProps = {
   persistKey?: any;
   autoStart?: boolean;
   tickIntervalSec?: number;
+  size?: number;
 };
 
 /** Format seconds -> mm:ss */
@@ -37,6 +38,7 @@ function TimeShow({
   autoStart = true,
   onTimeUpdate,
   tickIntervalSec = 5,
+  size = 104,
 }: QuizTimerProps) {
   const hasData = !!data;
   const safeData: QuizTiming = hasData
@@ -74,7 +76,7 @@ function TimeShow({
   const timerKey = `per-item-${id}-${totalSeconds}`;
 
   // color stages (fixed)
-  const colors = ["#16a34a", "#f59e0b", "#ef4444", "#9ca3af"] as const;
+  const colors = ["#F79945", "#BC5EB3", "#ED3A76", "#9ca3af"] as const;
   const colorsTime = [
     totalSeconds,
     Math.max(1, Math.ceil(totalSeconds * 0.5)),
@@ -84,8 +86,8 @@ function TimeShow({
 
   const renderTime = ({ remainingTime }: { remainingTime: number }) => (
     <div className="flex flex-col items-center justify-center">
-      <div className="text-xs uppercase tracking-wide opacity-70">Remaining</div>
-      <div className="text-2xl font-semibold">
+      <div className="text-[10px] uppercase tracking-wide opacity-70">Remaining</div>
+      <div className="text-xl font-semibold">
         {mmss(Math.max(0, remainingTime || 0))}
       </div>
     </div>
@@ -120,7 +122,7 @@ function TimeShow({
         colors={colors as unknown as any}
         colorsTime={colorsTime as unknown as any}
         isSmoothColorTransition={true}
-        size={140}
+        size={size}
         onUpdate={(remainingTime: number) => {
           const remaining = Math.max(0, Math.floor(remainingTime) || 0);
           const elapsed = Math.max(0, totalSeconds - remaining);

@@ -7,9 +7,14 @@ import { upsertAnswer } from "@/features/live/store/leaderboardAnswersSlice";
 import { useDispatch } from "react-redux";
 import moment from "@/lib/dayjs";
 import axiosInstance from "@/utils/axiosInstance";
-import { GlobalCountdown } from "@/components/GlobalTimeManage";
+import SharedQuestTimer from "@/components/SharedQuestTimer";
 import { AxiosError } from "axios";
-import { IoMdHappy } from "react-icons/io";
+import {
+	ParticipantStage,
+	ParticipantTimerPanel,
+	StickySubmitBar,
+	WaitingStage,
+} from "./participant-ui";
 type TaskQuestion = {
 	id: number | string;
 	text?: string;
@@ -43,7 +48,7 @@ const ShortAnswerComponent: React.FC<Props> = ({ task, value, onChange }) => {
 	const attempId = searchParams.get("aid");
 	const joinid = searchParams.get("jid");
 	const [watingData, setwatingData] = useState(true);
-	const [chalangeData, setchalangeData] = useState<any>({});
+	const [, setchalangeData] = useState<any>({});
 	const [currentTimeGet, setcurrentTimeGet] = useState<any>(0);
 	const maxWords = 5;
 	const startRef = useRef<number>(Date.now());
@@ -188,82 +193,80 @@ const ShortAnswerComponent: React.FC<Props> = ({ task, value, onChange }) => {
 		setcurrentTimeGet(s);
 	};
 	const handleExpire = () => {
-		//console.log("Expired -> submit response for quest");
+		if (task?.id) {
+			localStorage.setItem(
+				`timeExpired_${task.id}`,
+				JSON.stringify({
+					status: "completed",
+					submitStatus: "complited",
+					taskId: task.id,
+					ts: Date.now(),
+				}),
+			);
+		}
+		setwatingData(false);
 	};
 	return (
-		<div className="flex flex-col justify-center items-center px-4">
+		<>
 			{watingData ? (
-				<div className="max-w-xl w-full space-y-6">
-					<h2 className="text-2xl font-semibold text-gray-900 text-center">
-						{task?.title || "Short Answer"}
-					</h2>
-					{/* <div className="text-center text-sm text-gray-500">
-            {task?.task_type} {task?.id !== undefined && <>• ID: {task.id}</>}
-          </div> */}
+				<ParticipantStage size="narrow">
+					<div className="flex min-h-0 flex-1 flex-col">
+						<div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+							<div className="space-y-4">
+								<div className="rounded-lg border border-slate-200 bg-gradient-to-br from-white to-primary/10 p-4">
+									<p className="text-xs font-black uppercase tracking-wide text-primary">
+										Type your answer
+									</p>
+									<h2 className="mt-2 break-words text-2xl font-black leading-tight text-slate-950 sm:text-3xl">
+										{task?.title || "Short Answer"}
+									</h2>
+								</div>
 
-					<GlobalCountdown
-						source={{
-							id: dataNew?.id,
-							open_datetime: chalangeData?.open_datetime,
-							close_datetime: chalangeData?.close_datetime,
-							quiztime_mode: chalangeData?.quiztime_mode,
-							time_limit: task?.time_limit_seconds as any,
-							duration: chalangeData?.duration,
-						}}
-						autoStart={true}
-						onExpire={handleExpire}
-						onTimeUpdate={handleTimeUpdate}
-					/>
+								<ParticipantTimerPanel>
+									<SharedQuestTimer
+										attemptId={`attempt-${dataNew?.id}`}
+										onTimeUpdate={handleTimeUpdate}
+										onExpire={handleExpire}
+									/>
+								</ParticipantTimerPanel>
 
-					<p className="text-sm text-gray-500 text-center">
-						Please briefly describe what you found most valuable in
-						the training.
-					</p>
+								<div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+									<textarea
+										value={answer}
+										onChange={handleChange}
+										placeholder="Type your answer here..."
+										rows={4}
+										className="min-h-36 w-full resize-none rounded-lg border border-slate-300 bg-slate-50 p-4 text-base font-semibold text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/15"
+									/>
 
-					<div className="bg-white p-6 rounded-xl shadow-sm border space-y-4">
-						<textarea
-							value={answer}
-							onChange={handleChange}
-							placeholder="Type your answer here..."
-							rows={1}
-							className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+									<div className="mt-3 flex justify-between gap-3 text-sm font-semibold text-slate-500">
+										<span>
+											{wordCount}/{maxWords} words
+										</span>
+										{error && <span className="text-accent">{error}</span>}
+									</div>
+
+									{submitted && (
+										<p className="mt-3 rounded-md bg-primary/10 px-3 py-2 text-sm font-bold text-primary">
+											Answer submitted successfully!
+										</p>
+									)}
+								</div>
+							</div>
+						</div>
+
+						<StickySubmitBar
+							onSubmit={handleSubmit}
+							disabled={!answer.trim()}
+							selectedText={answer.trim() ? "Answer ready" : undefined}
+							helperText="Type your answer to unlock submit."
 						/>
-
-						<div className="flex justify-between text-sm text-gray-500">
-							<span>
-								{wordCount}/{maxWords} words
-							</span>
-							{error && (
-								<span className="text-red-500">{error}</span>
-							)}
-						</div>
-
-						{submitted && (
-							<p className="text-sm text-green-600">
-								Answer submitted successfully!
-							</p>
-						)}
-
-						<div className="text-center">
-							<button
-								onClick={handleSubmit}
-								disabled={!answer.trim()}
-								className="bg-primary text-white px-6 py-2 rounded-lg disabled:opacity-50"
-							>
-								Submit
-							</button>
-						</div>
 					</div>
-				</div>
+				</ParticipantStage>
 			) : (
-				<div className="flex justify-center items-center">
-					<h3 className="md:text-[30px] font-bold text-[18px] flex flex-col justify-center items-center pt-30">
-						<IoMdHappy className="mb-[30px] text-[100px]" />
-						Please wait for the presenter to change slides.
-					</h3>
-				</div>
+				<WaitingStage mode="host" />
 			)}
-		</div>
+		</>
 	);
 };
 export default ShortAnswerComponent;

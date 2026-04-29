@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import HostLiveHeader from "./HostLiveHeader";
 import HostLiveQuestionView from "./HostLiveQuestionView";
 import HostLiveNavigationControls from "./HostLiveNavigationControls";
@@ -34,6 +34,22 @@ import {
 } from "@/features/live/services/liveSessionApi";
 import type { SessionSnapshot, TimerState } from "@/features/live/types";
 import { toast } from "react-toastify";
+import {
+	QuestHostLiveShell,
+	QuestHostStage,
+	QuestHostWaitingStage,
+} from "@/features/live/components/quest-host-ui";
+import {
+	isQuestHostMusicArmed,
+	playQuestCountdownAudio,
+	startQuestHostMusic,
+	stopQuestHostMusic,
+} from "@/features/live/services/questHostAudio";
+
+const sleep = (ms: number) =>
+	new Promise((resolve) => {
+		window.setTimeout(resolve, ms);
+	});
 
 type Task = {
 	[x: string]: any;
@@ -170,6 +186,8 @@ export default function LiveQuiz() {
 	const [chartType, setChartType] = useState<
 		"bar" | "donut" | "dots" | "pie"
 	>("bar");
+	const [countdownValue, setCountdownValue] = useState<number | null>(null);
+	const [isAdvancing, setIsAdvancing] = useState(false);
 
 	const [quest, setQuest] = useState<Quest | null>(null);
 	const [results, setResults] = useState<LiveResultDatum[]>([]);
@@ -190,19 +208,6 @@ export default function LiveQuiz() {
 		currentSlideIndex,
 		totalSlides,
 	} = useSelector((state: any) => state.leaderboard);
-
-	const handleNextWithConfirm = async () => {
-		if (!quest) return;
-
-		const isLast = currentSlideIndex === quest.tasks.length - 1;
-
-		if (isLast) {
-			setEndModalOpen(true);
-			return;
-		}
-
-		handleNext(); // or handleNextSlide()
-	};
 
 	const toggleFullscreen = () => {
 		if (!isFullscreen)
@@ -230,6 +235,7 @@ export default function LiveQuiz() {
 		if (channelState.sessionStatus === "ended") {
 			setEndModalOpen(false);
 			dispatch(forceEndLive());
+			stopQuestHostMusic();
 		}
 	}, [channelState.sessionStatus, dispatch]);
 
@@ -363,6 +369,12 @@ export default function LiveQuiz() {
 		? tasks[Math.min(currentSlideIndex, tasks.length - 1)]
 		: null;
 
+	useEffect(() => {
+		if (!currentTask) return;
+
+		setChartType(currentTask.task_type === "truefalse" ? "pie" : "bar");
+	}, [currentTask?.id, currentTask?.task_type]);
+
 	// map result by task id for quick lookup
 	const resultByTaskId = useMemo(() => {
 		const m = new Map<number, LiveResultDatum>();
@@ -455,6 +467,42 @@ export default function LiveQuiz() {
 		}
 	};
 
+	const runCountdownAndNext = async () => {
+		if (isAdvancing) return;
+
+		setIsAdvancing(true);
+		void startQuestHostMusic();
+
+		try {
+			void playQuestCountdownAudio();
+			for (const value of [3, 2, 1]) {
+				setCountdownValue(value);
+				await sleep(1000);
+			}
+			setCountdownValue(null);
+			await handleNext();
+		} catch (error) {
+			console.error("Failed to advance quest slide:", error);
+			toast.error("Unable to move to the next quest slide.");
+			setCountdownValue(null);
+		} finally {
+			setIsAdvancing(false);
+		}
+	};
+
+	const handleNextWithConfirm = async () => {
+		if (!quest) return;
+
+		const isLast = currentSlideIndex === quest.tasks.length - 1;
+
+		if (isLast) {
+			setEndModalOpen(true);
+			return;
+		}
+
+		await runCountdownAndNext();
+	};
+
 	const handlePrev = async () => {
 		if (!quest || !activeSessionId) return;
 		const nextIndex = Math.max(
@@ -483,6 +531,7 @@ export default function LiveQuiz() {
 
 			setEndModalOpen(false);
 			dispatch(forceEndLive());
+			stopQuestHostMusic();
 		} catch (err) {
 			console.error("Failed to end live", err);
 			toast.error("Failed to end quest live session.");
@@ -491,19 +540,28 @@ export default function LiveQuiz() {
 	const handleCloseClick = () => {
 		setEndModalOpen(true);
 	};
+
+	useEffect(() => {
+		if (isQuestHostMusicArmed()) void startQuestHostMusic();
+
+		const resumeMusic = () => {
+			if (isQuestHostMusicArmed()) void startQuestHostMusic();
+		};
+
+		window.addEventListener("pointerdown", resumeMusic, { once: true });
+		return () => window.removeEventListener("pointerdown", resumeMusic);
+	}, []);
+
 	return (
-		<div
-			className={`relative h-[100vh] ${
-				isFullscreen
-					? "fixed inset-0 bg-white z-50 p-4"
-					: "min-h-screen flex flex-col bg-white p-4"
-			}`}
-		>
-			<HostLiveHeader onClose={handleCloseClick} />
+		<QuestHostLiveShell isFullscreen={isFullscreen}>
+			<div className="px-3 pt-3 sm:px-5 lg:px-8">
+				<HostLiveHeader onClose={handleCloseClick} />
+			</div>
 			{!showLeaderboard && (
-				<div className="absolute top-50 left-[20px] z-999">
+				<div className="fixed left-3 top-24 z-[80] hidden lg:block">
 					<HostLiveLeftSideBar
 						onChartTypeChange={(type) => setChartType(type)}
+						activeChartType={chartType}
 					/>
 				</div>
 			)}
@@ -514,13 +572,16 @@ export default function LiveQuiz() {
 					isFullscreen={isFullscreen}
 					chartType={chartType}
 					viewModel={viewModel}
+					participantCount={channelState.participantCount}
 				/>
 			) : (
-				<div className="flex-1 flex items-center justify-center text-gray-500">
-					{totalSlides === 0
-						? "Loading Quest..."
-						: "No slide to show"}
-				</div>
+				<QuestHostStage>
+					<QuestHostWaitingStage
+						title={totalSlides === 0 ? "Loading quest" : "No slide to show"}
+						subtitle="We are preparing the host presentation stage."
+						participantCount={channelState.participantCount}
+					/>
+				</QuestHostStage>
 			)}
 
 			{scope === "slide" ? (
@@ -531,6 +592,7 @@ export default function LiveQuiz() {
 					// onNext={handleNextSlide}
 					onNext={handleNextWithConfirm}
 					onToggleFullscreen={toggleFullscreen}
+					isBusy={isAdvancing}
 				/>
 			) : (
 				<>
@@ -541,9 +603,30 @@ export default function LiveQuiz() {
 							onPrev={handlePrev}
 							onNext={handleNextWithConfirm}
 							onToggleFullscreen={toggleFullscreen}
+							isBusy={isAdvancing}
 						/>
 					)}
 				</>
+			)}
+			{countdownValue !== null && (
+				<div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden bg-slate-950/95 text-white backdrop-blur-sm">
+					<div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(247,153,69,.28),transparent_35%),linear-gradient(135deg,rgba(188,94,179,.18),transparent_40%),linear-gradient(225deg,rgba(237,58,118,.16),transparent_36%)]" />
+					<div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,.14)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.14)_1px,transparent_1px)] [background-size:42px_42px]" />
+					<div className="relative text-center">
+						<p className="mb-4 text-sm font-black uppercase tracking-[0.45em] text-primary-100">
+							Next question in
+						</p>
+						<div
+							key={countdownValue}
+							className="animate-[ping_1s_ease-out_1] text-[10rem] font-black leading-none text-primary drop-shadow-[0_0_42px_rgba(247,153,69,.65)] md:text-[16rem]"
+						>
+							{countdownValue}
+						</div>
+						<p className="mt-4 text-xl font-bold text-white/80">
+							Get ready
+						</p>
+					</div>
+				</div>
 			)}
 			<Modal
 				title="End Live Session"
@@ -576,7 +659,7 @@ export default function LiveQuiz() {
     							${
 									!activeSessionId
 										? "bg-gray-400 cursor-not-allowed"
-										: "bg-red-600 hover:bg-red-700"
+										: "bg-accent hover:bg-accent/90"
 								}
   									`}
 							onClick={endHostLive}
@@ -586,6 +669,6 @@ export default function LiveQuiz() {
 					</div>
 				</div>
 			</Modal>
-		</div>
+		</QuestHostLiveShell>
 	);
 }

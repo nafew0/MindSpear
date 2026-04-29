@@ -1,21 +1,22 @@
-/* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
-import Image from "next/image";
 
-// ⬇️ Bring your chart components (adjust paths if needed)
-import { HorizontalBarChart as GlobalHorizantalBarChart } from "@/components/charts";
-// import HorizontalProgressBars from "@/components/charts";
-import { WordCloud as D3WordCloud } from "@/components/charts";
-import { BarChart as GlobalBarChart } from "@/components/charts";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import { AnimatePresence, motion } from "framer-motion";
+import { BarChart3, CheckCircle2, ClipboardList } from "lucide-react";
+import {
+	AllScalesChart,
+	BarChart as GlobalBarChart,
+	HorizontalBarChart as GlobalHorizontalBarChart,
+	PieChart as GlobalPieChart,
+	WordCloud,
+} from "@/components/charts";
 import QuickFormAnswerView from "@/features/live/components/Liveui/QuickFormAnswerView";
 import QuickShortAndLongAnswer from "@/features/live/components/Liveui/QuickShortAndLongAnswer";
-import { AllScalesChart } from "@/components/charts";
+import { QuestHostEmptyChart } from "@/features/live/components/quest-host-ui";
+import { cn } from "@/lib/utils";
 
-// -------------------------------- Types --------------------------------
 export type TabItem = {
 	serial_number?: number;
 	images: any;
@@ -37,18 +38,7 @@ type Task = {
 	quest_id: number;
 	title: string;
 	description: string | null;
-	task_type:
-		| "single_choice"
-		| "multiple_choice"
-		| "truefalse"
-		| "fill_in_the_blanks_choice"
-		| "sorting"
-		| "scales"
-		| "ranking"
-		| "wordcloud"
-		| "longanswer"
-		| "shortanswer"
-		| string;
+	task_type: string;
 	serial_number: number;
 	task_data: TaskData;
 	is_required: boolean;
@@ -57,7 +47,7 @@ type Task = {
 };
 type CompletionData = {
 	start_time?: string;
-	selected_option?: number | number[] | string[];
+	selected_option?: number | number[] | string[] | string;
 };
 type Submission = {
 	id: number;
@@ -71,326 +61,15 @@ type Submission = {
 	task: Task;
 };
 
-// ------------------------------- Utils ---------------------------------
 const FALLBACK_COLORS = [
-	"#3b82f6",
-	"#ef4444",
-	"#10b981",
-	"#f59e0b",
-	"#8b5cf6",
-	"#06b6d4",
-	"#f97316",
+	"#F79945",
+	"#BC5EB3",
+	"#ED3A76",
+	"#111827",
+	"#E07D2A",
+	"#9A3F92",
+	"#374151",
 ];
-
-const asNumber = (v: unknown) => (typeof v === "number" ? v : Number(v));
-
-const resolveByIdOrIndex = <T extends { id: number }>(v: number, arr: T[]) =>
-	arr.find((x) => x.id === v) ??
-	(v >= 0 && v < arr.length ? arr[v] : undefined);
-
-// --------------------- Build props for your charts ---------------------
-type ViewProps = {
-	currentView:
-		| "single_choice"
-		| "multiple_choice"
-		| "truefalse"
-		| "fill_in_the_blanks_choice"
-		| "sorting"
-		| "scales"
-		| "ranking"
-		| "wordcloud"
-		| "quick_form"
-		| "shortanswer"
-		| "longanswer";
-	categories: string[];
-	colors: string[];
-	uniqueColors: string[];
-	data: number[]; // zeros except selected index = 1
-	rankinData: { text: string; count: number; color?: string }[];
-	values: { text: string; value: number }[]; // wordcloud
-};
-
-function buildViewProps(sub: Submission): ViewProps {
-	const type = (
-		sub.task.task_type || ""
-	).toLowerCase() as ViewProps["currentView"];
-	const questions = sub.task.task_data?.questions ?? [];
-	const categories = questions.map((q) => q.text);
-	const colors = questions.map(
-		(q, i) => q.color || FALLBACK_COLORS[i % FALLBACK_COLORS.length]
-	);
-	const uniqueColors = Array.from(new Set(colors));
-	const selected = sub.completion_data?.selected_option;
-
-	// Base zeros array with length = number of options (≥ 1)
-	const zeros = Array.from(
-		{ length: Math.max(questions.length, 1) },
-		() => 0
-	);
-	let data = zeros.slice();
-
-	if (
-		type === "multiple_choice" ||
-		type === "single_choice" ||
-		type === "truefalse" ||
-		type === "fill_in_the_blanks_choice" ||
-		type === "sorting" ||
-		type === "scales"
-	) {
-		const arr = Array.isArray(selected) ? selected : [];
-		const nums = arr
-			.map(asNumber)
-			.filter((x) => Number.isFinite(x)) as number[];
-		nums.forEach((n) => {
-			const resolved = resolveByIdOrIndex(n, questions);
-			if (resolved) {
-				const idx = questions.findIndex((q) => q === resolved);
-				if (idx >= 0) data[idx] = 1;
-			}
-		});
-	}
-
-	let rankinData: { text: string; count: number; color?: string }[] = [];
-	if (type === "ranking") {
-		const arr = Array.isArray(selected) ? selected : [];
-		const N = questions.length || arr.length || 0;
-		rankinData = arr.map((v, i) => {
-			const n = asNumber(v);
-			const item = resolveByIdOrIndex(n, questions);
-			const score = N - i;
-			return {
-				text: item?.text ?? String(v),
-				count: score,
-				images: "/images/icons/ranking.svg",
-				color: item?.color,
-			};
-		});
-	}
-	if (type === "sorting") {
-		const arr = Array.isArray(selected) ? selected : [];
-		const N = questions.length || arr.length || 0;
-		rankinData = arr.map((v, i) => {
-			const n = asNumber(v);
-			const item = resolveByIdOrIndex(n, questions);
-			const score = N - i;
-			return {
-				text: item?.text ?? String(v),
-				count: score,
-				images: "/images/icons/ranking.svg",
-				color: item?.color,
-			};
-		});
-	}
-
-	const values: { text: string; value: number }[] =
-		type === "wordcloud" || Array.isArray(selected)
-			? (selected as string[]).map((w) => ({ text: w, value: 1 }))
-			: [];
-
-	const currentView: ViewProps["currentView"] = [
-		"single_choice",
-		"multiple_choice",
-		"truefalse",
-		"fill_in_the_blanks_choice",
-		"sorting",
-		"scales",
-		"ranking",
-		"shortanswer",
-		"longanswer",
-		"quick_form",
-		"wordcloud",
-	].includes(type)
-		? (type as ViewProps["currentView"])
-		: "single_choice";
-
-	return {
-		currentView,
-		categories,
-		colors,
-		uniqueColors,
-		data,
-		rankinData,
-		values,
-	};
-}
-
-function transformTaskData(data: any) {
-	if (data.task.task_type !== "scales") {
-		return [];
-	}
-
-	// Extract questions and selected options
-	const questions = data?.task?.task_data?.questions;
-	const selectedOptions = data?.completion_data?.selected_option;
-
-	// Create an array to store the result
-	const result = [];
-
-	// Map each question to its corresponding selected option value
-	for (let i = 0; i < questions.length; i++) {
-		result.push({
-			text: questions[i].text,
-			value: selectedOptions[i],
-		});
-	}
-
-	return result;
-}
-
-function ChartPanel({ sub }: { sub: Submission }) {
-	const { currentView, categories, colors, rankinData, values } = useMemo(
-		() => buildViewProps(sub),
-		[sub]
-	);
-	const scaleItems = transformTaskData(sub);
-	console.log(sub, "rankingTextrankingTextrankingTextrankingText");
-	console.log(scaleItems, "scaleItemsscaleItemsscaleItemsscaleItems");
-	const datalist: any = sub?.completion_data?.selected_option;
-	const rankingText: any = sub?.task?.task_data?.questions
-		.sort((a, b) => a.id - b.id)
-		.map((item) => item.text);
-
-	console.log(
-		datalist,
-		"currentViewcurrentViewcurrentViewcurrentViewcurrentView"
-	);
-	console.log(
-		values,
-		"currentViewcurrentViewcurrentViewcurrentViewcurrentView"
-	);
-	console.log(
-		rankingText,
-		"currentViewcurrentViewcurrentViewcurrentViewcurrentView"
-	);
-	console.log(
-		rankinData,
-		"currentViewcurrentViewcurrentViewcurrentViewcurrentView"
-	);
-	console.log(
-		sub?.task?.task_data?.questions,
-		"currentViewcurrentViewcurrentViewcurrentViewcurrentView"
-	);
-
-	// {
-	// 	"optionsCount": {
-	// 		"0": {
-	// 			"count": 40,
-	// 			"count_raw": 1,
-	// 			"count_position": 4,
-	// 			"sum": 2,
-	// 			"calculated_value": 10,
-	// 			"average": 2,
-	// 			"highest_value": 5,
-	// 			"my_calculated_value": 40,
-	// 			"text": "S1"
-	// 		},
-	// 		"1": {
-	// 			"count": 60,
-	// 			"count_raw": 1,
-	// 			"count_position": 4,
-	// 			"sum": 3,
-	// 			"calculated_value": 15,
-	// 			"average": 3,
-	// 			"highest_value": 5,
-	// 			"my_calculated_value": 60,
-	// 			"text": "S2"
-	// 		},
-	// 		"2": {
-	// 			"count": 60,
-	// 			"count_raw": 1,
-	// 			"count_position": 4,
-	// 			"sum": 3,
-	// 			"calculated_value": 15,
-	// 			"average": 3,
-	// 			"highest_value": 5,
-	// 			"my_calculated_value": 60,
-	// 			"text": "S3"
-	// 		},
-	// 		"3": {
-	// 			"count": 80,
-	// 			"count_raw": 1,
-	// 			"count_position": 4,
-	// 			"sum": 4,
-	// 			"calculated_value": 20,
-	// 			"average": 4,
-	// 			"highest_value": 5,
-	// 			"my_calculated_value": 80,
-	// 			"text": "S4"
-	// 		}
-	// 	}
-	// }
-
-	return (
-		<>
-			{currentView === "single_choice" ||
-			currentView === "multiple_choice" ||
-			currentView === "truefalse" ||
-			currentView === "fill_in_the_blanks_choice" ? (
-				<div className="w-full px-4 h-full">
-					<GlobalBarChart data={datalist} categories={categories} />
-				</div>
-			) : currentView === "scales" ? (
-				<div className="w-full px-4 h-min-screen overflow-auto scrollbar-hidden">
-					<AllScalesChart title="" items={scaleItems} />
-				</div>
-			) : currentView === "ranking" ? (
-				<div className="w-[80%] px-4 h-full">
-					<GlobalHorizantalBarChart
-						data={datalist}
-						categories={rankingText}
-						colors={rankinData
-							.map(
-								(opt, i) =>
-									opt.color || colors[i % colors.length]
-							)
-							.filter(Boolean)}
-					/>
-				</div>
-			) : currentView === "sorting" ? (
-				<div className="w-[80%] px-4 h-full">
-					<GlobalHorizantalBarChart
-						data={datalist}
-						categories={rankingText}
-						colors={sub?.task?.task_data?.questions
-							?.map((opt) => opt.color)
-							.filter(Boolean)}
-					/>
-				</div>
-			) : currentView === "quick_form" ? (
-				<div className="">
-					<QuickFormAnswerView
-						data={{
-							id: "",
-							time: 120,
-							user_name: "",
-							answer_data: sub?.completion_data,
-						}}
-					/>
-				</div>
-			) : currentView === "wordcloud" ? (
-				<div className="min-h-[850px] w-full flex items-center justify-center">
-					<D3WordCloud
-						words={values}
-						width={1000}
-						height={850}
-						minFont={12}
-						maxFont={72}
-						rotate={() => (Math.random() > 0.85 ? 90 : 0)}
-						// onWordClick={(w: any) => console.log("Clicked:", w)}
-						className=""
-					/>
-				</div>
-			) : currentView === "longanswer" ||
-			  currentView === "shortanswer" ? (
-				<div className="min-h-[850px] w-full flex items-center justify-center">
-					<QuickShortAndLongAnswer
-						answerData={sub?.completion_data?.selected_option}
-					/>
-				</div>
-			) : null}
-		</>
-	);
-}
 
 const htmlToText = (html?: string) => {
 	if (!html) return "";
@@ -399,18 +78,211 @@ const htmlToText = (html?: string) => {
 		const div = document.createElement("div");
 		div.innerHTML = stripped;
 		const text = div.textContent || div.innerText || "";
-		return text
-			.replace(/\u00a0/g, " ")
-			.replace(/\s+/g, " ")
-			.trim();
+		return text.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
 	}
-	return stripped
-		.replace(/\u00a0/g, " ")
-		.replace(/\s+/g, " ")
-		.trim();
+	return stripped.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
 };
 
-// Main Display Component
+const toArray = (value: CompletionData["selected_option"]) => {
+	if (Array.isArray(value)) return value;
+	if (value === undefined || value === null || value === "") return [];
+	return [value];
+};
+
+const toNumberArray = (
+	value: CompletionData["selected_option"],
+	targetLength: number,
+) => {
+	const source = toArray(value).map((item) => Number(item) || 0);
+	return Array.from({ length: Math.max(targetLength, source.length, 1) }, (_, index) =>
+		Math.round(Number(source[index] ?? 0)),
+	);
+};
+
+const taskIcon = (taskType: string) => {
+	if (taskType === "single_choice" || taskType === "multiple_choice") {
+		return "/images/icons/Icon-01.svg";
+	}
+	if (taskType === "truefalse") return "/images/icons/yes-no.svg";
+	if (taskType === "wordcloud") return "/images/icons/word-cloud.svg";
+	if (taskType === "ranking") return "/images/icons/ranking.svg";
+	if (taskType === "sorting") return "/images/icons/sorting.svg";
+	if (taskType === "shortanswer") return "/images/icons/Icon-03.svg";
+	if (taskType === "longanswer") return "/images/icons/long-answer.svg";
+	if (taskType === "quick_form") return "/images/icons/quick-form.svg";
+	if (taskType === "scales") return "/images/icons/scales.svg";
+	return "";
+};
+
+const wordValues = (selected: CompletionData["selected_option"]) => {
+	const totals = new Map<string, { text: string; value: number }>();
+
+	for (const item of toArray(selected)) {
+		const text = String(item ?? "").trim();
+		if (!text) continue;
+
+		const key = text.toLowerCase();
+		const existing = totals.get(key);
+		if (existing) {
+			existing.value += 1;
+		} else {
+			totals.set(key, { text, value: 1 });
+		}
+	}
+
+	return Array.from(totals.values()).sort((left, right) => {
+		if (right.value !== left.value) return right.value - left.value;
+		return left.text.localeCompare(right.text);
+	});
+};
+
+function ChartPanel({ sub }: { sub: Submission }) {
+	const taskType = String(sub.task.task_type || "").toLowerCase();
+	const questions = sub.task.task_data?.questions ?? [];
+	const categories = questions.map((question, index) =>
+		question.text || `Option ${index + 1}`,
+	);
+	const colors = questions.map(
+		(question, index) => question.color || FALLBACK_COLORS[index % FALLBACK_COLORS.length],
+	);
+	const values = toNumberArray(sub.completion_data?.selected_option, categories.length);
+	const chartData = values.map((value, index) => ({
+		label: categories[index] ?? `Option ${index + 1}`,
+		value,
+		color: colors[index],
+	}));
+	const hasValues = values.some((value) => Number(value) > 0);
+
+	if (
+		taskType === "single_choice" ||
+		taskType === "multiple_choice" ||
+		taskType === "fill_in_the_blanks_choice"
+	) {
+		return hasValues ? (
+			<GlobalBarChart data={chartData} height={420} className="w-full" />
+		) : (
+			<QuestHostEmptyChart />
+		);
+	}
+
+	if (taskType === "truefalse") {
+		return hasValues ? (
+			<GlobalPieChart data={chartData} height={420} className="w-full" />
+		) : (
+			<QuestHostEmptyChart />
+		);
+	}
+
+	if (taskType === "ranking" || taskType === "sorting") {
+		const orderedCategories = [...questions]
+			.sort((left, right) => Number(left.id) - Number(right.id))
+			.map((item) => item.text);
+
+		return hasValues ? (
+			<GlobalHorizontalBarChart
+				data={values}
+				categories={orderedCategories.length ? orderedCategories : categories}
+				colors={colors}
+				height={Math.max(360, values.length * 58 + 110)}
+			/>
+		) : (
+			<QuestHostEmptyChart />
+		);
+	}
+
+	if (taskType === "scales") {
+		const scaleItems = categories.map((text, index) => ({
+			text,
+			value: values[index] ?? 0,
+			color: colors[index],
+		}));
+
+		return <AllScalesChart title="" items={scaleItems} height={460} />;
+	}
+
+	if (taskType === "wordcloud") {
+		const words = wordValues(sub.completion_data?.selected_option);
+
+		return words.length ? (
+			<WordCloud words={words} height={440} minFont={18} maxFont={46} className="w-full" />
+		) : (
+			<QuestHostEmptyChart />
+		);
+	}
+
+	if (taskType === "longanswer" || taskType === "shortanswer") {
+		return (
+			<div className="min-h-[420px] w-full rounded-2xl bg-slate-50">
+				<QuickShortAndLongAnswer answerData={toArray(sub.completion_data?.selected_option)} />
+			</div>
+		);
+	}
+
+	if (taskType === "quick_form") {
+		return (
+			<QuickFormAnswerView
+				data={{
+					id: "",
+					time: 120,
+					user_name: "",
+					answer_data: sub?.completion_data,
+				}}
+			/>
+		);
+	}
+
+	return <QuestHostEmptyChart title="Unsupported result" description="This task type has no chart renderer yet." />;
+}
+
+function ResultPanel({ sub }: { sub: Submission }) {
+	const title = htmlToText(sub.task.title);
+	const rawTaskType = String(sub.task.task_type || "").toLowerCase();
+	const taskType = rawTaskType.replaceAll("_", " ");
+	const selectedItems = toArray(sub.completion_data?.selected_option);
+	const numericValues = toNumberArray(
+		sub.completion_data?.selected_option,
+		sub.task.task_data?.questions?.length ?? selectedItems.length,
+	);
+	const responseTotal =
+		rawTaskType === "wordcloud" ||
+		rawTaskType === "shortanswer" ||
+		rawTaskType === "longanswer"
+			? selectedItems.length
+			: numericValues.reduce((total, value) => total + Math.max(value, 0), 0);
+
+	return (
+		<div className="space-y-5">
+			<section className="grid gap-4 lg:grid-cols-[1fr_220px_220px]">
+				<div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+					<p className="mb-2 text-xs font-black uppercase tracking-wide text-primary">
+						Question
+					</p>
+					<h2 className="break-words text-2xl font-black leading-tight text-slate-950">
+						{title}
+					</h2>
+				</div>
+				<ResultStat label="Task Type" value={taskType} />
+				<ResultStat label="Entries" value={responseTotal || "Aggregated"} />
+			</section>
+
+			<section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white p-3 shadow-sm sm:p-5">
+				<ChartPanel sub={sub} />
+			</section>
+		</div>
+	);
+}
+
+function ResultStat({ label, value }: { label: string; value: React.ReactNode }) {
+	return (
+		<div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+			<p className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">
+				{label}
+			</p>
+			<p className="capitalize text-xl font-black text-slate-950">{value}</p>
+		</div>
+	);
+}
+
 export default function AllResultView({
 	resultList,
 	loading,
@@ -424,230 +296,157 @@ export default function AllResultView({
 	initialTabId?: string;
 	className?: string;
 }) {
-	console.log(resultList, "resultListresultListresultListresultList");
-
 	const dynamicTabs: TabItem[] = useMemo(() => {
 		if (!Array.isArray(resultList)) return [];
 		return resultList.map((sub) => ({
 			id: String(sub.task.id),
 			label: sub.task.title,
 			serial_number: sub.task.serial_number,
-			images:
-				sub.task.task_type === "single_choice" ||
-				sub.task.task_type === "multiple_choice"
-					? "/images/icons/Icon-01.svg"
-					: sub.task.task_type === "truefalse"
-					? "/images/icons/yes-no.svg"
-					: sub.task.task_type === "wordcloud"
-					? "/images/icons/word-cloud.svg"
-					: sub.task.task_type === "ranking"
-					? "/images/icons/ranking.svg"
-					: sub.task.task_type === "sorting"
-					? "/images/icons/sorting.svg"
-					: sub.task.task_type === "shortanswer"
-					? "/images/icons/Icon-03.svg"
-					: sub.task.task_type === "longanswer"
-					? "/images/icons/long-answer.svg"
-					: sub.task.task_type === "quick_form"
-					? "/images/icons/quick-form.svg"
-					: sub.task.task_type === "scales"
-					? "/images/icons/scales.svg"
-					: "",
-			content: (
-				<div className="space-y-6 flex flex-col justify-between">
-					<section className="grid gap-4 md:grid-cols-2">
-						<header className="space-y-1">
-							<h2 className="text-2xl font-semibold">
-								{htmlToText(sub.task.title)}
-							</h2>
-						</header>
-						<div className="rounded-2xl border bg-white p-4 shadow-sm">
-							<div className="text-xs uppercase text-gray-500">
-								Status
-							</div>
-							<div className="font-medium">{sub.status}</div>
-						</div>
-						<div className="rounded-2xl border bg-white p-4 shadow-sm hidden">
-							<div className="text-xs uppercase text-gray-500">
-								Completed at
-							</div>
-							<div className="font-medium">
-								{sub.completed_at
-									? new Date(
-											sub.completed_at
-									  ).toLocaleString()
-									: "—"}
-							</div>
-						</div>
-					</section>
-
-					<div></div>
-
-					{/* <section className="rounded-2xl border bg-white p-4 shadow-sm "> */}
-					<section className="rounded-2xl border bg-white p-4 shadow-sm flex overflow-y-auto scrollbar-hidden">
-						<ChartPanel sub={sub} />
-					</section>
-				</div>
-			),
+			images: taskIcon(String(sub.task.task_type || "").toLowerCase()),
+			content: <ResultPanel sub={sub} />,
 		}));
 	}, [resultList]);
 
 	const items: TabItem[] = useMemo(
-		() => (tabs?.length ? tabs : dynamicTabs),
-		[tabs, dynamicTabs]
+		() =>
+			(tabs?.length ? tabs : dynamicTabs)
+				.slice()
+				.sort((left, right) => Number(left.serial_number) - Number(right.serial_number)),
+		[tabs, dynamicTabs],
 	);
 
 	const [active, setActive] = useState<string>(
-		initialTabId ?? items[0]?.id ?? ""
+		initialTabId ?? items[0]?.id ?? "",
 	);
-	const activeIndex = Math.max(
-		0,
-		items.findIndex((t) => t.id === active)
-	);
+	const activeIndex = Math.max(0, items.findIndex((tab) => tab.id === active));
 
 	useEffect(() => {
 		if (!items.length) return;
-		const exists = items.some((t) => t.id === active);
+		const exists = items.some((tab) => tab.id === active);
 		if (!exists) setActive(items[0].id);
 	}, [items, active]);
 
 	const onKeyDown = useCallback(
-		(e: React.KeyboardEvent<HTMLDivElement>) => {
+		(event: React.KeyboardEvent<HTMLDivElement>) => {
 			if (!items.length) return;
-			if (e.key === "ArrowDown") {
-				e.preventDefault();
-				const next = (activeIndex + 1) % items.length;
-				setActive(items[next].id);
-			} else if (e.key === "ArrowUp") {
-				e.preventDefault();
-				const prev = (activeIndex - 1 + items.length) % items.length;
-				setActive(items[prev].id);
-			} else if (e.key === "Home") {
-				e.preventDefault();
+			if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+				event.preventDefault();
+				setActive(items[(activeIndex + 1) % items.length].id);
+			} else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+				event.preventDefault();
+				setActive(items[(activeIndex - 1 + items.length) % items.length].id);
+			} else if (event.key === "Home") {
+				event.preventDefault();
 				setActive(items[0].id);
-			} else if (e.key === "End") {
-				e.preventDefault();
+			} else if (event.key === "End") {
+				event.preventDefault();
 				setActive(items[items.length - 1].id);
 			}
 		},
-		[activeIndex, items]
+		[activeIndex, items],
 	);
+
+	if (loading && !items.length) {
+		return (
+			<div className={cn("rounded-[24px] border border-slate-200 bg-white p-8 text-center", className)}>
+				<div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary">
+					<BarChart3 className="h-7 w-7 animate-pulse" />
+				</div>
+				<p className="font-black text-slate-900">Loading quest results...</p>
+			</div>
+		);
+	}
 
 	if (!items.length) {
 		return (
 			<div className={cn("w-full", className)}>
-				<div className="rounded-2xl border bg-white p-6 shadow-sm">
+				<div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
 					No data found.
 				</div>
 			</div>
 		);
 	}
-	const truncateChars = (text: string, limit = 10) => {
-		const plain = htmlToText(text || "").trim();
-		return plain.length > limit ? plain.slice(0, limit) + "..." : plain;
-	};
-
-	console.log(items, "itemsitemsitemsitemsitemsitemsitems");
 
 	return (
-		<div className={cn("w-full relative min-h-screen", className)}>
-			<div className="lg:grid lg:grid-cols-[260px_1fr] lg:gap-6">
+		<div className={cn("w-full", className)}>
+			<div className="mb-5 grid gap-4 sm:grid-cols-3">
+				<ResultSummaryCard label="Questions" value={items.length} icon={<ClipboardList />} />
+				<ResultSummaryCard label="Status" value="Completed" icon={<CheckCircle2 />} />
+				<ResultSummaryCard label="View" value="Aggregated" icon={<BarChart3 />} />
+			</div>
+
+			<div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
 				<aside
 					role="tablist"
-					aria-label="Sections"
+					aria-label="Quest result sections"
 					onKeyDown={onKeyDown}
-					className={cn(
-						"fixed inset-x-0 bottom-0 z-40 bg-white border-t shadow-md p-2",
-						"flex flex-row gap-2 overflow-x-auto scrollbar-hidden",
-						"lg:static lg:z-auto lg:bg-white lg:rounded-2xl lg:border lg:shadow-sm lg:p-3",
-						"lg:sticky lg:top-4 lg:self-start lg:h-[calc(92vh-80px)]",
-						"lg:flex lg:flex-col lg:gap-0 lg:overflow-y-auto"
-					)}
+					className="flex gap-3 overflow-x-auto rounded-[24px] border border-slate-200 bg-white p-3 shadow-sm [scrollbar-width:none] [-ms-overflow-style:none] lg:sticky lg:top-4 lg:max-h-[calc(92vh-120px)] lg:flex-col lg:overflow-y-auto"
 				>
-					{items
-						?.sort(
-							(a, b) =>
-								Number(a.serial_number) -
-								Number(b.serial_number)
-						)
-						.map((t) => {
-							const Icon = t.icon;
-							const isActive = t.id === active;
-							return (
-								<button
-									key={t.id}
-									role="tab"
-									aria-selected={isActive}
-									aria-controls={`panel-${t.id}`}
-									id={`tab-${t.id}`}
-									onClick={() => setActive(t.id)}
-									className={cn(
-										"shrink-0 flex flex-col gap-4 items-center justify-center rounded-xl border px-3 py-2 relative",
-										"min-w-[92px] h-[84px]",
-										"transition active:scale-[0.98]",
-										isActive
-											? "bg-gray-100 border-gray-300 ring-1 ring-black/5"
-											: "bg-white border-gray-200 hover:bg-gray-50",
-										"lg:w-full lg:h-[132px] lg:px-5 lg:py-2 lg:mb-3 lg:rounded-[10px] lg:border-2 lg:border-[#2222] lg:hover:border-[#BC5EB3]"
-									)}
-								>
-									<div className=" w-full">
-										<div className=" absolute left-0 w-[20px] h-5 top-0 rounded-tl-[7px] rounded-br-[7px] text-[12px] items-center flex text-[#fff] justify-center group-hover:bg-[#BC5EB3] bg-[#BC5EB3] ">
-											{t?.serial_number}
-										</div>
-									</div>
-									<div className="flex flex-col justify-center items-center ">
-										{Icon ? (
-											<Icon className="h-4 w-4 shrink-0 mb-1" />
-										) : null}
+					{items.map((tab) => {
+						const Icon = tab.icon;
+						const isActive = tab.id === active;
+						const label = htmlToText(String(tab.label || ""));
 
-										{typeof t.images === "string" &&
-										t.images.length > 0 ? (
-											<Image
-												src={t.images}
-												alt={`${t.label} icon`}
-												width={100}
-												height={100}
-												className="w-12 h-12 lg:w-16 lg:h-16 object-cover"
-												priority={false}
-											/>
-										) : null}
-
-										<span className="text-xs lg:text-sm font-bold">
-											{/* {t.label} */}
-											{truncateChars(`${t?.label}`, 30)}
-										</span>
-									</div>
-									{loading ? (
-										<span className="mt-1 text-[10px] lg:ml-auto lg:text-xs text-gray-400">
-											loading…
-										</span>
+						return (
+							<button
+								key={tab.id}
+								role="tab"
+								aria-selected={isActive}
+								aria-controls={`panel-${tab.id}`}
+								id={`tab-${tab.id}`}
+								onClick={() => setActive(tab.id)}
+								className={cn(
+									"relative flex min-w-[132px] shrink-0 items-center gap-3 rounded-2xl border p-3 text-left transition active:scale-[0.98] lg:min-w-0 lg:w-full",
+									isActive
+										? "border-primary bg-primary/10 shadow-sm"
+										: "border-slate-200 bg-slate-50 hover:border-secondary/40 hover:bg-secondary/10",
+								)}
+							>
+								<span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white shadow-sm">
+									{Icon ? <Icon className="h-5 w-5" /> : null}
+									{typeof tab.images === "string" && tab.images.length > 0 ? (
+										<Image
+											src={tab.images}
+											alt={`${label} icon`}
+											width={44}
+											height={44}
+											className="h-8 w-8 object-contain"
+										/>
 									) : null}
-								</button>
-							);
-						})}
+								</span>
+								<span className="min-w-0">
+									<span className="block text-xs font-black uppercase tracking-wide text-slate-500">
+										Slide {tab.serial_number}
+									</span>
+									<span className="line-clamp-2 text-sm font-black text-slate-950">
+										{label}
+									</span>
+								</span>
+							</button>
+						);
+					})}
 				</aside>
 
-				<section className="pt-2 pb-28 lg:pb-4 p-4 bg-white border-2 rounded-[10px] min-h-[60vh] lg:h-[calc(92vh-80px)] flex flex-col overflow-y-auto scrollbar-hidden md:p-6 shadow-sm">
+				<section className="min-h-[460px] rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:min-h-[620px]">
 					<AnimatePresence mode="wait">
-						{items.map((t) => {
-							const isActive = t.id === active;
+						{items.map((tab) => {
+							const isActive = tab.id === active;
 							return (
 								isActive && (
 									<motion.div
-										key={t.id}
+										key={tab.id}
 										role="tabpanel"
-										id={`panel-${t.id}`}
-										aria-labelledby={`tab-${t.id}`}
-										initial={{ opacity: 0, y: 4 }}
+										id={`panel-${tab.id}`}
+										aria-labelledby={`tab-${tab.id}`}
+										initial={{ opacity: 0, y: 16 }}
 										animate={{ opacity: 1, y: 0 }}
-										exit={{ opacity: 0, y: -4 }}
-										transition={{ duration: 0.18 }}
+										exit={{ opacity: 0, y: -12 }}
+										transition={{ duration: 0.35, ease: "easeOut" }}
 										className="focus:outline-none"
 									>
-										{typeof t.content === "function"
-											? t.content(t.id)
-											: t.content}
+										{typeof tab.content === "function"
+											? tab.content(tab.id)
+											: tab.content}
 									</motion.div>
 								)
 							);
@@ -655,6 +454,30 @@ export default function AllResultView({
 					</AnimatePresence>
 				</section>
 			</div>
+		</div>
+	);
+}
+
+function ResultSummaryCard({
+	label,
+	value,
+	icon,
+}: {
+	label: string;
+	value: React.ReactNode;
+	icon: React.ReactNode;
+}) {
+	return (
+		<div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+			<div className="mb-3 flex items-center justify-between gap-3">
+				<span className="text-xs font-black uppercase tracking-wide text-slate-500">
+					{label}
+				</span>
+				<span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary [&_svg]:h-4 [&_svg]:w-4">
+					{icon}
+				</span>
+			</div>
+			<div className="text-2xl font-black text-slate-950">{value}</div>
 		</div>
 	);
 }

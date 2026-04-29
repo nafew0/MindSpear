@@ -44,6 +44,11 @@ export function BarChart({
 	);
 	const rawLabels = chartData.map((item) => item.label);
 	const values = chartData.map((item) => item.value);
+	const maxValue = Math.max(...values.map((value) => Number(value) || 0), 0);
+	const horizontalAxisMax =
+		horizontal && maxValue > 0
+			? Math.ceil(maxValue + Math.max(maxValue * 0.32, 14))
+			: undefined;
 	const hasRenderableData = values.some((value) => Number(value) > 0);
 
 	const options: ApexOptions = useMemo(
@@ -74,17 +79,22 @@ export function BarChart({
 			},
 			dataLabels: {
 				enabled: true,
-				offsetX: horizontal ? 8 : 0,
+				textAnchor: horizontal ? "start" : "middle",
+				offsetX: horizontal ? 22 : 0,
 				offsetY: horizontal ? 0 : -22,
 				formatter: (value: number) => `${value}${valueSuffix}`,
 				style: {
-					colors: [chartNeutrals.chartAxis],
+					colors: horizontal ? chartColors : [chartNeutrals.chartAxis],
 					fontSize: "12px",
 					fontWeight: 700,
+				},
+				background: {
+					enabled: false,
 				},
 			},
 			xaxis: {
 				categories: rawLabels.map((label) => truncateLabel(label)),
+				max: horizontalAxisMax,
 				labels: {
 					show: !horizontal,
 					trim: true,
@@ -121,7 +131,17 @@ export function BarChart({
 				},
 			},
 		}),
-		[chartColors, height, horizontal, rawLabels, rounded, showLegend, title, valueSuffix]
+		[
+			chartColors,
+			height,
+			horizontal,
+			horizontalAxisMax,
+			rawLabels,
+			rounded,
+			showLegend,
+			title,
+			valueSuffix,
+		]
 	);
 
 	return (

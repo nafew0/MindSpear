@@ -29,7 +29,7 @@ const WaitingRoomComponent: React.FC = () => {
 				<div className="pt-4">
 					<button
 						onClick={handleLeave}
-						className="text-sm text-gray-500 hover:text-red-500 underline transition"
+						className="text-sm text-gray-500 hover:text-accent underline transition"
 					>
 						Leave waiting room
 					</button>

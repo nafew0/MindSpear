@@ -1,37 +1,50 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, {
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-} from "react";
-import { BarChart as GlobalBarChart } from "@/components/charts";
-import { DonutChart as GlobalDonutChart } from "@/components/charts";
-import { PieChart as GlobalPieChart } from "@/components/charts";
-import { WordCloud as D3WordCloud } from "@/components/charts";
-import { HorizontalBarChart as GlobalHorizantalBarChart } from "@/components/charts";
-import { AllScalesChart } from "@/components/charts";
-import Image from "next/image";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import DOMPurify from "dompurify";
+import {
+	AllScalesChart,
+	BarChart as GlobalBarChart,
+	DonutChart as GlobalDonutChart,
+	HorizontalBarChart as GlobalHorizontalBarChart,
+	PieChart as GlobalPieChart,
+	WordCloud,
+} from "@/components/charts";
 import QuickFormCreatorView from "@/features/live/components/Liveui/QuickFormCreatorView";
 import QuickShortAndLongAnswer from "@/features/live/components/Liveui/QuickShortAndLongAnswer";
-import { useSelector } from "react-redux";
+import {
+	QuestHostEmptyChart,
+	QuestHostQuestionHeader,
+	QuestHostResponsePanel,
+	QuestHostStage,
+	QuestHostWaitingStage,
+} from "@/features/live/components/quest-host-ui";
 import type { HostLiveViewModel } from "@/features/live/services/hostLiveViewModel";
+import { useSelector } from "react-redux";
 
 type HostLiveQuestionViewProps = {
 	isFullscreen: boolean;
 	chartType: "bar" | "donut" | "dots" | "pie";
 	viewModel: HostLiveViewModel;
+	participantCount?: number;
 };
+
+const formatViewLabel = (value: string) =>
+	String(value || "question").replaceAll("_", " ");
 
 export default function HostLiveQuestionView({
 	isFullscreen,
 	chartType = "bar",
 	viewModel,
+	participantCount,
 }: HostLiveQuestionViewProps) {
-	const { showLeaderboard } = useSelector((state: any) => state.leaderboard);
+	const {
+		showLeaderboard,
+		currentSlideIndex,
+		totalSlides,
+	} = useSelector((state: any) => state.leaderboard);
 	const questTimeData = useSelector((state: any) => state.questTime);
 	const { questId, questionId, questiQsenTime } = questTimeData;
 
@@ -46,7 +59,7 @@ export default function HostLiveQuestionView({
 
 	const storageKey = useMemo(
 		() => (questId && questionId ? `timer_${questId}_${questionId}` : null),
-		[questId, questionId]
+		[questId, questionId],
 	);
 
 	const getCachedTime = useCallback(() => {
@@ -83,13 +96,13 @@ export default function HostLiveQuestionView({
 						questionId,
 						savedAt: Date.now(),
 						completed,
-					})
+					}),
 				);
 			} catch (error) {
 				console.error("Error saving time to localStorage:", error);
 			}
 		},
-		[storageKey, questId, questionId]
+		[storageKey, questId, questionId],
 	);
 
 	const clearAllTimerData = useCallback(() => {
@@ -205,10 +218,7 @@ export default function HostLiveQuestionView({
 			const remainingSeconds = remainingMs / 1000;
 			const elapsedSeconds = elapsedMs / 1000;
 
-			const progressPercent = Math.min(
-				100,
-				(elapsedSeconds / total) * 100
-			);
+			const progressPercent = Math.min(100, (elapsedSeconds / total) * 100);
 
 			if (progressRef.current) {
 				progressRef.current.style.width = `${progressPercent}%`;
@@ -239,155 +249,123 @@ export default function HostLiveQuestionView({
 		return () => cancelAnimationFrame(rafId);
 	}, [total, storageKey, getCachedTime, saveCurrentTime]);
 
-	const SafeHTML = ({ html }: { html: string }) => {
-		const cleanHtml = DOMPurify.sanitize(html);
-		return <span dangerouslySetInnerHTML={{ __html: cleanHtml }} />;
-	};
-
-	const waitingForResponses = (
-		<div className="w-full min-h-[220px] flex items-center justify-center text-center text-gray-500">
-			<div>
-				<p className="text-lg font-semibold text-gray-700">
-					Waiting for responses
-				</p>
-				<p className="text-sm">
-					Participant answers will appear here in real time.
-				</p>
-			</div>
-		</div>
+	const cleanTitle = useMemo(
+		() => DOMPurify.sanitize(viewModel.title),
+		[viewModel.title],
+	);
+	const cleanContent = useMemo(
+		() => DOMPurify.sanitize(viewModel.contentHtml),
+		[viewModel.contentHtml],
 	);
 
-	const images =
-		viewModel.currentView === "single_choice"
-			? "/images/icons/Icon-01.svg"
-			: viewModel.currentView === "multiple_choice"
-			? "/images/icons/Icon-01.svg"
-			: viewModel.currentView === "sorting"
-			? "/images/icons/sorting.svg"
-			: viewModel.currentView === "truefalse"
-			? "/images/icons/yes-no.svg"
-			: viewModel.currentView === "wordcloud"
-			? "/images/icons/word-cloud.svg"
-			: viewModel.currentView === "ranking"
-			? "/images/icons/ranking.svg"
-			: viewModel.currentView === "shortanswer"
-			? "/images/icons/Icon-03.svg"
-			: viewModel.currentView === "longanswer"
-			? "/images/icons/long-answer.svg"
-			: viewModel.currentView === "quick_form"
-			? "/images/icons/quick-form.svg"
-			: viewModel.currentView === "scales"
-			? "/images/icons/scales.svg"
-			: "/images/placeholder.jpg";
+	const chartData = useMemo(
+		() =>
+			viewModel.categories.map((label, index) => ({
+				label,
+				value: viewModel.choiceSeries[index] ?? 0,
+				color: viewModel.color[index] || undefined,
+			})),
+		[viewModel.categories, viewModel.choiceSeries, viewModel.color],
+	);
 
 	const shouldShowWaiting =
 		viewModel.isResponseDriven && !viewModel.hasResponses;
 
 	const renderChoiceChart = () => {
-		if (chartType === "bar") {
-			return (
-				<div className="w-[80%] m-auto">
-					<GlobalBarChart
-						data={viewModel.choiceSeries}
-						categories={viewModel.categories}
-					/>
-				</div>
-			);
+		if (!viewModel.choiceSeries.some((value) => Number(value) > 0)) {
+			return <QuestHostEmptyChart />;
 		}
 
 		if (chartType === "pie") {
 			return (
-				<div className="w-[80%] m-auto flex justify-center items-center pb-[40px]">
-					<GlobalPieChart
-						series={
-							viewModel.choiceSeries.length
-								? viewModel.choiceSeries
-								: [0]
-						}
-						labels={
-							viewModel.categories.length ? viewModel.categories : [""]
-						}
-						colors={[]}
-					/>
-				</div>
+				<GlobalPieChart
+					data={chartData}
+					height={460}
+					className="w-full"
+					showLegend
+				/>
 			);
 		}
 
 		if (chartType === "donut") {
 			return (
-				<div className="w-[80%] m-auto flex justify-center items-center pb-[40px]">
-					<GlobalDonutChart
-						series={
-							viewModel.choiceSeries.length
-								? viewModel.choiceSeries
-								: [0]
-						}
-						labels={
-							viewModel.categories.length ? viewModel.categories : [""]
-						}
-						colors={[]}
-					/>
-				</div>
+				<GlobalDonutChart
+					data={chartData}
+					height={460}
+					className="w-full"
+					showLegend
+				/>
 			);
 		}
 
-		return <div className="w-[80%] m-auto" />;
+		return (
+			<GlobalBarChart
+				data={chartData}
+				height={440}
+				className="w-full"
+				showLegend={false}
+			/>
+		);
 	};
 
 	const renderBody = () => {
 		if (shouldShowWaiting) {
-			return waitingForResponses;
+			return (
+				<QuestHostWaitingStage
+					responseCount={viewModel.responseTotal}
+					participantCount={participantCount}
+				/>
+			);
 		}
 
 		switch (viewModel.displayKind) {
 			case "choice":
-				return <div className="w-full px-4">{renderChoiceChart()}</div>;
+				return <ChartCanvas>{renderChoiceChart()}</ChartCanvas>;
 
 			case "scales":
 				return (
-					<div className="w-[80%] px-4 h-[900px] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [-webkit-overflow-scrolling:touch] ">
-						<AllScalesChart title="" items={viewModel.scaleItems} />
-					</div>
+					<ChartCanvas>
+						<AllScalesChart title="" items={viewModel.scaleItems} height={520} />
+					</ChartCanvas>
 				);
 
 			case "ranking":
 				return (
-					<div className="w-[80%] px-4">
-						<GlobalHorizantalBarChart
+					<ChartCanvas>
+						<GlobalHorizontalBarChart
 							data={viewModel.rankingItems.map((item) => item.count)}
 							categories={viewModel.rankingItems.map((item) => item.text)}
 							colors={viewModel.rankingItems
 								.map((item) => item.color)
 								.filter(Boolean)}
+							height={Math.max(380, viewModel.rankingItems.length * 58 + 120)}
 						/>
-					</div>
+					</ChartCanvas>
 				);
 
 			case "text":
 				return (
-					<div className="w-[78%] absolute top-50">
+					<div className="min-h-[420px] flex-1 bg-slate-50">
 						<QuickShortAndLongAnswer answerData={viewModel.textAnswers} />
 					</div>
 				);
 
 			case "wordcloud":
 				return (
-					<div className="min-h-[850px] w-full flex items-center justify-center">
-						<D3WordCloud
+					<ChartCanvas>
+						<WordCloud
 							words={viewModel.wordCloudWords}
-							width={1000}
-							height={850}
-							minFont={12}
-							maxFont={72}
-							rotate={() => (Math.random() > 0.85 ? 90 : 0)}
-							className=""
+							height={520}
+							minFont={18}
+							maxFont={48}
+							className="w-full"
 						/>
-					</div>
+					</ChartCanvas>
 				);
 
 			case "quick_form":
 				return (
-					<div className="w-[78%] absolute top-50">
+					<div className="min-h-[420px] flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6">
 						<QuickFormCreatorView
 							answerData={viewModel.quickFormAnswers}
 							quickFromId={viewModel.quickFormId}
@@ -397,25 +375,21 @@ export default function HostLiveQuestionView({
 
 			case "content":
 				return (
-					<div className="w-[78%]">
+					<div className="flex min-h-[420px] flex-1 items-center justify-center overflow-auto bg-slate-50 p-4 sm:p-8">
 						<div
-							className="overflow-auto flex flex-col justify-center items-center px-4"
+							className="w-full max-w-5xl overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm"
 							style={{
 								backgroundImage: viewModel.imageUrl
-									? `url('${viewModel.imageUrl}')`
+									? `linear-gradient(rgba(255,255,255,.9),rgba(255,255,255,.9)), url('${viewModel.imageUrl}')`
 									: undefined,
 								backgroundSize: "cover",
 								backgroundPosition: "center",
 							}}
 						>
-							<div className="bg-white p-3 shadow-3 rounded-[10px]">
-								<div
-									dangerouslySetInnerHTML={{
-										__html: viewModel.contentHtml,
-									}}
-									className="prose max-w-none"
-								/>
-							</div>
+							<div
+								dangerouslySetInnerHTML={{ __html: cleanContent }}
+								className="prose max-w-none p-5 sm:p-8"
+							/>
 						</div>
 					</div>
 				);
@@ -423,52 +397,44 @@ export default function HostLiveQuestionView({
 	};
 
 	return (
-		<div
-			className={`flex-1 flex flex-col items-center py-4 overflow-y-auto scrollbar-hidden ${
-				isFullscreen
-					? "h-[calc(100vh-120px)]"
-					: chartType === "pie" || chartType === "donut"
-					? ""
-					: "justify-between"
-			}`}
-		>
-			<div className="w-[80%] flex relative px-4 py-6 shadow text-xl rounded-[10px] font-semibold mb-4 text-center justify-center">
-				<span
-					className="w-full h-[5px] bg-slate-200/70 absolute top-0 left-0"
-					aria-hidden="true"
-				/>
-				<span
-					ref={progressRef}
-					className="h-[5px] absolute top-0 left-0 bg-[#f79945]"
-					style={{ width: "0%", transition: "width 100ms linear" }}
-					aria-label="time progress"
-				/>
-				<span
-					ref={timeRef}
-					className="absolute -top-5 right-0 text-sm font-medium tabular-nums select-none"
-				>
-					{formatMMSS(total)}
-				</span>
-				<SafeHTML html={viewModel.title} />
-
-				<button
-					onClick={clearAllTimerData}
-					className="absolute hidden -top-8 left-0 text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition-colors"
-					title="Clear all timer cache"
-				>
-					Clear Timers
-				</button>
-			</div>
-
-			<Image
-				src={images}
-				alt="Logo"
-				width={206}
-				height={62}
-				className="mb-4 opacity-[.2] absolute top-[42%] hidden"
+		<QuestHostStage className={isFullscreen ? "pt-5" : undefined}>
+			<QuestHostQuestionHeader
+				title={<span dangerouslySetInnerHTML={{ __html: cleanTitle }} />}
+				viewLabel={formatViewLabel(viewModel.currentView)}
+				responseCount={viewModel.responseTotal}
+				totalSlidesLabel={
+					totalSlides ? `Slide ${currentSlideIndex + 1} of ${totalSlides}` : undefined
+				}
+				progressRef={progressRef}
+				timeRef={timeRef}
+				timeLabel={formatMMSS(total)}
 			/>
 
-			{renderBody()}
+			<QuestHostResponsePanel>
+				<AnimatePresence mode="wait">
+					<motion.div
+						key={`${viewModel.taskType}-${viewModel.displayKind}-${questionId}`}
+						initial={{ opacity: 0, y: 18 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0, y: -12 }}
+						transition={{ duration: 0.5, ease: "easeOut" }}
+						className="flex min-h-[420px] flex-1 flex-col"
+					>
+						{renderBody()}
+					</motion.div>
+				</AnimatePresence>
+			</QuestHostResponsePanel>
+		</QuestHostStage>
+	);
+}
+
+function ChartCanvas({ children }: { children: React.ReactNode }) {
+	return (
+		<div className="flex min-h-[420px] flex-1 items-center justify-center overflow-auto bg-slate-50 p-4 sm:p-6 lg:p-8">
+			<div className="w-full max-w-6xl rounded-[22px] border border-slate-200 bg-white p-3 shadow-sm sm:p-5">
+				{children}
+			</div>
 		</div>
 	);
 }
+

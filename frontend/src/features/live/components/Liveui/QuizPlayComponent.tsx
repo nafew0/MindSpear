@@ -2,18 +2,19 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import QuizLiveFooter from "@/components/Layouts/quiz/QuizLiveFooter";
 import ChoiceComponent from "./ChoiceComponent";
 import ShortAnswerComponent from "./ShortAnswerComponent";
 import QuickFormPreview from "./QuickFormPreview";
-import WaitingRoomComponentQuiz from "./WaitingRoomComponentQuiz";
 import Leaderboard from "@/components/Dashboard/Leaderboard";
 import { useSearchParams, useRouter } from "next/navigation";
 import { completeParticipantAttempt } from "@/features/live/services/participantApi";
 import { getParticipantToken } from "@/features/live/services/liveStorage";
 import type { LiveSessionStatus } from "@/features/live/types";
+import {
+	ParticipantShell,
+	ParticipantStage,
+	WaitingStage,
+} from "./participant-ui";
 
 export interface TaskItem {
 	id: number;
@@ -91,6 +92,8 @@ const QuizPlayComponent: React.FC<NavigatorProps> = ({
 	const attemptId = searchParams.get("aid");
 	const sessionId = searchParams.get("sid");
 	const quizId = searchParams.get("qid");
+	const quizTitle = searchParams.get("title");
+	const userName = searchParams.get("uname");
 	const [leaderboardVisible, setLeaderboardVisible] = useState(false);
 	const completionStartedRef = useRef(false);
 
@@ -142,40 +145,34 @@ const QuizPlayComponent: React.FC<NavigatorProps> = ({
 		? componentForTaskType(
 				String((currentTask.question_type || currentTask.task_type) ?? "")
 			)
-		: WaitingRoomComponentQuiz;
+		: null;
 
 	return (
-		<div className="h-screen overflow-auto bg-white">
-			<div className="py-6 flex items-center justify-center">
-				<Link href="/">
-					<Image
-						src="/images/logo/logo.svg"
-						className="dark:hidden"
-						alt="logo"
-						role="presentation"
-						quality={100}
-						width={176}
-						height={42}
-					/>
-				</Link>
-			</div>
-
+		<ParticipantShell
+			variant="quiz"
+			title={quizTitle}
+			participantName={userName}
+			sessionStatus={leaderboardVisible ? "ended" : sessionStatus}
+		>
 			{leaderboardVisible ? (
-				<Leaderboard scope="entire" />
+				<ParticipantStage size="full" className="bg-white/95 p-4">
+					<Leaderboard scope="entire" />
+				</ParticipantStage>
 			) : (
-				<div className="bg-white w-full">
-					<div className="mx-auto max-w-4xl px-4">
-						{currentTask ? (
-							<Body task={currentTask as TaskItem} />
-						) : (
-							<Body />
-						)}
-					</div>
-				</div>
+				<>
+					{currentTask && Body ? (
+						<Body task={currentTask as TaskItem} />
+					) : (
+						<WaitingStage
+							mode="lobby"
+							title="You're in the quiz lobby"
+							message="Stay ready. The host will launch the first question soon."
+							statusLabel="Connected to live quiz"
+						/>
+					)}
+				</>
 			)}
-
-			<QuizLiveFooter />
-		</div>
+		</ParticipantShell>
 	);
 };
 

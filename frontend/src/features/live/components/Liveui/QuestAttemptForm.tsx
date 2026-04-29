@@ -2,18 +2,22 @@
 "use client";
 
 import QuizDateClose from "@/components/ErrorComponent/QuizDateClose";
-import InputGroup from "@/components/FormElements/InputGroup";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
 import moment from "@/lib/dayjs";
 import { useSearchParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import { HiUserGroup } from "react-icons/hi";
 import { toast } from "react-toastify";
 import {
 	clearLegacyLiveStorage,
 	storeParticipantTokenBundle,
 } from "@/features/live/services/liveStorage";
+import {
+	JoinIntroCard,
+	ParticipantShell,
+	ParticipantStage,
+	WaitingStage,
+} from "./participant-ui";
 // import { useDispatch } from "react-redux";
 // import { useSocketStatusComparison } from "@/utils/sockerReconnected";
 
@@ -33,6 +37,7 @@ function QuestAttemptForm() {
 		string | undefined
 	>();
 	const [quizErrorStatus, setQuizErrorStatus] = useState<boolean>(false);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 	useEffect(() => {
 		clearLegacyLiveStorage();
 	}, [joinid]);
@@ -81,6 +86,7 @@ function QuestAttemptForm() {
 	if (hours > 0) timeParts.push(`${hours} hour${hours > 1 ? "s" : ""}`);
 	if (minutes > 0)
 		timeParts.push(`${minutes} minute${minutes > 1 ? "s" : ""}`);
+	const result = timeParts.join(", ") || "Live now";
 	const clearQuestionDataFromStorage = () => {
 		if (typeof window !== "undefined") {
 			localStorage.removeItem("quiz_currentQuestion");
@@ -106,6 +112,11 @@ function QuestAttemptForm() {
 
 	const userId = Math.floor(Math.random() * 10000).toString();
 	const dataSubmit = async () => {
+		if (!currentUserName.trim()) {
+			toast.error("Please enter your name");
+			return;
+		}
+		setIsSubmitting(true);
 		try {
 			const formattedDate = quizData?.quest?.start_datetime
 				? moment
@@ -134,6 +145,7 @@ function QuestAttemptForm() {
 				toast.error(
 					"Unable to join this live quest. Missing session metadata.",
 				);
+				setIsSubmitting(false);
 				return;
 			}
 			storeParticipantTokenBundle({
@@ -150,6 +162,7 @@ function QuestAttemptForm() {
 			const axiosError = error as AxiosError<{
 				message?: string;
 			}>;
+			setIsSubmitting(false);
 			if (axiosError.response) {
 				console.error(
 					"Error verifying token:",
@@ -171,95 +184,64 @@ function QuestAttemptForm() {
 	// If the fetched quest has ended, show a clear message and prevent any actions
 	if (quizData?.quest?.status === "Ended") {
 		return (
-			<div className="container mx-auto p-4 max-w-3xl text-center">
-				<QuizDateClose
-					errorTest={
-						"This quest has ended. You cannot join or perform any actions."
-					}
-					errorStatus={true}
-				/>
-			</div>
+			<ParticipantShell variant="quest" sessionStatus="ended">
+				<ParticipantStage size="narrow" className="bg-white/95 p-5">
+					<QuizDateClose
+						errorTest={
+							"This quest has ended. You cannot join or perform any actions."
+						}
+						errorStatus={true}
+					/>
+				</ParticipantStage>
+			</ParticipantShell>
 		);
 	}
 	if (quizErrorStatus) {
 		return (
-			<div className="container mx-auto p-4 max-w-3xl text-center">
-				{quizErrorStatus && (
+			<ParticipantShell variant="quest" sessionStatus="ended">
+				<ParticipantStage size="narrow" className="bg-white/95 p-5">
 					<QuizDateClose
 						errorTest={quizErrorMessage}
 						errorStatus={quizErrorStatus}
 					/>
-				)}
-			</div>
+				</ParticipantStage>
+			</ParticipantShell>
 		);
 	}
-	const createTime =
-		quizData?.quest?.start_datetime !== null ||
-		quizData?.quest?.start_datetime !== undefined
-			? quizData?.quest?.start_datetime
-			: new Date();
+	if (quizData === null) {
+		return (
+			<ParticipantShell variant="quest" sessionStatus="pending">
+				<WaitingStage
+					mode="lobby"
+					title="Loading live quest"
+					message="We are checking the session and getting your lobby ready."
+					statusLabel="Connecting"
+				/>
+			</ParticipantShell>
+		);
+	}
 	return (
-		<div className="quiz_play_bg ">
-			<div className="flex flex-col justify-center items-center h-screen w-full">
-				<div className=" flex flex-col justify-center items-center bg-[#fff] w-full md:w-[500px] rounded-[5px] ">
-					<div className="w-[80px] h-[80px] rounded-full bg-[#fff] items-center flex justify-center mt-[-40px] shadow-2">
-						<HiUserGroup className="text-[30px] text-[#222]" />
-					</div>
-					<h3 className="text-[24px] font-bold py-[10px] text-[#222]">
-						{" "}
-						{quizData?.quest?.title}{" "}
-					</h3>
-					<h3 className="bg-[#123396] text-[#fff] px-[30px] py-[10px] rounded-[5px] font-bold my-[10px]">
-						{" "}
-						{/* Open for: {moment.(quizData?.quest?.start_datetime)}{" "} */}
-						Open for:{" "}
-						{moment(createTime).format("YYYY-MM-DD HH:mm:ss")}
-					</h3>
-
-					<div className="flex justify-between w-full bg-[#2222] mt-[10px] px-[10px] py-[10px]">
-						<h3>
-							{quizData?.quest?.tasks
-								? `${quizData?.quest?.tasks.length} Questions`
-								: ""}
-						</h3>
-
-						{/* <h3> Host Name : <span className='font-bold'> {quizData?.quiz?.user.full_name} </span> </h3> */}
-					</div>
-				</div>
-
-				<div className="md:h-[200px]"></div>
-
-				<div className=" flex  bg-[#fff] w-full md:w-[500px] rounded-[5px] mt-[30px] ">
-					<div className="flex gap-3 justify-between w-full p-[15px]">
-						{/* <input
-                        type="text"
-                        // onChange={(e) => setUserName(e.target.value)}
-                        onChange={(e) => setCurrentUserName(e.target.value)}
-                        placeholder="Enter nickname"
-                        className="flex-1 px-3 py-3 border rounded-lg w-[60%]"
-                    /> */}
-
-						<InputGroup
-							onChange={(e) => setCurrentUserName(e.target.value)}
-							className=" font-bold text-[#333] w-[90%] "
-							type="text"
-							label=""
-							placeholder="Enter Name"
-							iconPosition="left"
-							height="sm"
-						/>
-
-						<button
-							onClick={dataSubmit}
-							className="bg-primary mt-3 font-bold px-[20px] rounded-[10px] text-[#fff] shadow-3 "
-						>
-							{" "}
-							Okay
-						</button>
-					</div>
-				</div>
-			</div>
-		</div>
+		<ParticipantShell
+			variant="quest"
+			title={quizData?.quest?.title}
+			participantName={currentUserName}
+			sessionStatus="pending"
+		>
+			<JoinIntroCard
+				module="quest"
+				title={quizData?.quest?.title}
+				name={currentUserName}
+				onNameChange={setCurrentUserName}
+				onSubmit={dataSubmit}
+				durationText={result}
+				countLabel={
+					quizData?.quest?.tasks
+						? `${quizData?.quest?.tasks.length} tasks`
+						: "Ready"
+				}
+				isSubmitting={isSubmitting}
+			/>
+		</ParticipantShell>
 	);
 }
 export default QuestAttemptForm;

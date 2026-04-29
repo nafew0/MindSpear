@@ -12,6 +12,15 @@ import ClientProviders from "./ClientLayout";
 export const metadata: Metadata = {
 	title: "MindSpear",
 	description: "MindSpear - Quiz, Quest and Survey Platform",
+	icons: {
+		icon: [
+			{
+				url: "/images/logo/favicon.svg",
+				type: "image/svg+xml",
+			},
+		],
+		shortcut: "/images/logo/favicon.svg",
+	},
 };
 
 export default function RootLayout({

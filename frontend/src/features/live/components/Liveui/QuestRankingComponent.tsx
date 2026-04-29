@@ -14,11 +14,9 @@ import clsx from "clsx";
 import { useSearchParams } from "next/navigation";
 import axiosInstance from "@/utils/axiosInstance";
 import { upsertAnswer } from "@/features/live/store/leaderboardAnswersSlice";
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/stores/store";
+import { useDispatch } from "react-redux";
 import moment from "@/lib/dayjs";
 import { AxiosError } from "axios";
-import QuizTimer, { getCurrentTime } from "@/components/GlobalTimer";
 import { TimerCacheManager } from "@/utils/timerCacheUtils";
 import {
 	DndContext,
@@ -28,11 +26,15 @@ import {
 	useSensor,
 	useSensors,
 	DragEndEvent,
-	DragOverEvent,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import SharedQuestTimer from "@/components/SharedQuestTimer";
-import { IoMdHappy } from "react-icons/io";
+import {
+	ParticipantStage,
+	ParticipantTimerPanel,
+	StickySubmitBar,
+	WaitingStage,
+} from "./participant-ui";
 type TaskQuestion = {
 	id: number | string;
 	text?: string;
@@ -123,7 +125,7 @@ function Droppable({
 			ref={setNodeRef}
 			className={clsx(
 				className,
-				isOver ? "ring-2 ring-orange-400 ring-offset-2" : "",
+				isOver ? "ring-2 ring-primary ring-offset-2" : "",
 			)}
 		>
 			{children}
@@ -132,11 +134,9 @@ function Droppable({
 }
 const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 	const dispatch = useDispatch();
-	const answers = useSelector((state: RootState) => state.answers);
 	const dataNew: any = task;
 	const searchParams = useSearchParams();
 	const joinid = searchParams.get("jid");
-	const userId = searchParams.get("ujid");
 	const attempId = searchParams.get("aid");
 	const [watingData, setwatingData] = useState(true);
 	const [chalangeData, setchalangeData] = useState<any>({});
@@ -266,8 +266,6 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 	}, [task?.id]);
 	const handleExpire = () => {
 		if (!task?.id) return;
-		const key = `timeExpired_${task.id}`;
-		const raw = localStorage.getItem(key);
 		const saved = setTaskExpired(task.id);
 		const ok =
 			saved?.status === "completed" &&
@@ -346,7 +344,6 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 	const saveAnswer = async () => {
 		try {
 			const currentTime = moment().format("YYYY-MM-DD HH:mm:ss");
-			const rankIndexList = ranked.map((_, i) => i + 1);
 			const payload = {
 				task_id: task?.id,
 				completion_data: {
@@ -422,173 +419,164 @@ const QuestChoiceComponent: React.FC<Props> = ({ task }) => {
 			.trim();
 	};
 	return (
-		<div className=" overflow-auto flex flex-col justify-center items-center px-4">
+		<>
 			{watingData ? (
-				<div className="max-w-3xl w-full space-y-6">
-					<h2 className="text-2xl font-semibold text-gray-900 text-center">
-						{htmlToText(task?.title)}
-					</h2>
+				<ParticipantStage size="wide">
+					<div className="flex min-h-0 flex-1 flex-col">
+						<div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+							<div className="grid gap-4 lg:grid-cols-[1fr_18rem] lg:items-start">
+								<div className="rounded-lg border border-slate-200 bg-gradient-to-br from-white to-secondary/10 p-4">
+									<p className="text-xs font-black uppercase tracking-wide text-primary">
+										Build your ranking
+									</p>
+									<h2 className="mt-2 break-words text-2xl font-black leading-tight text-slate-950 sm:text-3xl">
+										{htmlToText(task?.title)}
+									</h2>
+								</div>
 
-					<div className="flex justify-center items-center">
-						<SharedQuestTimer
-							attemptId={`attempt-${dataNew?.id}`}
-							onTimeUpdate={handleTimeUpdate}
-							onExpire={handleExpire}
+								<ParticipantTimerPanel>
+									<SharedQuestTimer
+										attemptId={`attempt-${dataNew?.id}`}
+										onTimeUpdate={handleTimeUpdate}
+										onExpire={handleExpire}
+									/>
+								</ParticipantTimerPanel>
+							</div>
+
+							<DndContext
+								sensors={sensors}
+								onDragOver={onDragOver}
+								onDragEnd={onDragEnd}
+							>
+								<div className="mt-5 grid gap-4 lg:grid-cols-2">
+									<div className="space-y-3">
+										<h3 className="text-sm font-black uppercase tracking-wide text-slate-700">
+											Options
+										</h3>
+
+										<Droppable
+											id={OPTIONS_ZONE_ID}
+											className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3"
+										>
+											{available.length > 0 ? (
+												available.map((i) => (
+													<DraggableOption
+														key={optItemId(i)}
+														id={optItemId(i)}
+														from="options"
+														optIdx={i}
+														label={
+															<button
+																type="button"
+																onClick={() => addToRanking(i)}
+																className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-left font-bold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/10"
+																title="Click or drag into your ranking"
+															>
+																{options[i]}
+															</button>
+														}
+														className="w-full"
+													/>
+												))
+											) : (
+												<div className="rounded-md bg-white p-4 text-sm font-semibold text-slate-500">
+													All options are ranked.
+												</div>
+											)}
+										</Droppable>
+									</div>
+
+									<div className="space-y-3">
+										<h3 className="text-sm font-black uppercase tracking-wide text-slate-700">
+											Your ranking
+										</h3>
+
+										<Droppable
+											id={RANKING_ZONE_ID}
+											className="flex min-h-[180px] flex-col gap-3 rounded-lg border border-slate-300 bg-slate-950 p-3"
+										>
+											{ranked.length === 0 ? (
+												<div className="grid min-h-32 place-items-center rounded-md border border-dashed border-white/25 text-center text-sm font-bold text-white/70">
+													Click or drop options here
+												</div>
+											) : (
+												ranked.map((optIdx, pos) => (
+													<Droppable key={rankItemId(pos)} id={rankItemId(pos)}>
+														<div className="flex items-center justify-between rounded-lg border border-white/10 bg-white px-3 py-3 shadow-sm">
+															<div className="flex w-full items-center gap-3">
+																<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-black text-white">
+																	{pos + 1}
+																</div>
+
+																<DraggableOption
+																	id={`rank-draggable-${optIdx}`}
+																	from="ranking"
+																	optIdx={optIdx}
+																	label={
+																		<div className="font-bold text-slate-800">
+																			{options[optIdx]}
+																		</div>
+																	}
+																	className="flex-1"
+																/>
+															</div>
+
+															<div className="flex shrink-0 items-center gap-2 pl-3">
+																<button
+																	type="button"
+																	onClick={() => moveUp(pos)}
+																	className={clsx(
+																		"rounded-md border px-2 py-1 text-sm font-black",
+																		pos === 0
+																			? "cursor-not-allowed opacity-40"
+																			: "hover:border-primary/40",
+																	)}
+																	disabled={pos === 0}
+																	title="Move up"
+																>
+																	▲
+																</button>
+																<button
+																	type="button"
+																	onClick={() => moveDown(pos)}
+																	className={clsx(
+																		"rounded-md border px-2 py-1 text-sm font-black",
+																		pos === ranked.length - 1
+																			? "cursor-not-allowed opacity-40"
+																			: "hover:border-primary/40",
+																	)}
+																	disabled={pos === ranked.length - 1}
+																	title="Move down"
+																>
+																	▼
+																</button>
+															</div>
+														</div>
+													</Droppable>
+												))
+											)}
+										</Droppable>
+									</div>
+								</div>
+							</DndContext>
+						</div>
+
+						<StickySubmitBar
+							onSubmit={dataSubmit}
+							disabled={ranked.length === 0}
+							selectedText={
+								ranked.length > 0
+									? `${ranked.length} ranked ${ranked.length === 1 ? "item" : "items"}`
+									: undefined
+							}
+							helperText="Rank at least one item to unlock submit."
 						/>
 					</div>
-
-					<DndContext
-						sensors={sensors}
-						onDragOver={onDragOver}
-						onDragEnd={onDragEnd}
-					>
-						<div className="space-y-3">
-							<h3 className="font-semibold">Options</h3>
-
-							<Droppable
-								id={OPTIONS_ZONE_ID}
-								className="grid md:grid-cols-2 gap-3 rounded-2xl"
-							>
-								{available.length > 0 ? (
-									available.map((i) => (
-										<DraggableOption
-											key={optItemId(i)}
-											id={optItemId(i)}
-											from="options"
-											optIdx={i}
-											label={
-												<button
-													onClick={() =>
-														addToRanking(i)
-													}
-													className="w-full text-left px-4 py-3 rounded-xl border bg-white hover:border-orange-400 transition"
-													title="Click or drag into Your ranking"
-												>
-													{options[i]}
-												</button>
-											}
-											className="w-full"
-										/>
-									))
-								) : (
-									<div className="text-sm text-gray-500">
-										All options are ranked.
-									</div>
-								)}
-							</Droppable>
-						</div>
-
-						<div className="space-y-3">
-							<h3 className="font-semibold">Your ranking</h3>
-
-							<Droppable
-								id={RANKING_ZONE_ID}
-								className="bg-[#e6e6e6] p-5 rounded-2xl min-h-[120px] flex flex-col gap-3"
-							>
-								{ranked.length === 0 ? (
-									<h3 className="text-center text-gray-700">
-										Click or drop options
-									</h3>
-								) : (
-									ranked.map((optIdx, pos) => (
-										<Droppable
-											key={rankItemId(pos)}
-											id={rankItemId(pos)}
-										>
-											<div className="bg-white rounded-xl border px-4 py-3 flex items-center justify-between">
-												<div className="flex items-center gap-3 w-full">
-													<div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-semibold shrink-0">
-														{pos + 1}
-													</div>
-
-													<DraggableOption
-														id={`rank-draggable-${optIdx}`}
-														from="ranking"
-														optIdx={optIdx}
-														label={
-															<div className="text-gray-800">
-																{
-																	options[
-																		optIdx
-																	]
-																}
-															</div>
-														}
-														className="flex-1"
-													/>
-												</div>
-
-												<div className="flex items-center gap-2 shrink-0 pl-3">
-													<button
-														onClick={() =>
-															moveUp(pos)
-														}
-														className={clsx(
-															"px-2 py-1 rounded-md border text-sm",
-															pos === 0
-																? "opacity-40 cursor-not-allowed"
-																: "hover:border-orange-400",
-														)}
-														disabled={pos === 0}
-														title="Move up"
-													>
-														▲
-													</button>
-													<button
-														onClick={() =>
-															moveDown(pos)
-														}
-														className={clsx(
-															"px-2 py-1 rounded-md border text-sm",
-															pos ===
-																ranked.length -
-																	1
-																? "opacity-40 cursor-not-allowed"
-																: "hover:border-orange-400",
-														)}
-														disabled={
-															pos ===
-															ranked.length - 1
-														}
-														title="Move down"
-													>
-														▼
-													</button>
-												</div>
-											</div>
-										</Droppable>
-									))
-								)}
-							</Droppable>
-
-							{ranked.length > 0 && (
-								<div className="text-sm text-gray-600">
-									Ranking indices :{" "}
-									<code>[{ranked.join(", ")}]</code>
-								</div>
-							)}
-						</div>
-					</DndContext>
-
-					<div className="flex items-center justify-center py-2">
-						<button
-							onClick={dataSubmit}
-							className="bg-primary px-4 py-2 rounded-lg text-white disabled:opacity-50"
-							disabled={ranked.length === 0}
-						>
-							Submit
-						</button>
-					</div>
-				</div>
+				</ParticipantStage>
 			) : (
-				<div className="flex justify-center items-center">
-					<h3 className="md:text-[30px] font-bold text-[18px] flex flex-col justify-center items-center pt-30">
-						<IoMdHappy className="mb-[30px] text-[100px]" />
-						Please wait for the presenter to change slides.
-					</h3>
-				</div>
+				<WaitingStage mode="host" />
 			)}
-		</div>
+		</>
 	);
 };
 export default QuestChoiceComponent;

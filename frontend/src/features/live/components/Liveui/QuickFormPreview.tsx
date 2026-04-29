@@ -10,7 +10,12 @@ import { FaChevronDown } from "react-icons/fa";
 import { useSearchParams } from "next/navigation";
 import { AxiosError } from "axios";
 import SharedQuestTimer from "@/components/SharedQuestTimer";
-import { IoMdHappy } from "react-icons/io";
+import {
+	ParticipantStage,
+	ParticipantTimerPanel,
+	StickySubmitBar,
+	WaitingStage,
+} from "./participant-ui";
 // import moment from "@/lib/dayjs";
 
 const CheckboxPreview: React.FC<{
@@ -413,60 +418,67 @@ const QuickFormPreview: React.FC<Props> = ({ task }) => {
 	};
 	return (
 		<>
-			{/* watingData */}
-
 			{watingData ? (
-				<div className="max-w-5xl mx-auto space-y-8 p-4 rounded-xl">
-					<h2 className="text-2xl font-semibold text-gray-900 text-center">
-						{htmlToText(task?.title)}
-					</h2>
+				<ParticipantStage size="wide">
+					<div className="flex min-h-0 flex-1 flex-col">
+						<div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+							<div className="grid gap-4 lg:grid-cols-[1fr_18rem] lg:items-start">
+								<div className="rounded-lg border border-slate-200 bg-gradient-to-br from-white to-primary/10 p-4">
+									<p className="text-xs font-black uppercase tracking-wide text-primary">
+										Quick form
+									</p>
+									<h2 className="mt-2 break-words text-2xl font-black leading-tight text-slate-950 sm:text-3xl">
+										{htmlToText(task?.title)}
+									</h2>
+								</div>
 
-					<div className="flex justify-center items-center">
-						<SharedQuestTimer
-							attemptId={`attempt-${dataNew?.id}`}
-							onTimeUpdate={handleTimeUpdate}
-							onExpire={handleExpire}
+								<ParticipantTimerPanel>
+									<SharedQuestTimer
+										attemptId={`attempt-${dataNew?.id}`}
+										onTimeUpdate={handleTimeUpdate}
+										onExpire={handleExpire}
+									/>
+								</ParticipantTimerPanel>
+							</div>
+
+							<div className="mt-5 space-y-4">
+								{orderedQuestions.map((q) => (
+									<div
+										key={String(q.id)}
+										className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+									>
+										<p className="mb-3 font-black text-slate-800">
+											<span className="mr-2 inline-flex h-7 min-w-[1.75rem] items-center justify-center rounded-md bg-slate-950 px-2 text-xs text-white">
+												{parseSN(q.serial_number)}
+											</span>
+											{q.label || "Untitled Question"}
+										</p>
+										{renderPreview(q)}
+									</div>
+								))}
+
+								{orderedQuestions.length === 0 && (
+									<div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-sm font-semibold text-slate-500">
+										No questions for this quick form.
+									</div>
+								)}
+							</div>
+						</div>
+
+						<StickySubmitBar
+							onSubmit={handleSubmit}
+							disabled={orderedQuestions.length === 0}
+							selectedText={
+								orderedQuestions.length > 0
+									? `${orderedQuestions.length} form ${orderedQuestions.length === 1 ? "item" : "items"}`
+									: undefined
+							}
+							helperText="Complete the form to submit."
 						/>
 					</div>
-
-					{orderedQuestions.map((q) => (
-						<div
-							key={String(q.id)}
-							className="p-4 bg-white rounded-lg border border-gray-200"
-						>
-							<p className="font-medium text-gray-800 mb-3">
-								{parseSN(q.serial_number)}.{" "}
-								{q.label || "Untitled Question"}
-							</p>
-							{renderPreview(q)}
-						</div>
-					))}
-
-					{orderedQuestions.length === 0 && (
-						<div className="p-4 text-sm text-gray-500 border rounded-lg bg-white">
-							No questions for this quick form.
-						</div>
-					)}
-
-					{/* Submit button */}
-					{orderedQuestions.length > 0 && (
-						<div className="pt-4 flex justify-center items-center">
-							<button
-								onClick={handleSubmit}
-								className="px-6 py-2 rounded-md bg-primary text-white font-medium hover:bg-primary/90"
-							>
-								Submit
-							</button>
-						</div>
-					)}
-				</div>
+				</ParticipantStage>
 			) : (
-				<div className="flex justify-center items-center">
-					<h3 className="md:text-[30px] font-bold text-[18px] flex flex-col justify-center items-center pt-30">
-						<IoMdHappy className="mb-[30px] text-[100px]" />
-						Please wait for the presenter to change slides.
-					</h3>
-				</div>
+				<WaitingStage mode="host" />
 			)}
 		</>
 	);

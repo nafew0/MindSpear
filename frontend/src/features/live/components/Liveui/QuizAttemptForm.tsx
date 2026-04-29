@@ -2,18 +2,22 @@
 "use client";
 
 import QuizDateClose from "@/components/ErrorComponent/QuizDateClose";
-import InputGroup from "@/components/FormElements/InputGroup";
 import axiosInstance from "@/utils/axiosInstance";
 import { AxiosError } from "axios";
 import moment from "@/lib/dayjs";
 import { useSearchParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import { HiUserGroup } from "react-icons/hi";
 import {
 	clearLegacyLiveStorage,
 	storeParticipantTokenBundle,
 } from "@/features/live/services/liveStorage";
 import { toast } from "react-toastify";
+import {
+	JoinIntroCard,
+	ParticipantShell,
+	ParticipantStage,
+	WaitingStage,
+} from "./participant-ui";
 interface QuizOption {
 	color: string[];
 	choices: (string | null)[];
@@ -147,6 +151,10 @@ function QuizAttemptForm() {
 	const result = timeParts.join(", ") || "0 minute";
 	const userId = Math.floor(Math.random() * 10000).toString();
 	const dataSubmit = async () => {
+		if (!currentUserName.trim()) {
+			toast.error("Please enter your name");
+			return;
+		}
 		setIsSubmitting(true);
 		try {
 			const formattedDate = quizData?.quiz?.open_datetime
@@ -176,6 +184,7 @@ function QuizAttemptForm() {
 				toast.error(
 					"Unable to join this live quiz. Missing session metadata.",
 				);
+				setIsSubmitting(false);
 				return;
 			}
 			storeParticipantTokenBundle({
@@ -227,84 +236,53 @@ function QuizAttemptForm() {
 	};
 	if (quizErrorStatus) {
 		return (
-			<div className="container mx-auto p-4 max-w-3xl text-center">
-				{quizErrorStatus && (
+			<ParticipantShell variant="quiz" sessionStatus="ended">
+				<ParticipantStage size="narrow" className="bg-white/95 p-5">
 					<QuizDateClose
 						errorTest={quizErrorMessage}
 						errorStatus={quizErrorStatus}
 					/>
-				)}
-			</div>
+				</ParticipantStage>
+			</ParticipantShell>
 		);
 	}
-	if (quizData === null) return;
+	if (quizData === null) {
+		return (
+			<ParticipantShell variant="quiz" sessionStatus="pending">
+				<WaitingStage
+					mode="lobby"
+					title="Loading live quiz"
+					message="We are checking the session and getting your lobby ready."
+					statusLabel="Connecting"
+				/>
+			</ParticipantShell>
+		);
+	}
 	const qsenList = quizData.quiz.questions.filter(
 		(question) => question.options !== null,
 	);
 	return (
-		<div className="quiz_play_bg ">
-			<div className="flex flex-col justify-center items-center h-screen w-full">
-				<div className=" flex flex-col justify-center items-center bg-[#fff] w-full md:w-[500px] rounded-[5px] ">
-					<div className="w-[80px] h-[80px] rounded-full bg-[#fff] items-center flex justify-center mt-[-40px] shadow-2">
-						<HiUserGroup className="text-[30px] text-[#222]" />
-					</div>
-					<h3 className="text-[24px] font-bold py-[10px] text-[#222]">
-						{" "}
-						{quizData?.quiz?.title}{" "}
-					</h3>
-					<h3 className="bg-[#123396] text-[#fff] px-[30px] py-[10px] rounded-[5px] font-bold my-[10px]">
-						{" "}
-						Open for: {result}{" "}
-					</h3>
-
-					<div className="flex justify-between w-full bg-[#2222] mt-[10px] px-[10px] py-[10px]">
-						<h3>
-							{quizData?.quiz?.questions?.length
-								? `${qsenList.length} Questions`
-								: ""}
-						</h3>
-
-						{/* <h3> Host Name : <span className='font-bold'> {quizData?.quiz?.user.full_name} </span> </h3> */}
-					</div>
-				</div>
-
-				<div className="md:h-[200px]"></div>
-
-				<div className=" flex  bg-[#fff] w-full md:w-[500px] rounded-[5px] mt-[30px] ">
-					<div className="flex gap-3 justify-between w-full p-[15px]">
-						{/* <input
-                        type="text"
-                        // onChange={(e) => setUserName(e.target.value)}
-                        onChange={(e) => setCurrentUserName(e.target.value)}
-                        placeholder="Enter nickname"
-                        className="flex-1 px-3 py-3 border rounded-lg w-[60%]"
-                    /> */}
-
-						<InputGroup
-							onChange={(e) => setCurrentUserName(e.target.value)}
-							className=" font-bold text-[#333] w-[90%] "
-							type="text"
-							label=""
-							placeholder="Enter Name"
-							iconPosition="left"
-							height="sm"
-						/>
-
-						<button
-							onClick={dataSubmit}
-							disabled={isSubmitting}
-							className="bg-primary mt-3 font-bold px-[20px] rounded-[10px] text-[#fff] shadow-3"
-						>
-							{isSubmitting ? (
-								<span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-t-transparent" />
-							) : (
-								"Okay"
-							)}
-						</button>
-					</div>
-				</div>
-			</div>
-		</div>
+		<ParticipantShell
+			variant="quiz"
+			title={quizData?.quiz?.title}
+			participantName={currentUserName}
+			sessionStatus="pending"
+		>
+			<JoinIntroCard
+				module="quiz"
+				title={quizData?.quiz?.title}
+				name={currentUserName}
+				onNameChange={setCurrentUserName}
+				onSubmit={dataSubmit}
+				durationText={result}
+				countLabel={
+					quizData?.quiz?.questions?.length
+						? `${qsenList.length} questions`
+						: "Ready"
+				}
+				isSubmitting={isSubmitting}
+			/>
+		</ParticipantShell>
 	);
 }
 export default QuizAttemptForm;

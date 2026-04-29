@@ -21,6 +21,10 @@ import {
 	clearQuestSession,
 } from "@/features/quest/store/questSessionSlice";
 import { getHostLiveSession } from "@/features/live/services/liveSessionApi";
+import {
+	armQuestHostMusic,
+	startQuestHostMusic,
+} from "@/features/live/services/questHostAudio";
 
 import { toast } from "react-toastify";
 
@@ -80,6 +84,11 @@ const HostLive: React.FC<HostLiveProps> = ({
 	useEffect(() => {
 		dispatch(clearQuestSession());
 	}, [dispatch]);
+
+	const beginHostMusic = () => {
+		armQuestHostMusic();
+		void startQuestHostMusic();
+	};
 
 	const {
 		control,
@@ -159,6 +168,7 @@ const HostLive: React.FC<HostLiveProps> = ({
 	};
 
 	const HostLiveSubmith = async (data: QuizFormValues) => {
+		beginHostMusic();
 		const obj = {
 			...data,
 			start_datetime: moment(data.start_datetime).format(
@@ -203,6 +213,7 @@ const HostLive: React.FC<HostLiveProps> = ({
 
 	// Start the QUEST
 	const quizeStartFunction = async () => {
+		beginHostMusic();
 		try {
 			const session = await getHostLiveSession("quest", questId);
 			dispatch(setQuestSession(session));
@@ -237,6 +248,7 @@ const HostLive: React.FC<HostLiveProps> = ({
 	}
 
 	const hostLiveFunction = async () => {
+		beginHostMusic();
 		const response = await axiosInstance.get(`/quests/show/${params?.id}`);
 		const data_quest = response?.data?.data?.quest;
 		if (shouldFetch(data_quest)) {

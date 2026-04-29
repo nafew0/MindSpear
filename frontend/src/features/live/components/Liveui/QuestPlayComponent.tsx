@@ -2,21 +2,18 @@
 "use client";
 
 import React, { useCallback, useMemo } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import QuizLiveFooter from "@/components/Layouts/quiz/QuizLiveFooter";
 import QuestChoiceComponent from "./QuestChoiceComponent";
 import QuestContentComponent from "./QuestContentComponent";
 import QuestRankingComponent from "./QuestRankingComponent";
 import QuestShortAnswerComponent from "./QuestShortAnswerComponent";
 import QuickFormPreview from "./QuickFormPreview";
 import QuestScalesChoiceComponent from "./QuestScalesChoiceComponent";
-import WaitingRoomComponent from "./WaitingRoomComponent";
-import { FaUser } from "react-icons/fa";
-import QuestCompletedPages from "@/features/quest/components/QuestCompletedPages";
 import { useSearchParams } from "next/navigation";
 import { useSelector } from "react-redux";
 import type { LiveSessionStatus } from "@/features/live/types";
+import AllQuestResult from "@/components/ResultComponent/AllQuestResult";
+import { BarChart3, CheckCircle2 } from "lucide-react";
+import { ParticipantShell, ParticipantStage, WaitingStage } from "./participant-ui";
 
 export interface TaskItem {
 	id: number;
@@ -44,6 +41,57 @@ const UnsupportedComponent: React.FC<{ task: TaskItem }> = ({ task }) => (
 		<p className="text-center text-base">{task.title}</p>
 	</div>
 );
+
+function QuestParticipantResultStage({
+	sessionId,
+	questTitle,
+}: {
+	sessionId: string | null;
+	questTitle: string | null;
+}) {
+	if (!sessionId) {
+		return (
+			<WaitingStage
+				mode="complete"
+				title="Quest complete"
+				message="Your responses are saved. The live result session could not be resolved on this device."
+			/>
+		);
+	}
+
+	return (
+		<ParticipantStage
+			size="full"
+			className="overflow-visible bg-white/95 p-3 shadow-xl shadow-black/10 sm:p-5"
+		>
+			<div className="mb-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+				<div className="flex items-start gap-3">
+					<div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+						<BarChart3 className="h-5 w-5" />
+					</div>
+					<div className="min-w-0 flex-1">
+						<div className="inline-flex items-center gap-2 rounded-full bg-secondary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-secondary">
+							<CheckCircle2 className="h-3.5 w-3.5" />
+							Quest complete
+						</div>
+						<h2 className="mt-2 text-2xl font-black leading-tight text-slate-950 sm:text-3xl">
+							Cumulative results
+						</h2>
+						<p className="mt-1 text-sm font-medium text-slate-500">
+							{questTitle || "Your live quest"} has ended. Review the group
+							results below.
+						</p>
+					</div>
+				</div>
+			</div>
+
+			<AllQuestResult
+				attemId={sessionId}
+				className="pb-2"
+			/>
+		</ParticipantStage>
+	);
+}
 
 const componentForTaskType = (
 	t: string
@@ -93,6 +141,8 @@ const QuestPlayComponent: React.FC<NavigatorProps> = ({
 }) => {
 	const searchParams = useSearchParams();
 	const userName = searchParams.get("uname");
+	const questTitle = searchParams.get("title");
+	const sessionId = searchParams.get("sid");
 	const { showLeaderboard } = useSelector((state: any) => state.leaderboard);
 
 	const ordered = useMemo(
@@ -116,7 +166,7 @@ const QuestPlayComponent: React.FC<NavigatorProps> = ({
 		? componentForTaskType(
 				String((currentTask.question_type || currentTask.task_type) ?? "")
 			)
-		: WaitingRoomComponent;
+		: null;
 
 	const handleLeaveQuest = useCallback(() => {
 		try {
@@ -148,44 +198,32 @@ const QuestPlayComponent: React.FC<NavigatorProps> = ({
 	}, [handleLeaveQuest, isEnded]);
 
 	return (
-		<div className="h-screen overflow-auto bg-white relative">
-			<div className="py-6 flex items-center justify-center">
-				<Link href="/">
-					<Image
-						src="/images/logo/logo.svg"
-						className="dark:hidden"
-						alt="logo"
-						role="presentation"
-						quality={100}
-						width={176}
-						height={42}
-					/>
-				</Link>
-			</div>
-
-			<div className="flex gap-2 absolute top-5 right-5 justify-center items-center font-bold">
-				<span className="bg-primary w-[40px] text-white h-[40px] rounded-full flex justify-center items-center">
-					<FaUser />
-				</span>
-				<h3>{userName}</h3>
-			</div>
-
+		<ParticipantShell
+			variant="quest"
+			title={questTitle}
+			participantName={userName}
+			sessionStatus={isEnded ? "ended" : sessionStatus}
+		>
 			{isEnded ? (
-				<QuestCompletedPages pagesStatus="user" />
+				<QuestParticipantResultStage
+					sessionId={sessionId}
+					questTitle={questTitle}
+				/>
 			) : (
-				<div className="bg-white w-full">
-					<div className="mx-auto max-w-4xl px-4">
-						{currentTask ? (
-							<Body task={currentTask as TaskItem} />
-						) : (
-							<Body />
-						)}
-					</div>
-				</div>
+				<>
+					{currentTask && Body ? (
+						<Body task={currentTask as TaskItem} />
+					) : (
+						<WaitingStage
+							mode="lobby"
+							title="You're in the quest lobby"
+							message="Stay ready. The host will open the first task soon."
+							statusLabel="Connected to live quest"
+						/>
+					)}
+				</>
 			)}
-
-			<QuizLiveFooter />
-		</div>
+		</ParticipantShell>
 	);
 };
 

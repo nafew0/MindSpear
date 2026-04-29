@@ -41,16 +41,16 @@ const FillInTheBlanksComponent: React.FC = () => {
 							className={clsx(
 								"border-b-2 outline-none px-2 py-1 text-primary transition-all duration-150",
 								error
-									? "border-red-500 focus:border-red-500"
+									? "border-accent focus:border-accent"
 									: "border-gray-300 focus:border-primary"
 							)}
 						/>
 						.
 					</p>
 
-					{error && <p className="text-sm text-red-500">{error}</p>}
+					{error && <p className="text-sm text-accent">{error}</p>}
 					{submitted && (
-						<p className="text-sm text-green-600">
+						<p className="text-sm text-primary">
 							Answer submitted: <strong>{answer}</strong>
 						</p>
 					)}

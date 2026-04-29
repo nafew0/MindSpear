@@ -60,6 +60,7 @@ export type HostLiveViewModel = {
 		| "content";
 	isResponseDriven: boolean;
 	hasResponses: boolean;
+	responseTotal: number;
 	choiceSeries: number[];
 	rankingItems: HostRankingItem[];
 	scaleItems: HostScaleItem[];
@@ -166,22 +167,28 @@ const buildScaleItems = (
 		.sort((left, right) => right.value - left.value);
 
 export const toWordCloudWords = (
-	answers: string[],
-	opts: { max?: number; min?: number } = {}
+	answers: string[]
 ): HostWordCloudWord[] => {
-	const { max = 60, min = 20 } = opts;
-	const words = answers
-		.map((answer) => String(answer ?? "").trim())
-		.filter(Boolean);
+	const totals = new Map<string, HostWordCloudWord>();
 
-	if (words.length === 0) return [];
-	if (words.length === 1) return [{ text: words[0], value: max }];
+	for (const answer of answers) {
+		const text = String(answer ?? "").trim();
+		if (!text) continue;
 
-	const step = (max - min) / (words.length - 1);
-	return words.map((text, index) => ({
-		text,
-		value: Math.round(max - index * step),
-	}));
+		const key = text.toLowerCase();
+		const existing = totals.get(key);
+
+		if (existing) {
+			existing.value += 1;
+		} else {
+			totals.set(key, { text, value: 1 });
+		}
+	}
+
+	return Array.from(totals.values()).sort((left, right) => {
+		if (right.value !== left.value) return right.value - left.value;
+		return left.text.localeCompare(right.text);
+	});
 };
 
 export const isResponseDrivenTaskType = (taskType: unknown) =>
@@ -204,6 +211,13 @@ export function buildHostLiveViewModel(
 	const scaleItems = buildScaleItems(categories, choiceSeries);
 	const textAnswers = extractTextAnswers(result);
 	const wordCloudWords = toWordCloudWords(textAnswers);
+	const numericTotal = choiceSeries.reduce(
+		(total, value) => total + Math.max(Number(value) || 0, 0),
+		0
+	);
+	const responseTotal = Math.round(
+		textAnswers.length > 0 ? textAnswers.length : numericTotal
+	);
 	const isResponseDriven = isResponseDrivenTaskType(taskType);
 
 	if (ORDERED_TASK_TYPES.has(taskType)) {
@@ -216,6 +230,7 @@ export function buildHostLiveViewModel(
 			displayKind: "ranking",
 			isResponseDriven,
 			hasResponses: hasNumericResponses(choiceSeries),
+			responseTotal,
 			choiceSeries,
 			rankingItems,
 			scaleItems,
@@ -238,6 +253,7 @@ export function buildHostLiveViewModel(
 			displayKind: "scales",
 			isResponseDriven,
 			hasResponses: hasNumericResponses(choiceSeries),
+			responseTotal,
 			choiceSeries,
 			rankingItems,
 			scaleItems,
@@ -260,6 +276,7 @@ export function buildHostLiveViewModel(
 			displayKind: "wordcloud",
 			isResponseDriven,
 			hasResponses: textAnswers.length > 0,
+			responseTotal,
 			choiceSeries,
 			rankingItems,
 			scaleItems,
@@ -282,6 +299,7 @@ export function buildHostLiveViewModel(
 			displayKind: "text",
 			isResponseDriven,
 			hasResponses: textAnswers.length > 0,
+			responseTotal,
 			choiceSeries,
 			rankingItems,
 			scaleItems,
@@ -304,6 +322,7 @@ export function buildHostLiveViewModel(
 			displayKind: "quick_form",
 			isResponseDriven: false,
 			hasResponses: false,
+			responseTotal,
 			choiceSeries,
 			rankingItems,
 			scaleItems,
@@ -326,6 +345,7 @@ export function buildHostLiveViewModel(
 			displayKind: "content",
 			isResponseDriven: false,
 			hasResponses: false,
+			responseTotal,
 			choiceSeries,
 			rankingItems,
 			scaleItems,
@@ -347,6 +367,7 @@ export function buildHostLiveViewModel(
 		displayKind: "choice",
 		isResponseDriven,
 		hasResponses: hasNumericResponses(choiceSeries),
+		responseTotal,
 		choiceSeries,
 		rankingItems,
 		scaleItems,
